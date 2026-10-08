@@ -1,0 +1,45 @@
+name: Unpack FleetPilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unpack FleetPilot
+        run: |
+          rm -rf .tmp_fleetpilot
+          mkdir .tmp_fleetpilot
+
+          unzip -q "FleetPilot-v0.1 2.zip" -d .tmp_fleetpilot
+
+          cp -a .tmp_fleetpilot/fleetpilot/. .
+
+          rm -rf .tmp_fleetpilot
+          rm -f "FleetPilot-v0.1 2.zip"
+          rm -f "# FleetPilot"
+          rm -f "FleetPilot"
+          rm -rf ".github/.github"
+
+      - name: Commit project files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Unpack FleetPilot v0.1"
+          git push
