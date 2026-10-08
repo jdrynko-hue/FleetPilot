@@ -28,6 +28,7 @@ jobs:
           rm -f "# FleetPilot"
           rm -f "FleetPilot"
           rm -rf ".github/.github"
+          rm -f ".github/workflows/flutter.yml"
 
       - name: Commit project files
         run: |
