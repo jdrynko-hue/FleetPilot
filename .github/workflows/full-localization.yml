@@ -1155,16 +1155,13 @@ jobs:
           login = Path("lib/auth/login_screen.dart")
           s = login.read_text(encoding="utf-8")
 
-          old = """                              itemBuilder: (_) => [
-                                PopupMenuItem(
-                                  value: 'pl',
-                                  child: Text('🇵🇱 ${tr('polish')}'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'en',
-                                  child: Text('🇬🇧 ${tr('english')}'),
-                                ),
-                              ],"""
+                    start = s.find("                              itemBuilder: (_) => [")
+          end = s.find("                              ],", start)
+
+          if start == -1 or end == -1:
+              raise SystemExit("Could not replace login language selector")
+
+          end += len("                              ],")
 
           new = """                              itemBuilder: (_) => supportedLanguages
                                   .map(
@@ -1175,11 +1172,9 @@ jobs:
                                   )
                                   .toList(),"""
 
-          if old not in s:
-              raise SystemExit("Could not find login language selector")
+          s = s[:start] + new + s[end:]
 
-          login.write_text(s.replace(old, new), encoding="utf-8")
-
+          login.write_text(s, encoding="utf-8")
           # -------------------------------------------------------
           # 12 languages in company settings.
           # -------------------------------------------------------
