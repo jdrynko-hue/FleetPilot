@@ -1,0 +1,129 @@
+name: Commercial Sprint 1 Final
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/commercial-sprint-1-final.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Apply SaaS sprint
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          source = Path(
+              ".github/workflows/commercial-sprint-1-rescue.yml"
+          ).read_text(encoding="utf-8")
+
+          marker = "          python3 <<'PY'\n"
+          if marker not in source:
+              raise SystemExit("Rescue workflow not found")
+
+          script = source.split(marker, 1)[1]
+          script = script.split("\n          PY", 1)[0]
+
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in script.splitlines()
+          )
+
+          start = script.index("def replace_once(")
+          end = script.index("\n# ===", start)
+
+          helper = '''
+          def replace_once(source, old, new, label):
+              if old in source:
+                  return source.replace(old, new, 1)
+
+              pattern = r"\\s*".join(
+                  re.escape(line.strip())
+                  for line in old.splitlines()
+              )
+
+              match = re.search(pattern, source)
+
+              if match is None:
+                  raise SystemExit(
+                      f"Patch point missing: {label}"
+                  )
+
+              return (
+                  source[:match.start()]
+                  + new
+                  + source[match.end():]
+              )
+          '''
+
+          import textwrap
+          helper = textwrap.dedent(helper)
+
+          script = script[:start] + helper + script[end:]
+          script = "import re\n" + script
+
+          exec(compile(script, "fleetpilot_sprint.py", "exec"))
+
+          # Correct mobile navigation indices.
+          path = Path("lib/shell/fleet_shell.dart")
+          content = path.read_text(encoding="utf-8")
+
+          for key, index in [("reports", 6), ("company", 7)]:
+              pattern = (
+                  r"(title: Text\\(tr\\('"
+                  + key
+                  + r"'\\)\\),.*?onTap: \\(\\) \\{"
+                  + r".*?setState\\(\\(\\) => _index = )"
+                  + r"\\d+(?=\\);)"
+              )
+
+              content, count = re.subn(
+                  pattern,
+                  lambda m, value=index: m.group(1) + str(value),
+                  content,
+                  count=1,
+                  flags=re.DOTALL,
+              )
+
+              if count != 1:
+                  raise SystemExit(
+                      f"Navigation correction failed: {key}"
+                  )
+
+          path.write_text(content, encoding="utf-8")
+          print("Commercial Sprint applied")
+          PY
+
+      - name: Validate
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib supabase/migrations/002_saas_foundation.sql
+          git commit -m "Complete SaaS Commercial Sprint 1"
+          git push
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy.yml --ref main
