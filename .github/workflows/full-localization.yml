@@ -1,0 +1,1490 @@
+name: FleetPilot Full Localization
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/full-localization.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  localization:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install 12-language localization
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          translations = {
+            "en": {
+              "dashboard": "Home",
+              "vehicles": "Vehicles",
+              "drivers": "Drivers",
+              "issues": "Issues",
+              "repairs": "Repairs",
+              "garages": "Garages",
+              "company": "Company",
+              "more": "More",
+              "refresh": "Refresh",
+              "sign_out": "Sign out",
+              "language": "Language",
+              "settings": "Settings",
+              "team": "Team",
+              "team_description": "People with access to this fleet",
+              "invite_member": "Invite user",
+              "email": "Email",
+              "role": "Role",
+              "create_invite": "Create invitation",
+              "invite_created": "Invitation link copied",
+              "pending_invites": "Pending invitations",
+              "no_invites": "No pending invitations",
+              "revoke": "Revoke",
+              "remove": "Remove",
+              "join_company": "Join an existing company",
+              "invite_code": "Invitation code",
+              "accept_invite": "Join",
+              "your_role": "Your role",
+              "currency": "Currency",
+              "owner": "Owner",
+              "admin": "Administrator",
+              "manager": "Manager",
+              "viewer": "Viewer",
+              "try_again": "Try again",
+              "create_account": "Create account",
+              "sign_in": "Sign in",
+              "sign_in_subtitle": "Sign in to your fleet",
+              "password": "Password",
+              "have_account": "Already have an account? Sign in",
+              "no_account": "New to FleetPilot? Create an account",
+              "invalid_email": "Enter a valid email address",
+              "short_password": "Use at least 8 characters",
+              "available": "Available",
+              "in_use": "In use",
+              "workshop": "Workshop",
+              "maintenance": "Maintenance",
+              "off_road": "Off road",
+              "sold": "Sold",
+              "active": "Active",
+              "inactive": "Inactive",
+              "holiday": "Holiday",
+              "suspended": "Suspended",
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "critical": "Critical",
+              "open": "Open",
+              "booked": "Booked",
+              "in_progress": "In progress",
+              "resolved": "Resolved",
+              "closed": "Closed",
+              "planned": "Planned",
+              "ready": "Ready",
+              "completed": "Completed",
+              "cancelled": "Cancelled",
+              "fleet_status": "Fleet status",
+              "add_first_vehicle": "Add your first vehicle to get started.",
+              "fleet_operational": "{operational} of {total} vehicles operational",
+              "unavailable": "Unavailable",
+              "repairs_month": "Repairs / month",
+              "requires_attention": "Requires attention",
+              "all_under_control": "Everything under control",
+              "no_urgent_items": "No urgent items right now.",
+              "critical_priority": "Critical priority",
+              "high_priority": "High priority",
+              "due_date": "Due",
+              "vehicle": "Vehicle",
+              "add_vehicle": "Add vehicle",
+              "search_vehicles": "Search vehicles",
+              "status": "Status",
+              "all_statuses": "All statuses",
+              "no_vehicles_yet": "No vehicles yet",
+              "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+              "edit": "Edit",
+              "archive_vehicle_q": "Archive vehicle?",
+              "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+              "cancel": "Cancel",
+              "archive": "Archive",
+              "registration": "Registration *",
+              "registration_required": "Registration is required",
+              "make": "Make",
+              "model": "Model",
+              "year": "Year",
+              "mileage": "Mileage",
+              "assigned_driver": "Assigned driver",
+              "no_driver": "No driver",
+              "inspection_type": "Inspection type",
+              "inspection_due": "Inspection due",
+              "service_due_date": "Service due date",
+              "service_due_mileage": "Service due mileage",
+              "insurance_expiry": "Insurance expiry",
+              "notes": "Notes",
+              "saving": "Saving…",
+              "save_vehicle": "Save vehicle",
+              "edit_vehicle": "Edit vehicle",
+              "driver": "Driver",
+              "unassigned": "Unassigned",
+              "service": "Service",
+              "insurance": "Insurance",
+              "add": "Add",
+              "no_issues_recorded": "No issues recorded.",
+              "no_repairs_recorded": "No repairs recorded.",
+              "repair": "Repair",
+              "add_driver": "Add driver",
+              "edit_driver": "Edit driver",
+              "name": "Name *",
+              "name_required": "Name is required",
+              "phone": "Phone",
+              "employee_reference": "Employee reference",
+              "save_driver": "Save driver",
+              "no_drivers_yet": "No drivers yet",
+              "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+              "add_issue": "Add issue",
+              "edit_issue": "Edit issue",
+              "select_vehicle": "Select a vehicle",
+              "issue_title": "Issue title *",
+              "title_required": "Title is required",
+              "description": "Description",
+              "priority": "Priority",
+              "all_priorities": "All priorities",
+              "reported_by_driver": "Reported by driver",
+              "not_specified": "Not specified",
+              "mileage_reported": "Mileage when reported",
+              "internal_notes": "Internal notes",
+              "save_issue": "Save issue",
+              "no_issues": "No issues",
+              "no_issues_message": "Defects and operational issues will appear here.",
+              "add_repair": "Add repair",
+              "edit_repair": "Edit repair",
+              "repair_description": "Repair description",
+              "garage": "Garage",
+              "not_assigned": "Not assigned",
+              "related_issue": "Related issue",
+              "no_linked_issue": "No linked issue",
+              "mileage_in": "Mileage in",
+              "parts_cost": "Parts cost",
+              "labour_cost": "Labour cost",
+              "other_cost": "Other cost",
+              "booked_date": "Booked date",
+              "started_date": "Started date",
+              "expected_completion": "Expected completion",
+              "completed_date": "Completed date",
+              "invoice_reference": "Invoice reference",
+              "save_repair": "Save repair",
+              "no_repairs": "No repairs",
+              "no_repairs_message": "Repair jobs and costs will appear here.",
+              "add_garage": "Add garage",
+              "edit_garage": "Edit garage",
+              "garage_name": "Garage name *",
+              "contact_name": "Contact name",
+              "address_line_1": "Address line 1",
+              "address_line_2": "Address line 2",
+              "city": "City",
+              "postcode": "Postcode",
+              "country": "Country",
+              "save_garage": "Save garage",
+              "no_garages_yet": "No garages yet",
+              "no_garages_message": "Add workshops and garages to connect them with repairs.",
+              "create_your_fleet": "Create your fleet",
+              "workspace_message": "Your company's fleet data is securely separated from other companies.",
+              "company_name": "Company name",
+              "country_code": "Country code",
+              "currency_gbp": "GBP — British pound",
+              "currency_eur": "EUR — Euro",
+              "currency_pln": "PLN — Polish złoty",
+              "currency_usd": "USD — US dollar",
+              "creating": "Creating…",
+              "create_fleet": "Create fleet",
+              "company_added": "Company added successfully."
+            },
+
+            "pl": {
+              "dashboard": "Start",
+              "vehicles": "Pojazdy",
+              "drivers": "Kierowcy",
+              "issues": "Usterki",
+              "repairs": "Naprawy",
+              "garages": "Warsztaty",
+              "company": "Firma",
+              "more": "Więcej",
+              "refresh": "Odśwież",
+              "sign_out": "Wyloguj",
+              "language": "Język",
+              "settings": "Ustawienia",
+              "team": "Zespół",
+              "team_description": "Osoby mające dostęp do tej floty",
+              "invite_member": "Zaproś użytkownika",
+              "email": "E-mail",
+              "role": "Rola",
+              "create_invite": "Utwórz zaproszenie",
+              "invite_created": "Link zaproszenia został skopiowany",
+              "pending_invites": "Oczekujące zaproszenia",
+              "no_invites": "Brak oczekujących zaproszeń",
+              "revoke": "Anuluj",
+              "remove": "Usuń",
+              "join_company": "Dołącz do istniejącej firmy",
+              "invite_code": "Kod zaproszenia",
+              "accept_invite": "Dołącz",
+              "your_role": "Twoja rola",
+              "currency": "Waluta",
+              "owner": "Właściciel",
+              "admin": "Administrator",
+              "manager": "Manager",
+              "viewer": "Podgląd",
+              "try_again": "Spróbuj ponownie",
+              "create_account": "Utwórz konto",
+              "sign_in": "Zaloguj",
+              "sign_in_subtitle": "Zaloguj się do swojej floty",
+              "password": "Hasło",
+              "have_account": "Masz już konto? Zaloguj się",
+              "no_account": "Nie masz konta? Utwórz je",
+              "invalid_email": "Podaj poprawny adres e-mail",
+              "short_password": "Hasło musi mieć co najmniej 8 znaków",
+              "available": "Dostępny",
+              "in_use": "W użyciu",
+              "workshop": "Warsztat",
+              "maintenance": "Serwis",
+              "off_road": "Wyłączony z ruchu",
+              "sold": "Sprzedany",
+              "active": "Aktywny",
+              "inactive": "Nieaktywny",
+              "holiday": "Urlop",
+              "suspended": "Zawieszony",
+              "low": "Niski",
+              "medium": "Średni",
+              "high": "Wysoki",
+              "critical": "Krytyczny",
+              "open": "Otwarta",
+              "booked": "Umówiona",
+              "in_progress": "W trakcie",
+              "resolved": "Rozwiązana",
+              "closed": "Zamknięta",
+              "planned": "Planowana",
+              "ready": "Gotowa",
+              "completed": "Zakończona",
+              "cancelled": "Anulowana",
+              "fleet_status": "Stan floty",
+              "add_first_vehicle": "Dodaj pierwszy pojazd, aby rozpocząć.",
+              "fleet_operational": "{operational} z {total} pojazdów operacyjnych",
+              "unavailable": "Niedostępne",
+              "repairs_month": "Naprawy / miesiąc",
+              "requires_attention": "Wymaga uwagi",
+              "all_under_control": "Wszystko pod kontrolą",
+              "no_urgent_items": "Brak pilnych spraw w tej chwili.",
+              "critical_priority": "Priorytet krytyczny",
+              "high_priority": "Wysoki priorytet",
+              "due_date": "Termin",
+              "vehicle": "Pojazd",
+              "add_vehicle": "Dodaj pojazd",
+              "search_vehicles": "Szukaj pojazdów",
+              "status": "Status",
+              "all_statuses": "Wszystkie statusy",
+              "no_vehicles_yet": "Brak pojazdów",
+              "no_vehicles_message": "Dodaj pierwszy pojazd, aby rozpocząć zarządzanie flotą.",
+              "edit": "Edytuj",
+              "archive_vehicle_q": "Zarchiwizować pojazd?",
+              "archive_vehicle_message": "Pojazd zniknie z aktywnych list, ale jego historia zostanie zachowana.",
+              "cancel": "Anuluj",
+              "archive": "Archiwizuj",
+              "registration": "Numer rejestracyjny *",
+              "registration_required": "Numer rejestracyjny jest wymagany",
+              "make": "Marka",
+              "model": "Model",
+              "year": "Rok",
+              "mileage": "Przebieg",
+              "assigned_driver": "Przypisany kierowca",
+              "no_driver": "Brak kierowcy",
+              "inspection_type": "Rodzaj przeglądu",
+              "inspection_due": "Termin przeglądu",
+              "service_due_date": "Termin serwisu",
+              "service_due_mileage": "Przebieg do serwisu",
+              "insurance_expiry": "Koniec ubezpieczenia",
+              "notes": "Notatki",
+              "saving": "Zapisywanie…",
+              "save_vehicle": "Zapisz pojazd",
+              "edit_vehicle": "Edytuj pojazd",
+              "driver": "Kierowca",
+              "unassigned": "Nieprzypisany",
+              "service": "Serwis",
+              "insurance": "Ubezpieczenie",
+              "add": "Dodaj",
+              "no_issues_recorded": "Brak zapisanych usterek.",
+              "no_repairs_recorded": "Brak zapisanych napraw.",
+              "repair": "Naprawa",
+              "add_driver": "Dodaj kierowcę",
+              "edit_driver": "Edytuj kierowcę",
+              "name": "Imię i nazwisko *",
+              "name_required": "Nazwa jest wymagana",
+              "phone": "Telefon",
+              "employee_reference": "Numer pracownika",
+              "save_driver": "Zapisz kierowcę",
+              "no_drivers_yet": "Brak kierowców",
+              "no_drivers_message": "Kierowców będzie można przypisywać do pojazdów i zgłoszeń.",
+              "add_issue": "Dodaj usterkę",
+              "edit_issue": "Edytuj usterkę",
+              "select_vehicle": "Wybierz pojazd",
+              "issue_title": "Nazwa usterki *",
+              "title_required": "Nazwa jest wymagana",
+              "description": "Opis",
+              "priority": "Priorytet",
+              "all_priorities": "Wszystkie priorytety",
+              "reported_by_driver": "Zgłoszone przez kierowcę",
+              "not_specified": "Nie określono",
+              "mileage_reported": "Przebieg przy zgłoszeniu",
+              "internal_notes": "Notatki wewnętrzne",
+              "save_issue": "Zapisz usterkę",
+              "no_issues": "Brak usterek",
+              "no_issues_message": "Usterki i problemy operacyjne pojawią się tutaj.",
+              "add_repair": "Dodaj naprawę",
+              "edit_repair": "Edytuj naprawę",
+              "repair_description": "Opis naprawy",
+              "garage": "Warsztat",
+              "not_assigned": "Nieprzypisany",
+              "related_issue": "Powiązana usterka",
+              "no_linked_issue": "Brak powiązanej usterki",
+              "mileage_in": "Przebieg przy przyjęciu",
+              "parts_cost": "Koszt części",
+              "labour_cost": "Koszt robocizny",
+              "other_cost": "Inne koszty",
+              "booked_date": "Data rezerwacji",
+              "started_date": "Data rozpoczęcia",
+              "expected_completion": "Planowane zakończenie",
+              "completed_date": "Data zakończenia",
+              "invoice_reference": "Numer faktury",
+              "save_repair": "Zapisz naprawę",
+              "no_repairs": "Brak napraw",
+              "no_repairs_message": "Naprawy i ich koszty pojawią się tutaj.",
+              "add_garage": "Dodaj warsztat",
+              "edit_garage": "Edytuj warsztat",
+              "garage_name": "Nazwa warsztatu *",
+              "contact_name": "Osoba kontaktowa",
+              "address_line_1": "Adres 1",
+              "address_line_2": "Adres 2",
+              "city": "Miasto",
+              "postcode": "Kod pocztowy",
+              "country": "Kraj",
+              "save_garage": "Zapisz warsztat",
+              "no_garages_yet": "Brak warsztatów",
+              "no_garages_message": "Dodaj warsztaty, aby przypisywać je do napraw.",
+              "create_your_fleet": "Utwórz swoją flotę",
+              "workspace_message": "Dane floty Twojej firmy są bezpiecznie oddzielone od danych innych firm.",
+              "company_name": "Nazwa firmy",
+              "country_code": "Kod kraju",
+              "currency_gbp": "GBP — funt brytyjski",
+              "currency_eur": "EUR — euro",
+              "currency_pln": "PLN — polski złoty",
+              "currency_usd": "USD — dolar amerykański",
+              "creating": "Tworzenie…",
+              "create_fleet": "Utwórz flotę",
+              "company_added": "Firma została dodana."
+            }
+          }
+
+          # For the additional languages we use complete translated UI dictionaries
+          # based on the English keys above.
+          extra = {}
+
+          def make(base, overrides):
+              result = dict(base)
+              result.update(overrides)
+              return result
+
+          en = translations["en"]
+
+          extra["de"] = make(en, {
+              "dashboard":"Start","vehicles":"Fahrzeuge","drivers":"Fahrer","issues":"Mängel",
+              "repairs":"Reparaturen","garages":"Werkstätten","company":"Unternehmen","more":"Mehr",
+              "refresh":"Aktualisieren","sign_out":"Abmelden","language":"Sprache","settings":"Einstellungen",
+              "team":"Team","team_description":"Personen mit Zugriff auf diese Flotte",
+              "invite_member":"Benutzer einladen","role":"Rolle","create_invite":"Einladung erstellen",
+              "invite_created":"Einladungslink wurde kopiert","pending_invites":"Ausstehende Einladungen",
+              "no_invites":"Keine ausstehenden Einladungen","revoke":"Widerrufen","remove":"Entfernen",
+              "join_company":"Bestehendem Unternehmen beitreten","invite_code":"Einladungscode",
+              "accept_invite":"Beitreten","your_role":"Ihre Rolle","currency":"Währung",
+              "owner":"Inhaber","admin":"Administrator","manager":"Manager","viewer":"Betrachter",
+              "try_again":"Erneut versuchen","create_account":"Konto erstellen","sign_in":"Anmelden",
+              "sign_in_subtitle":"Bei Ihrer Flotte anmelden","password":"Passwort",
+              "have_account":"Bereits ein Konto? Anmelden","no_account":"Neu bei FleetPilot? Konto erstellen",
+              "invalid_email":"Gültige E-Mail-Adresse eingeben","short_password":"Mindestens 8 Zeichen verwenden",
+              "available":"Verfügbar","in_use":"Im Einsatz","workshop":"Werkstatt","maintenance":"Wartung",
+              "off_road":"Außer Betrieb","sold":"Verkauft","active":"Aktiv","inactive":"Inaktiv",
+              "holiday":"Urlaub","suspended":"Gesperrt","low":"Niedrig","medium":"Mittel","high":"Hoch",
+              "critical":"Kritisch","open":"Offen","booked":"Gebucht","in_progress":"In Bearbeitung",
+              "resolved":"Gelöst","closed":"Geschlossen","planned":"Geplant","ready":"Bereit",
+              "completed":"Abgeschlossen","cancelled":"Storniert","fleet_status":"Flottenstatus",
+              "add_first_vehicle":"Fügen Sie Ihr erstes Fahrzeug hinzu.",
+              "fleet_operational":"{operational} von {total} Fahrzeugen einsatzbereit",
+              "unavailable":"Nicht verfügbar","repairs_month":"Reparaturen / Monat",
+              "requires_attention":"Handlungsbedarf","all_under_control":"Alles unter Kontrolle",
+              "no_urgent_items":"Derzeit keine dringenden Punkte.","critical_priority":"Kritische Priorität",
+              "high_priority":"Hohe Priorität","due_date":"Fällig","vehicle":"Fahrzeug",
+              "add_vehicle":"Fahrzeug hinzufügen","search_vehicles":"Fahrzeuge suchen",
+              "all_statuses":"Alle Status","no_vehicles_yet":"Noch keine Fahrzeuge",
+              "no_vehicles_message":"Fügen Sie Ihr erstes Fahrzeug hinzu, um die Flotte zu verwalten.",
+              "edit":"Bearbeiten","archive_vehicle_q":"Fahrzeug archivieren?",
+              "archive_vehicle_message":"Das Fahrzeug wird aus aktiven Listen entfernt, die Historie bleibt erhalten.",
+              "cancel":"Abbrechen","archive":"Archivieren","registration":"Kennzeichen *",
+              "registration_required":"Kennzeichen ist erforderlich","make":"Marke","year":"Jahr",
+              "mileage":"Kilometerstand","assigned_driver":"Zugewiesener Fahrer","no_driver":"Kein Fahrer",
+              "inspection_type":"Prüfungsart","inspection_due":"Prüfung fällig",
+              "service_due_date":"Servicetermin","service_due_mileage":"Service-Kilometerstand",
+              "insurance_expiry":"Versicherungsablauf","notes":"Notizen","saving":"Speichern…",
+              "save_vehicle":"Fahrzeug speichern","edit_vehicle":"Fahrzeug bearbeiten","driver":"Fahrer",
+              "unassigned":"Nicht zugewiesen","service":"Service","insurance":"Versicherung","add":"Hinzufügen",
+              "no_issues_recorded":"Keine Mängel erfasst.","no_repairs_recorded":"Keine Reparaturen erfasst.",
+              "repair":"Reparatur","add_driver":"Fahrer hinzufügen","edit_driver":"Fahrer bearbeiten",
+              "name":"Name *","name_required":"Name ist erforderlich","phone":"Telefon",
+              "employee_reference":"Mitarbeiternummer","save_driver":"Fahrer speichern",
+              "no_drivers_yet":"Noch keine Fahrer","no_drivers_message":"Fahrer können Fahrzeugen und Meldungen zugewiesen werden.",
+              "add_issue":"Mangel hinzufügen","edit_issue":"Mangel bearbeiten","select_vehicle":"Fahrzeug auswählen",
+              "issue_title":"Mangelbezeichnung *","title_required":"Titel ist erforderlich","description":"Beschreibung",
+              "priority":"Priorität","all_priorities":"Alle Prioritäten","reported_by_driver":"Vom Fahrer gemeldet",
+              "not_specified":"Nicht angegeben","mileage_reported":"Kilometerstand bei Meldung",
+              "internal_notes":"Interne Notizen","save_issue":"Mangel speichern","no_issues":"Keine Mängel",
+              "no_issues_message":"Mängel und betriebliche Probleme werden hier angezeigt.",
+              "add_repair":"Reparatur hinzufügen","edit_repair":"Reparatur bearbeiten",
+              "repair_description":"Reparaturbeschreibung","garage":"Werkstatt","not_assigned":"Nicht zugewiesen",
+              "related_issue":"Zugehöriger Mangel","no_linked_issue":"Kein verknüpfter Mangel",
+              "mileage_in":"Kilometerstand bei Eingang","parts_cost":"Teilekosten","labour_cost":"Arbeitskosten",
+              "other_cost":"Sonstige Kosten","booked_date":"Buchungsdatum","started_date":"Startdatum",
+              "expected_completion":"Voraussichtliche Fertigstellung","completed_date":"Abschlussdatum",
+              "invoice_reference":"Rechnungsnummer","save_repair":"Reparatur speichern",
+              "no_repairs":"Keine Reparaturen","no_repairs_message":"Reparaturaufträge und Kosten werden hier angezeigt.",
+              "add_garage":"Werkstatt hinzufügen","edit_garage":"Werkstatt bearbeiten",
+              "garage_name":"Werkstattname *","contact_name":"Ansprechpartner","address_line_1":"Adresse 1",
+              "address_line_2":"Adresse 2","city":"Stadt","postcode":"Postleitzahl","country":"Land",
+              "save_garage":"Werkstatt speichern","no_garages_yet":"Noch keine Werkstätten",
+              "no_garages_message":"Fügen Sie Werkstätten hinzu, um sie Reparaturen zuzuordnen.",
+              "create_your_fleet":"Ihre Flotte erstellen","workspace_message":"Die Flottendaten Ihres Unternehmens sind sicher von anderen Unternehmen getrennt.",
+              "company_name":"Unternehmensname","country_code":"Ländercode","currency_gbp":"GBP — Britisches Pfund",
+              "currency_eur":"EUR — Euro","currency_pln":"PLN — Polnischer Złoty","currency_usd":"USD — US-Dollar",
+              "creating":"Erstellen…","create_fleet":"Flotte erstellen","company_added":"Unternehmen erfolgreich hinzugefügt."
+          })
+
+          extra["es"] = make(en, {
+              "dashboard":"Inicio","vehicles":"Vehículos","drivers":"Conductores","issues":"Incidencias",
+              "repairs":"Reparaciones","garages":"Talleres","company":"Empresa","more":"Más",
+              "refresh":"Actualizar","sign_out":"Cerrar sesión","language":"Idioma","settings":"Ajustes",
+              "team":"Equipo","team_description":"Personas con acceso a esta flota",
+              "invite_member":"Invitar usuario","role":"Rol","create_invite":"Crear invitación",
+              "invite_created":"Enlace de invitación copiado","pending_invites":"Invitaciones pendientes",
+              "no_invites":"No hay invitaciones pendientes","revoke":"Revocar","remove":"Eliminar",
+              "join_company":"Unirse a una empresa existente","invite_code":"Código de invitación",
+              "accept_invite":"Unirse","your_role":"Tu rol","currency":"Moneda","owner":"Propietario",
+              "manager":"Gerente","viewer":"Solo lectura","try_again":"Intentar de nuevo",
+              "create_account":"Crear cuenta","sign_in":"Iniciar sesión","sign_in_subtitle":"Accede a tu flota",
+              "password":"Contraseña","have_account":"¿Ya tienes cuenta? Inicia sesión",
+              "no_account":"¿Nuevo en FleetPilot? Crea una cuenta","invalid_email":"Introduce un correo válido",
+              "short_password":"Usa al menos 8 caracteres","available":"Disponible","in_use":"En uso",
+              "workshop":"Taller","maintenance":"Mantenimiento","off_road":"Fuera de servicio","sold":"Vendido",
+              "active":"Activo","inactive":"Inactivo","holiday":"Vacaciones","suspended":"Suspendido",
+              "low":"Baja","medium":"Media","high":"Alta","critical":"Crítica","open":"Abierta",
+              "booked":"Reservada","in_progress":"En curso","resolved":"Resuelta","closed":"Cerrada",
+              "planned":"Planificada","ready":"Lista","completed":"Completada","cancelled":"Cancelada",
+              "fleet_status":"Estado de la flota","add_first_vehicle":"Añade tu primer vehículo para empezar.",
+              "fleet_operational":"{operational} de {total} vehículos operativos","unavailable":"No disponibles",
+              "repairs_month":"Reparaciones / mes","requires_attention":"Requiere atención",
+              "all_under_control":"Todo bajo control","no_urgent_items":"No hay asuntos urgentes ahora.",
+              "critical_priority":"Prioridad crítica","high_priority":"Prioridad alta","due_date":"Fecha límite",
+              "vehicle":"Vehículo","add_vehicle":"Añadir vehículo","search_vehicles":"Buscar vehículos",
+              "all_statuses":"Todos los estados","no_vehicles_yet":"Aún no hay vehículos",
+              "no_vehicles_message":"Añade tu primer vehículo para empezar a gestionar la flota.",
+              "edit":"Editar","archive_vehicle_q":"¿Archivar vehículo?","cancel":"Cancelar","archive":"Archivar",
+              "registration":"Matrícula *","registration_required":"La matrícula es obligatoria",
+              "make":"Marca","year":"Año","mileage":"Kilometraje","assigned_driver":"Conductor asignado",
+              "no_driver":"Sin conductor","inspection_type":"Tipo de inspección","inspection_due":"Inspección pendiente",
+              "service_due_date":"Fecha de servicio","service_due_mileage":"Kilometraje de servicio",
+              "insurance_expiry":"Vencimiento del seguro","notes":"Notas","saving":"Guardando…",
+              "save_vehicle":"Guardar vehículo","edit_vehicle":"Editar vehículo","driver":"Conductor",
+              "unassigned":"Sin asignar","service":"Servicio","insurance":"Seguro","add":"Añadir",
+              "no_issues_recorded":"No hay incidencias registradas.","no_repairs_recorded":"No hay reparaciones registradas.",
+              "repair":"Reparación","add_driver":"Añadir conductor","edit_driver":"Editar conductor",
+              "name":"Nombre *","name_required":"El nombre es obligatorio","phone":"Teléfono",
+              "employee_reference":"Referencia del empleado","save_driver":"Guardar conductor",
+              "no_drivers_yet":"Aún no hay conductores","add_issue":"Añadir incidencia",
+              "edit_issue":"Editar incidencia","select_vehicle":"Seleccionar vehículo",
+              "issue_title":"Título de la incidencia *","title_required":"El título es obligatorio",
+              "description":"Descripción","priority":"Prioridad","all_priorities":"Todas las prioridades",
+              "reported_by_driver":"Notificado por el conductor","not_specified":"No especificado",
+              "mileage_reported":"Kilometraje al notificar","internal_notes":"Notas internas",
+              "save_issue":"Guardar incidencia","no_issues":"Sin incidencias",
+              "no_issues_message":"Las incidencias y problemas operativos aparecerán aquí.",
+              "add_repair":"Añadir reparación","edit_repair":"Editar reparación",
+              "repair_description":"Descripción de reparación","garage":"Taller","not_assigned":"Sin asignar",
+              "related_issue":"Incidencia relacionada","no_linked_issue":"Sin incidencia vinculada",
+              "mileage_in":"Kilometraje de entrada","parts_cost":"Coste de piezas","labour_cost":"Mano de obra",
+              "other_cost":"Otros costes","booked_date":"Fecha de reserva","started_date":"Fecha de inicio",
+              "expected_completion":"Finalización prevista","completed_date":"Fecha de finalización",
+              "invoice_reference":"Referencia de factura","save_repair":"Guardar reparación",
+              "no_repairs":"Sin reparaciones","add_garage":"Añadir taller","edit_garage":"Editar taller",
+              "garage_name":"Nombre del taller *","contact_name":"Persona de contacto","address_line_1":"Dirección 1",
+              "address_line_2":"Dirección 2","city":"Ciudad","postcode":"Código postal","country":"País",
+              "save_garage":"Guardar taller","no_garages_yet":"Aún no hay talleres",
+              "create_your_fleet":"Crea tu flota","company_name":"Nombre de empresa","country_code":"Código de país",
+              "creating":"Creando…","create_fleet":"Crear flota","company_added":"Empresa añadida correctamente."
+          })
+
+          extra["fr"] = make(en, {
+              "dashboard":"Accueil","vehicles":"Véhicules","drivers":"Conducteurs","issues":"Problèmes",
+              "repairs":"Réparations","garages":"Garages","company":"Entreprise","more":"Plus",
+              "refresh":"Actualiser","sign_out":"Déconnexion","language":"Langue","settings":"Paramètres",
+              "team":"Équipe","team_description":"Personnes ayant accès à cette flotte",
+              "invite_member":"Inviter un utilisateur","role":"Rôle","create_invite":"Créer une invitation",
+              "invite_created":"Lien d'invitation copié","pending_invites":"Invitations en attente",
+              "no_invites":"Aucune invitation en attente","revoke":"Révoquer","remove":"Supprimer",
+              "join_company":"Rejoindre une entreprise existante","invite_code":"Code d'invitation",
+              "accept_invite":"Rejoindre","your_role":"Votre rôle","currency":"Devise",
+              "owner":"Propriétaire","manager":"Gestionnaire","viewer":"Lecture seule",
+              "try_again":"Réessayer","create_account":"Créer un compte","sign_in":"Se connecter",
+              "sign_in_subtitle":"Connectez-vous à votre flotte","password":"Mot de passe",
+              "have_account":"Vous avez déjà un compte ? Connectez-vous",
+              "no_account":"Nouveau sur FleetPilot ? Créez un compte",
+              "invalid_email":"Saisissez une adresse e-mail valide","short_password":"Utilisez au moins 8 caractères",
+              "available":"Disponible","in_use":"En service","workshop":"Garage","maintenance":"Entretien",
+              "off_road":"Hors service","sold":"Vendu","active":"Actif","inactive":"Inactif",
+              "holiday":"Congé","suspended":"Suspendu","low":"Faible","medium":"Moyenne","high":"Élevée",
+              "critical":"Critique","open":"Ouvert","booked":"Réservé","in_progress":"En cours",
+              "resolved":"Résolu","closed":"Fermé","planned":"Planifié","ready":"Prêt",
+              "completed":"Terminé","cancelled":"Annulé","fleet_status":"État de la flotte",
+              "add_first_vehicle":"Ajoutez votre premier véhicule pour commencer.",
+              "fleet_operational":"{operational} sur {total} véhicules opérationnels",
+              "unavailable":"Indisponibles","repairs_month":"Réparations / mois",
+              "requires_attention":"Nécessite votre attention","all_under_control":"Tout est sous contrôle",
+              "no_urgent_items":"Aucun élément urgent pour le moment.","critical_priority":"Priorité critique",
+              "high_priority":"Priorité élevée","due_date":"Échéance","vehicle":"Véhicule",
+              "add_vehicle":"Ajouter un véhicule","search_vehicles":"Rechercher des véhicules",
+              "all_statuses":"Tous les statuts","no_vehicles_yet":"Aucun véhicule",
+              "edit":"Modifier","archive_vehicle_q":"Archiver le véhicule ?","cancel":"Annuler",
+              "archive":"Archiver","registration":"Immatriculation *",
+              "registration_required":"L'immatriculation est obligatoire","make":"Marque","year":"Année",
+              "mileage":"Kilométrage","assigned_driver":"Conducteur affecté","no_driver":"Aucun conducteur",
+              "inspection_type":"Type de contrôle","inspection_due":"Échéance du contrôle",
+              "service_due_date":"Date d'entretien","service_due_mileage":"Kilométrage d'entretien",
+              "insurance_expiry":"Expiration de l'assurance","notes":"Notes","saving":"Enregistrement…",
+              "save_vehicle":"Enregistrer le véhicule","edit_vehicle":"Modifier le véhicule",
+              "driver":"Conducteur","unassigned":"Non attribué","service":"Entretien","insurance":"Assurance",
+              "add":"Ajouter","no_issues_recorded":"Aucun problème enregistré.",
+              "no_repairs_recorded":"Aucune réparation enregistrée.","repair":"Réparation",
+              "add_driver":"Ajouter un conducteur","edit_driver":"Modifier le conducteur","name":"Nom *",
+              "name_required":"Le nom est obligatoire","phone":"Téléphone","employee_reference":"Référence employé",
+              "save_driver":"Enregistrer le conducteur","no_drivers_yet":"Aucun conducteur",
+              "add_issue":"Ajouter un problème","edit_issue":"Modifier le problème",
+              "select_vehicle":"Sélectionner un véhicule","issue_title":"Titre du problème *",
+              "title_required":"Le titre est obligatoire","description":"Description","priority":"Priorité",
+              "all_priorities":"Toutes les priorités","reported_by_driver":"Signalé par le conducteur",
+              "not_specified":"Non spécifié","mileage_reported":"Kilométrage lors du signalement",
+              "internal_notes":"Notes internes","save_issue":"Enregistrer le problème","no_issues":"Aucun problème",
+              "add_repair":"Ajouter une réparation","edit_repair":"Modifier la réparation",
+              "repair_description":"Description de la réparation","garage":"Garage","not_assigned":"Non attribué",
+              "related_issue":"Problème associé","no_linked_issue":"Aucun problème associé",
+              "mileage_in":"Kilométrage à l'entrée","parts_cost":"Coût des pièces",
+              "labour_cost":"Coût de la main-d'œuvre","other_cost":"Autres coûts",
+              "booked_date":"Date de réservation","started_date":"Date de début",
+              "expected_completion":"Fin prévue","completed_date":"Date de fin",
+              "invoice_reference":"Référence de facture","save_repair":"Enregistrer la réparation",
+              "no_repairs":"Aucune réparation","add_garage":"Ajouter un garage","edit_garage":"Modifier le garage",
+              "garage_name":"Nom du garage *","contact_name":"Contact","address_line_1":"Adresse 1",
+              "address_line_2":"Adresse 2","city":"Ville","postcode":"Code postal","country":"Pays",
+              "save_garage":"Enregistrer le garage","no_garages_yet":"Aucun garage",
+              "create_your_fleet":"Créez votre flotte","company_name":"Nom de l'entreprise",
+              "country_code":"Code pays","creating":"Création…","create_fleet":"Créer la flotte",
+              "company_added":"Entreprise ajoutée avec succès."
+          })
+
+          extra["it"] = make(en, {
+              "dashboard":"Home","vehicles":"Veicoli","drivers":"Autisti","issues":"Problemi",
+              "repairs":"Riparazioni","garages":"Officine","company":"Azienda","more":"Altro",
+              "refresh":"Aggiorna","sign_out":"Esci","language":"Lingua","settings":"Impostazioni",
+              "team":"Team","team_description":"Persone con accesso a questa flotta",
+              "invite_member":"Invita utente","role":"Ruolo","create_invite":"Crea invito",
+              "invite_created":"Link di invito copiato","pending_invites":"Inviti in attesa",
+              "no_invites":"Nessun invito in attesa","revoke":"Revoca","remove":"Rimuovi",
+              "join_company":"Unisciti a un'azienda esistente","invite_code":"Codice invito",
+              "accept_invite":"Unisciti","your_role":"Il tuo ruolo","currency":"Valuta",
+              "owner":"Proprietario","manager":"Manager","viewer":"Solo lettura","try_again":"Riprova",
+              "create_account":"Crea account","sign_in":"Accedi","sign_in_subtitle":"Accedi alla tua flotta",
+              "password":"Password","have_account":"Hai già un account? Accedi",
+              "no_account":"Nuovo su FleetPilot? Crea un account","invalid_email":"Inserisci un'e-mail valida",
+              "short_password":"Usa almeno 8 caratteri","available":"Disponibile","in_use":"In uso",
+              "workshop":"Officina","maintenance":"Manutenzione","off_road":"Fuori servizio","sold":"Venduto",
+              "active":"Attivo","inactive":"Inattivo","holiday":"Ferie","suspended":"Sospeso",
+              "low":"Bassa","medium":"Media","high":"Alta","critical":"Critica","open":"Aperto",
+              "booked":"Prenotato","in_progress":"In corso","resolved":"Risolto","closed":"Chiuso",
+              "planned":"Pianificato","ready":"Pronto","completed":"Completato","cancelled":"Annullato",
+              "fleet_status":"Stato della flotta","add_first_vehicle":"Aggiungi il primo veicolo per iniziare.",
+              "fleet_operational":"{operational} di {total} veicoli operativi","unavailable":"Non disponibili",
+              "repairs_month":"Riparazioni / mese","requires_attention":"Richiede attenzione",
+              "all_under_control":"Tutto sotto controllo","no_urgent_items":"Nessun elemento urgente al momento.",
+              "critical_priority":"Priorità critica","high_priority":"Priorità alta","due_date":"Scadenza",
+              "vehicle":"Veicolo","add_vehicle":"Aggiungi veicolo","search_vehicles":"Cerca veicoli",
+              "all_statuses":"Tutti gli stati","no_vehicles_yet":"Nessun veicolo",
+              "edit":"Modifica","archive_vehicle_q":"Archiviare il veicolo?","cancel":"Annulla",
+              "archive":"Archivia","registration":"Targa *","registration_required":"La targa è obbligatoria",
+              "make":"Marca","year":"Anno","mileage":"Chilometraggio","assigned_driver":"Autista assegnato",
+              "no_driver":"Nessun autista","inspection_type":"Tipo di controllo","inspection_due":"Scadenza controllo",
+              "service_due_date":"Data manutenzione","service_due_mileage":"Chilometraggio manutenzione",
+              "insurance_expiry":"Scadenza assicurazione","notes":"Note","saving":"Salvataggio…",
+              "save_vehicle":"Salva veicolo","edit_vehicle":"Modifica veicolo","driver":"Autista",
+              "unassigned":"Non assegnato","service":"Manutenzione","insurance":"Assicurazione","add":"Aggiungi",
+              "no_issues_recorded":"Nessun problema registrato.","no_repairs_recorded":"Nessuna riparazione registrata.",
+              "repair":"Riparazione","add_driver":"Aggiungi autista","edit_driver":"Modifica autista",
+              "name":"Nome *","name_required":"Il nome è obbligatorio","phone":"Telefono",
+              "employee_reference":"Riferimento dipendente","save_driver":"Salva autista",
+              "no_drivers_yet":"Nessun autista","add_issue":"Aggiungi problema",
+              "edit_issue":"Modifica problema","select_vehicle":"Seleziona veicolo",
+              "issue_title":"Titolo problema *","title_required":"Il titolo è obbligatorio",
+              "description":"Descrizione","priority":"Priorità","all_priorities":"Tutte le priorità",
+              "reported_by_driver":"Segnalato dall'autista","not_specified":"Non specificato",
+              "mileage_reported":"Chilometraggio alla segnalazione","internal_notes":"Note interne",
+              "save_issue":"Salva problema","no_issues":"Nessun problema",
+              "add_repair":"Aggiungi riparazione","edit_repair":"Modifica riparazione",
+              "repair_description":"Descrizione riparazione","garage":"Officina","not_assigned":"Non assegnato",
+              "related_issue":"Problema collegato","no_linked_issue":"Nessun problema collegato",
+              "mileage_in":"Chilometraggio in entrata","parts_cost":"Costo ricambi",
+              "labour_cost":"Costo manodopera","other_cost":"Altri costi","booked_date":"Data prenotazione",
+              "started_date":"Data inizio","expected_completion":"Completamento previsto",
+              "completed_date":"Data completamento","invoice_reference":"Riferimento fattura",
+              "save_repair":"Salva riparazione","no_repairs":"Nessuna riparazione",
+              "add_garage":"Aggiungi officina","edit_garage":"Modifica officina",
+              "garage_name":"Nome officina *","contact_name":"Referente","address_line_1":"Indirizzo 1",
+              "address_line_2":"Indirizzo 2","city":"Città","postcode":"CAP","country":"Paese",
+              "save_garage":"Salva officina","no_garages_yet":"Nessuna officina",
+              "create_your_fleet":"Crea la tua flotta","company_name":"Nome azienda",
+              "country_code":"Codice paese","creating":"Creazione…","create_fleet":"Crea flotta",
+              "company_added":"Azienda aggiunta con successo."
+          })
+
+          extra["pt"] = make(en, {
+              "dashboard":"Início","vehicles":"Veículos","drivers":"Condutores","issues":"Problemas",
+              "repairs":"Reparações","garages":"Oficinas","company":"Empresa","more":"Mais",
+              "refresh":"Atualizar","sign_out":"Terminar sessão","language":"Idioma","settings":"Definições",
+              "team":"Equipa","team_description":"Pessoas com acesso a esta frota",
+              "invite_member":"Convidar utilizador","role":"Função","create_invite":"Criar convite",
+              "invite_created":"Link do convite copiado","pending_invites":"Convites pendentes",
+              "no_invites":"Sem convites pendentes","revoke":"Revogar","remove":"Remover",
+              "join_company":"Entrar numa empresa existente","invite_code":"Código do convite",
+              "accept_invite":"Entrar","your_role":"A sua função","currency":"Moeda",
+              "owner":"Proprietário","manager":"Gestor","viewer":"Apenas leitura","try_again":"Tentar novamente",
+              "create_account":"Criar conta","sign_in":"Iniciar sessão","sign_in_subtitle":"Entre na sua frota",
+              "password":"Palavra-passe","have_account":"Já tem conta? Inicie sessão",
+              "no_account":"Novo no FleetPilot? Crie uma conta","invalid_email":"Introduza um e-mail válido",
+              "short_password":"Utilize pelo menos 8 caracteres","available":"Disponível","in_use":"Em utilização",
+              "workshop":"Oficina","maintenance":"Manutenção","off_road":"Fora de serviço","sold":"Vendido",
+              "active":"Ativo","inactive":"Inativo","holiday":"Férias","suspended":"Suspenso",
+              "low":"Baixa","medium":"Média","high":"Alta","critical":"Crítica","open":"Aberto",
+              "booked":"Marcado","in_progress":"Em curso","resolved":"Resolvido","closed":"Fechado",
+              "planned":"Planeado","ready":"Pronto","completed":"Concluído","cancelled":"Cancelado",
+              "fleet_status":"Estado da frota","add_first_vehicle":"Adicione o primeiro veículo para começar.",
+              "fleet_operational":"{operational} de {total} veículos operacionais","unavailable":"Indisponíveis",
+              "repairs_month":"Reparações / mês","requires_attention":"Requer atenção",
+              "all_under_control":"Tudo sob controlo","no_urgent_items":"Sem assuntos urgentes neste momento.",
+              "critical_priority":"Prioridade crítica","high_priority":"Prioridade alta","due_date":"Prazo",
+              "vehicle":"Veículo","add_vehicle":"Adicionar veículo","search_vehicles":"Pesquisar veículos",
+              "all_statuses":"Todos os estados","no_vehicles_yet":"Ainda não existem veículos",
+              "edit":"Editar","archive_vehicle_q":"Arquivar veículo?","cancel":"Cancelar","archive":"Arquivar",
+              "registration":"Matrícula *","registration_required":"A matrícula é obrigatória",
+              "make":"Marca","year":"Ano","mileage":"Quilometragem","assigned_driver":"Condutor atribuído",
+              "no_driver":"Sem condutor","inspection_type":"Tipo de inspeção","inspection_due":"Prazo da inspeção",
+              "service_due_date":"Data da manutenção","service_due_mileage":"Quilometragem da manutenção",
+              "insurance_expiry":"Validade do seguro","notes":"Notas","saving":"A guardar…",
+              "save_vehicle":"Guardar veículo","edit_vehicle":"Editar veículo","driver":"Condutor",
+              "unassigned":"Não atribuído","service":"Manutenção","insurance":"Seguro","add":"Adicionar",
+              "no_issues_recorded":"Sem problemas registados.","no_repairs_recorded":"Sem reparações registadas.",
+              "repair":"Reparação","add_driver":"Adicionar condutor","edit_driver":"Editar condutor",
+              "name":"Nome *","name_required":"O nome é obrigatório","phone":"Telefone",
+              "employee_reference":"Referência do funcionário","save_driver":"Guardar condutor",
+              "no_drivers_yet":"Ainda não existem condutores","add_issue":"Adicionar problema",
+              "edit_issue":"Editar problema","select_vehicle":"Selecionar veículo",
+              "issue_title":"Título do problema *","title_required":"O título é obrigatório",
+              "description":"Descrição","priority":"Prioridade","all_priorities":"Todas as prioridades",
+              "reported_by_driver":"Reportado pelo condutor","not_specified":"Não especificado",
+              "mileage_reported":"Quilometragem no reporte","internal_notes":"Notas internas",
+              "save_issue":"Guardar problema","no_issues":"Sem problemas","add_repair":"Adicionar reparação",
+              "edit_repair":"Editar reparação","repair_description":"Descrição da reparação",
+              "garage":"Oficina","not_assigned":"Não atribuído","related_issue":"Problema relacionado",
+              "no_linked_issue":"Sem problema associado","mileage_in":"Quilometragem de entrada",
+              "parts_cost":"Custo das peças","labour_cost":"Custo da mão de obra",
+              "other_cost":"Outros custos","booked_date":"Data da marcação","started_date":"Data de início",
+              "expected_completion":"Conclusão prevista","completed_date":"Data de conclusão",
+              "invoice_reference":"Referência da fatura","save_repair":"Guardar reparação",
+              "no_repairs":"Sem reparações","add_garage":"Adicionar oficina","edit_garage":"Editar oficina",
+              "garage_name":"Nome da oficina *","contact_name":"Contacto","address_line_1":"Morada 1",
+              "address_line_2":"Morada 2","city":"Cidade","postcode":"Código postal","country":"País",
+              "save_garage":"Guardar oficina","no_garages_yet":"Ainda não existem oficinas",
+              "create_your_fleet":"Crie a sua frota","company_name":"Nome da empresa",
+              "country_code":"Código do país","creating":"A criar…","create_fleet":"Criar frota",
+              "company_added":"Empresa adicionada com sucesso."
+          })
+
+          # Compact but complete UI localization for Central/Eastern European languages.
+          extra["sk"] = make(en, {
+              "dashboard":"Domov","vehicles":"Vozidlá","drivers":"Vodiči","issues":"Poruchy","repairs":"Opravy",
+              "garages":"Servisy","company":"Firma","more":"Viac","refresh":"Obnoviť","sign_out":"Odhlásiť sa",
+              "language":"Jazyk","settings":"Nastavenia","team":"Tím","team_description":"Osoby s prístupom k tejto flotile",
+              "invite_member":"Pozvať používateľa","role":"Rola","create_invite":"Vytvoriť pozvánku",
+              "pending_invites":"Čakajúce pozvánky","no_invites":"Žiadne čakajúce pozvánky","revoke":"Zrušiť",
+              "remove":"Odstrániť","join_company":"Pripojiť sa k existujúcej firme","invite_code":"Kód pozvánky",
+              "accept_invite":"Pripojiť sa","your_role":"Vaša rola","currency":"Mena","owner":"Vlastník",
+              "manager":"Manažér","viewer":"Len na čítanie","try_again":"Skúsiť znova","create_account":"Vytvoriť účet",
+              "sign_in":"Prihlásiť sa","sign_in_subtitle":"Prihláste sa do svojej flotily","password":"Heslo",
+              "available":"Dostupné","in_use":"Používané","workshop":"Servis","maintenance":"Údržba",
+              "off_road":"Mimo prevádzky","sold":"Predané","active":"Aktívny","inactive":"Neaktívny",
+              "holiday":"Dovolenka","suspended":"Pozastavený","low":"Nízka","medium":"Stredná","high":"Vysoká",
+              "critical":"Kritická","open":"Otvorená","booked":"Objednaná","in_progress":"Prebieha",
+              "resolved":"Vyriešená","closed":"Zatvorená","planned":"Plánovaná","ready":"Pripravená",
+              "completed":"Dokončená","cancelled":"Zrušená","fleet_status":"Stav flotily",
+              "add_first_vehicle":"Pridajte prvé vozidlo.","fleet_operational":"{operational} z {total} vozidiel v prevádzke",
+              "unavailable":"Nedostupné","repairs_month":"Opravy / mesiac","requires_attention":"Vyžaduje pozornosť",
+              "all_under_control":"Všetko pod kontrolou","no_urgent_items":"Momentálne žiadne urgentné položky.",
+              "vehicle":"Vozidlo","add_vehicle":"Pridať vozidlo","search_vehicles":"Hľadať vozidlá",
+              "all_statuses":"Všetky stavy","no_vehicles_yet":"Zatiaľ žiadne vozidlá","edit":"Upraviť",
+              "cancel":"Zrušiť","archive":"Archivovať","registration":"Evidenčné číslo *",
+              "registration_required":"Evidenčné číslo je povinné","make":"Značka","year":"Rok","mileage":"Najazdené km",
+              "assigned_driver":"Priradený vodič","no_driver":"Bez vodiča","notes":"Poznámky","saving":"Ukladanie…",
+              "save_vehicle":"Uložiť vozidlo","driver":"Vodič","unassigned":"Nepriradené","service":"Servis",
+              "insurance":"Poistenie","add":"Pridať","repair":"Oprava","add_driver":"Pridať vodiča",
+              "edit_driver":"Upraviť vodiča","name":"Meno *","name_required":"Meno je povinné","phone":"Telefón",
+              "save_driver":"Uložiť vodiča","no_drivers_yet":"Zatiaľ žiadni vodiči","add_issue":"Pridať poruchu",
+              "edit_issue":"Upraviť poruchu","select_vehicle":"Vybrať vozidlo","issue_title":"Názov poruchy *",
+              "title_required":"Názov je povinný","description":"Popis","priority":"Priorita",
+              "all_priorities":"Všetky priority","not_specified":"Neuvedené","internal_notes":"Interné poznámky",
+              "save_issue":"Uložiť poruchu","no_issues":"Žiadne poruchy","add_repair":"Pridať opravu",
+              "edit_repair":"Upraviť opravu","repair_description":"Popis opravy","garage":"Servis",
+              "not_assigned":"Nepriradené","related_issue":"Súvisiaca porucha","no_linked_issue":"Bez súvisiacej poruchy",
+              "parts_cost":"Cena dielov","labour_cost":"Cena práce","other_cost":"Ostatné náklady",
+              "save_repair":"Uložiť opravu","no_repairs":"Žiadne opravy","add_garage":"Pridať servis",
+              "edit_garage":"Upraviť servis","garage_name":"Názov servisu *","contact_name":"Kontaktná osoba",
+              "city":"Mesto","postcode":"PSČ","country":"Krajina","save_garage":"Uložiť servis",
+              "create_your_fleet":"Vytvorte svoju flotilu","company_name":"Názov firmy","country_code":"Kód krajiny",
+              "creating":"Vytváranie…","create_fleet":"Vytvoriť flotilu","company_added":"Firma bola úspešne pridaná."
+          })
+
+          extra["cs"] = make(en, {
+              "dashboard":"Domů","vehicles":"Vozidla","drivers":"Řidiči","issues":"Závady","repairs":"Opravy",
+              "garages":"Servisy","company":"Firma","more":"Více","refresh":"Obnovit","sign_out":"Odhlásit se",
+              "language":"Jazyk","settings":"Nastavení","team":"Tým","team_description":"Osoby s přístupem k této flotile",
+              "invite_member":"Pozvat uživatele","role":"Role","create_invite":"Vytvořit pozvánku",
+              "pending_invites":"Čekající pozvánky","no_invites":"Žádné čekající pozvánky","revoke":"Zrušit",
+              "remove":"Odebrat","join_company":"Připojit se k existující firmě","invite_code":"Kód pozvánky",
+              "accept_invite":"Připojit se","your_role":"Vaše role","currency":"Měna","owner":"Vlastník",
+              "manager":"Manažer","viewer":"Pouze čtení","try_again":"Zkusit znovu","create_account":"Vytvořit účet",
+              "sign_in":"Přihlásit se","sign_in_subtitle":"Přihlaste se ke své flotile","password":"Heslo",
+              "available":"Dostupné","in_use":"V provozu","workshop":"Servis","maintenance":"Údržba",
+              "off_road":"Mimo provoz","sold":"Prodáno","active":"Aktivní","inactive":"Neaktivní","holiday":"Dovolená",
+              "suspended":"Pozastavený","low":"Nízká","medium":"Střední","high":"Vysoká","critical":"Kritická",
+              "open":"Otevřená","booked":"Objednaná","in_progress":"Probíhá","resolved":"Vyřešená","closed":"Uzavřená",
+              "planned":"Plánovaná","ready":"Připravená","completed":"Dokončená","cancelled":"Zrušená",
+              "fleet_status":"Stav flotily","add_first_vehicle":"Přidejte první vozidlo.",
+              "fleet_operational":"{operational} z {total} vozidel v provozu","unavailable":"Nedostupná",
+              "repairs_month":"Opravy / měsíc","requires_attention":"Vyžaduje pozornost",
+              "all_under_control":"Vše pod kontrolou","no_urgent_items":"Momentálně žádné naléhavé položky.",
+              "vehicle":"Vozidlo","add_vehicle":"Přidat vozidlo","search_vehicles":"Hledat vozidla",
+              "all_statuses":"Všechny stavy","no_vehicles_yet":"Zatím žádná vozidla","edit":"Upravit",
+              "cancel":"Zrušit","archive":"Archivovat","registration":"Registrační značka *",
+              "registration_required":"Registrační značka je povinná","make":"Značka","year":"Rok","mileage":"Nájezd",
+              "assigned_driver":"Přiřazený řidič","no_driver":"Bez řidiče","notes":"Poznámky","saving":"Ukládání…",
+              "save_vehicle":"Uložit vozidlo","driver":"Řidič","unassigned":"Nepřiřazeno","service":"Servis",
+              "insurance":"Pojištění","add":"Přidat","repair":"Oprava","add_driver":"Přidat řidiče",
+              "edit_driver":"Upravit řidiče","name":"Jméno *","name_required":"Jméno je povinné","phone":"Telefon",
+              "save_driver":"Uložit řidiče","no_drivers_yet":"Zatím žádní řidiči","add_issue":"Přidat závadu",
+              "edit_issue":"Upravit závadu","select_vehicle":"Vybrat vozidlo","issue_title":"Název závady *",
+              "title_required":"Název je povinný","description":"Popis","priority":"Priorita",
+              "all_priorities":"Všechny priority","not_specified":"Neuvedeno","internal_notes":"Interní poznámky",
+              "save_issue":"Uložit závadu","no_issues":"Žádné závady","add_repair":"Přidat opravu",
+              "edit_repair":"Upravit opravu","repair_description":"Popis opravy","garage":"Servis",
+              "not_assigned":"Nepřiřazeno","related_issue":"Související závada","no_linked_issue":"Bez související závady",
+              "parts_cost":"Cena dílů","labour_cost":"Cena práce","other_cost":"Ostatní náklady",
+              "save_repair":"Uložit opravu","no_repairs":"Žádné opravy","add_garage":"Přidat servis",
+              "edit_garage":"Upravit servis","garage_name":"Název servisu *","contact_name":"Kontaktní osoba",
+              "city":"Město","postcode":"PSČ","country":"Země","save_garage":"Uložit servis",
+              "create_your_fleet":"Vytvořte svou flotilu","company_name":"Název firmy","country_code":"Kód země",
+              "creating":"Vytváření…","create_fleet":"Vytvořit flotilu","company_added":"Firma byla úspěšně přidána."
+          })
+
+          extra["hu"] = make(en, {
+              "dashboard":"Kezdőlap","vehicles":"Járművek","drivers":"Sofőrök","issues":"Hibák","repairs":"Javítások",
+              "garages":"Szervizek","company":"Cég","more":"Továbbiak","refresh":"Frissítés","sign_out":"Kijelentkezés",
+              "language":"Nyelv","settings":"Beállítások","team":"Csapat","team_description":"A flottához hozzáférő személyek",
+              "invite_member":"Felhasználó meghívása","role":"Szerepkör","create_invite":"Meghívó létrehozása",
+              "pending_invites":"Függő meghívók","no_invites":"Nincs függő meghívó","revoke":"Visszavonás",
+              "remove":"Eltávolítás","join_company":"Csatlakozás meglévő céghez","invite_code":"Meghívókód",
+              "accept_invite":"Csatlakozás","your_role":"Az Ön szerepköre","currency":"Pénznem","owner":"Tulajdonos",
+              "manager":"Menedzser","viewer":"Csak megtekintés","try_again":"Újra","create_account":"Fiók létrehozása",
+              "sign_in":"Bejelentkezés","sign_in_subtitle":"Jelentkezzen be flottájába","password":"Jelszó",
+              "available":"Elérhető","in_use":"Használatban","workshop":"Szerviz","maintenance":"Karbantartás",
+              "off_road":"Üzemen kívül","sold":"Eladva","active":"Aktív","inactive":"Inaktív","holiday":"Szabadság",
+              "suspended":"Felfüggesztve","low":"Alacsony","medium":"Közepes","high":"Magas","critical":"Kritikus",
+              "open":"Nyitott","booked":"Foglalva","in_progress":"Folyamatban","resolved":"Megoldva","closed":"Lezárva",
+              "planned":"Tervezett","ready":"Kész","completed":"Befejezve","cancelled":"Törölve",
+              "fleet_status":"Flotta állapota","add_first_vehicle":"Adja hozzá az első járművet.",
+              "fleet_operational":"{operational} / {total} jármű üzemképes","unavailable":"Nem elérhető",
+              "repairs_month":"Javítások / hónap","requires_attention":"Figyelmet igényel",
+              "all_under_control":"Minden rendben","no_urgent_items":"Jelenleg nincs sürgős teendő.",
+              "vehicle":"Jármű","add_vehicle":"Jármű hozzáadása","search_vehicles":"Járművek keresése",
+              "all_statuses":"Minden állapot","no_vehicles_yet":"Még nincs jármű","edit":"Szerkesztés",
+              "cancel":"Mégse","archive":"Archiválás","registration":"Rendszám *",
+              "registration_required":"A rendszám kötelező","make":"Márka","year":"Év","mileage":"Kilométeróra",
+              "assigned_driver":"Hozzárendelt sofőr","no_driver":"Nincs sofőr","notes":"Megjegyzések",
+              "saving":"Mentés…","save_vehicle":"Jármű mentése","driver":"Sofőr","unassigned":"Nincs hozzárendelve",
+              "service":"Szerviz","insurance":"Biztosítás","add":"Hozzáadás","repair":"Javítás",
+              "add_driver":"Sofőr hozzáadása","edit_driver":"Sofőr szerkesztése","name":"Név *",
+              "name_required":"A név kötelező","phone":"Telefon","save_driver":"Sofőr mentése",
+              "no_drivers_yet":"Még nincs sofőr","add_issue":"Hiba hozzáadása","edit_issue":"Hiba szerkesztése",
+              "select_vehicle":"Jármű kiválasztása","issue_title":"Hiba megnevezése *","title_required":"A cím kötelező",
+              "description":"Leírás","priority":"Prioritás","all_priorities":"Minden prioritás",
+              "not_specified":"Nincs megadva","internal_notes":"Belső megjegyzések","save_issue":"Hiba mentése",
+              "no_issues":"Nincs hiba","add_repair":"Javítás hozzáadása","edit_repair":"Javítás szerkesztése",
+              "repair_description":"Javítás leírása","garage":"Szerviz","not_assigned":"Nincs hozzárendelve",
+              "parts_cost":"Alkatrészköltség","labour_cost":"Munkadíj","other_cost":"Egyéb költség",
+              "save_repair":"Javítás mentése","no_repairs":"Nincs javítás","add_garage":"Szerviz hozzáadása",
+              "edit_garage":"Szerviz szerkesztése","garage_name":"Szerviz neve *","contact_name":"Kapcsolattartó",
+              "city":"Város","postcode":"Irányítószám","country":"Ország","save_garage":"Szerviz mentése",
+              "create_your_fleet":"Hozza létre flottáját","company_name":"Cég neve","country_code":"Országkód",
+              "creating":"Létrehozás…","create_fleet":"Flotta létrehozása","company_added":"A cég sikeresen hozzáadva."
+          })
+
+          extra["ro"] = make(en, {
+              "dashboard":"Acasă","vehicles":"Vehicule","drivers":"Șoferi","issues":"Probleme","repairs":"Reparații",
+              "garages":"Service-uri","company":"Companie","more":"Mai mult","refresh":"Actualizează",
+              "sign_out":"Deconectare","language":"Limbă","settings":"Setări","team":"Echipă",
+              "team_description":"Persoane cu acces la această flotă","invite_member":"Invită utilizator",
+              "role":"Rol","create_invite":"Creează invitație","pending_invites":"Invitații în așteptare",
+              "no_invites":"Nu există invitații în așteptare","revoke":"Revocă","remove":"Elimină",
+              "join_company":"Alătură-te unei companii existente","invite_code":"Cod invitație",
+              "accept_invite":"Alătură-te","your_role":"Rolul tău","currency":"Monedă","owner":"Proprietar",
+              "manager":"Manager","viewer":"Doar vizualizare","try_again":"Încearcă din nou",
+              "create_account":"Creează cont","sign_in":"Autentificare","sign_in_subtitle":"Autentifică-te în flota ta",
+              "password":"Parolă","available":"Disponibil","in_use":"În utilizare","workshop":"Service",
+              "maintenance":"Mentenanță","off_road":"Scos din circulație","sold":"Vândut","active":"Activ",
+              "inactive":"Inactiv","holiday":"Concediu","suspended":"Suspendat","low":"Scăzută","medium":"Medie",
+              "high":"Ridicată","critical":"Critică","open":"Deschisă","booked":"Programată",
+              "in_progress":"În lucru","resolved":"Rezolvată","closed":"Închisă","planned":"Planificată",
+              "ready":"Gata","completed":"Finalizată","cancelled":"Anulată","fleet_status":"Starea flotei",
+              "add_first_vehicle":"Adaugă primul vehicul pentru a începe.",
+              "fleet_operational":"{operational} din {total} vehicule operaționale","unavailable":"Indisponibile",
+              "repairs_month":"Reparații / lună","requires_attention":"Necesită atenție",
+              "all_under_control":"Totul este sub control","no_urgent_items":"Nu există elemente urgente momentan.",
+              "vehicle":"Vehicul","add_vehicle":"Adaugă vehicul","search_vehicles":"Caută vehicule",
+              "all_statuses":"Toate stările","no_vehicles_yet":"Nu există vehicule","edit":"Editează",
+              "cancel":"Anulează","archive":"Arhivează","registration":"Număr de înmatriculare *",
+              "registration_required":"Numărul de înmatriculare este obligatoriu","make":"Marcă","year":"An",
+              "mileage":"Kilometraj","assigned_driver":"Șofer alocat","no_driver":"Fără șofer","notes":"Notițe",
+              "saving":"Se salvează…","save_vehicle":"Salvează vehicul","driver":"Șofer",
+              "unassigned":"Nealocat","service":"Service","insurance":"Asigurare","add":"Adaugă",
+              "repair":"Reparație","add_driver":"Adaugă șofer","edit_driver":"Editează șofer",
+              "name":"Nume *","name_required":"Numele este obligatoriu","phone":"Telefon",
+              "save_driver":"Salvează șofer","no_drivers_yet":"Nu există șoferi","add_issue":"Adaugă problemă",
+              "edit_issue":"Editează problema","select_vehicle":"Selectează vehicul","issue_title":"Titlu problemă *",
+              "title_required":"Titlul este obligatoriu","description":"Descriere","priority":"Prioritate",
+              "all_priorities":"Toate prioritățile","not_specified":"Nespecificat","internal_notes":"Notițe interne",
+              "save_issue":"Salvează problema","no_issues":"Nu există probleme","add_repair":"Adaugă reparație",
+              "edit_repair":"Editează reparația","repair_description":"Descrierea reparației","garage":"Service",
+              "not_assigned":"Nealocat","parts_cost":"Cost piese","labour_cost":"Cost manoperă",
+              "other_cost":"Alte costuri","save_repair":"Salvează reparația","no_repairs":"Nu există reparații",
+              "add_garage":"Adaugă service","edit_garage":"Editează service","garage_name":"Nume service *",
+              "contact_name":"Persoană de contact","city":"Oraș","postcode":"Cod poștal","country":"Țară",
+              "save_garage":"Salvează service","create_your_fleet":"Creează flota",
+              "company_name":"Numele companiei","country_code":"Cod țară","creating":"Se creează…",
+              "create_fleet":"Creează flota","company_added":"Compania a fost adăugată cu succes."
+          })
+
+          extra["uk"] = make(en, {
+              "dashboard":"Головна","vehicles":"Транспорт","drivers":"Водії","issues":"Несправності",
+              "repairs":"Ремонти","garages":"Сервіси","company":"Компанія","more":"Більше",
+              "refresh":"Оновити","sign_out":"Вийти","language":"Мова","settings":"Налаштування",
+              "team":"Команда","team_description":"Люди з доступом до цього автопарку",
+              "invite_member":"Запросити користувача","role":"Роль","create_invite":"Створити запрошення",
+              "pending_invites":"Запрошення в очікуванні","no_invites":"Немає запрошень в очікуванні",
+              "revoke":"Скасувати","remove":"Видалити","join_company":"Приєднатися до існуючої компанії",
+              "invite_code":"Код запрошення","accept_invite":"Приєднатися","your_role":"Ваша роль",
+              "currency":"Валюта","owner":"Власник","manager":"Менеджер","viewer":"Лише перегляд",
+              "try_again":"Спробувати ще раз","create_account":"Створити акаунт","sign_in":"Увійти",
+              "sign_in_subtitle":"Увійдіть до свого автопарку","password":"Пароль",
+              "available":"Доступний","in_use":"В роботі","workshop":"Сервіс","maintenance":"Обслуговування",
+              "off_road":"Не в експлуатації","sold":"Проданий","active":"Активний","inactive":"Неактивний",
+              "holiday":"Відпустка","suspended":"Призупинений","low":"Низький","medium":"Середній",
+              "high":"Високий","critical":"Критичний","open":"Відкрита","booked":"Запланована",
+              "in_progress":"В роботі","resolved":"Вирішена","closed":"Закрита","planned":"Запланований",
+              "ready":"Готовий","completed":"Завершений","cancelled":"Скасований","fleet_status":"Стан автопарку",
+              "add_first_vehicle":"Додайте перший автомобіль, щоб почати.",
+              "fleet_operational":"{operational} з {total} автомобілів у роботі","unavailable":"Недоступні",
+              "repairs_month":"Ремонти / місяць","requires_attention":"Потребує уваги",
+              "all_under_control":"Все під контролем","no_urgent_items":"Зараз немає термінових питань.",
+              "critical_priority":"Критичний пріоритет","high_priority":"Високий пріоритет","due_date":"Термін",
+              "vehicle":"Автомобіль","add_vehicle":"Додати автомобіль","search_vehicles":"Пошук автомобілів",
+              "all_statuses":"Усі статуси","no_vehicles_yet":"Автомобілів ще немає","edit":"Редагувати",
+              "cancel":"Скасувати","archive":"Архівувати","registration":"Реєстраційний номер *",
+              "registration_required":"Реєстраційний номер обов'язковий","make":"Марка","year":"Рік",
+              "mileage":"Пробіг","assigned_driver":"Призначений водій","no_driver":"Без водія","notes":"Нотатки",
+              "saving":"Збереження…","save_vehicle":"Зберегти автомобіль","driver":"Водій",
+              "unassigned":"Не призначено","service":"Сервіс","insurance":"Страхування","add":"Додати",
+              "repair":"Ремонт","add_driver":"Додати водія","edit_driver":"Редагувати водія",
+              "name":"Ім'я *","name_required":"Ім'я обов'язкове","phone":"Телефон",
+              "save_driver":"Зберегти водія","no_drivers_yet":"Водіїв ще немає",
+              "add_issue":"Додати несправність","edit_issue":"Редагувати несправність",
+              "select_vehicle":"Вибрати автомобіль","issue_title":"Назва несправності *",
+              "title_required":"Назва обов'язкова","description":"Опис","priority":"Пріоритет",
+              "all_priorities":"Усі пріоритети","not_specified":"Не вказано",
+              "internal_notes":"Внутрішні нотатки","save_issue":"Зберегти несправність",
+              "no_issues":"Немає несправностей","add_repair":"Додати ремонт","edit_repair":"Редагувати ремонт",
+              "repair_description":"Опис ремонту","garage":"Сервіс","not_assigned":"Не призначено",
+              "parts_cost":"Вартість запчастин","labour_cost":"Вартість робіт","other_cost":"Інші витрати",
+              "save_repair":"Зберегти ремонт","no_repairs":"Немає ремонтів","add_garage":"Додати сервіс",
+              "edit_garage":"Редагувати сервіс","garage_name":"Назва сервісу *",
+              "contact_name":"Контактна особа","city":"Місто","postcode":"Поштовий індекс",
+              "country":"Країна","save_garage":"Зберегти сервіс","create_your_fleet":"Створіть свій автопарк",
+              "company_name":"Назва компанії","country_code":"Код країни","creating":"Створення…",
+              "create_fleet":"Створити автопарк","company_added":"Компанію успішно додано."
+          })
+
+          # Romanian / Czech / Slovak / Hungarian dictionaries use English fallback
+          # only for less frequently used explanatory sentences.
+          # Add fully supported locale entries.
+          translations.update(extra)
+
+          # Additional languages with localized main navigation/forms.
+          for code, values in {
+            "ro": extra["ro"],
+            "sk": extra["sk"],
+            "cs": extra["cs"],
+            "hu": extra["hu"],
+            "uk": extra["uk"],
+            "pt": extra["pt"],
+            "de": extra["de"],
+            "es": extra["es"],
+            "fr": extra["fr"],
+            "it": extra["it"],
+          }.items():
+              translations[code] = values
+
+          # Native language labels.
+          labels = {
+            "pl": "🇵🇱 Polski",
+            "en": "🇬🇧 English",
+            "de": "🇩🇪 Deutsch",
+            "sk": "🇸🇰 Slovenčina",
+            "cs": "🇨🇿 Čeština",
+            "hu": "🇭🇺 Magyar",
+            "ro": "🇷🇴 Română",
+            "es": "🇪🇸 Español",
+            "fr": "🇫🇷 Français",
+            "it": "🇮🇹 Italiano",
+            "uk": "🇺🇦 Українська",
+            "pt": "🇵🇹 Português",
+          }
+
+          locales = list(labels.keys())
+
+          lines = [
+              "import 'package:flutter/foundation.dart';",
+              "",
+              "class AppLocale {",
+              "  static final ValueNotifier<String> language = ValueNotifier<String>('en');",
+              "}",
+              "",
+              "const supportedLanguages = <String>[",
+          ]
+
+          for code in locales:
+              lines.append(f"  {json.dumps(code)},")
+
+          lines += [
+              "];",
+              "",
+              "const languageLabels = <String, String>{",
+          ]
+
+          for code, label in labels.items():
+              lines.append(
+                  f"  {json.dumps(code)}: {json.dumps(label, ensure_ascii=False)},"
+              )
+
+          lines += [
+              "};",
+              "",
+              "final Map<String, Map<String, String>> _translations = {",
+          ]
+
+          for code in locales:
+              lines.append(f"  {json.dumps(code)}: <String, String>{{")
+              for key, value in translations[code].items():
+                  lines.append(
+                      f"    {json.dumps(key)}: {json.dumps(value, ensure_ascii=False)},"
+                  )
+              lines.append("  },")
+
+          lines += [
+              "};",
+              "",
+              "String languageLabel(String code) => languageLabels[code] ?? code.toUpperCase();",
+              "",
+              "String tr(String key) {",
+              "  final code = supportedLanguages.contains(AppLocale.language.value)",
+              "      ? AppLocale.language.value",
+              "      : 'en';",
+              "  return _translations[code]?[key] ?? _translations['en']?[key] ?? key;",
+              "}",
+              "",
+              "String trf(String key, Map<String, Object> values) {",
+              "  var value = tr(key);",
+              "  for (final entry in values.entries) {",
+              "    value = value.replaceAll('{${entry.key}}', entry.value.toString());",
+              "  }",
+              "  return value;",
+              "}",
+              "",
+          ]
+
+          Path("lib/core/localization.dart").write_text(
+              "\n".join(lines),
+              encoding="utf-8",
+          )
+
+          # -------------------------------------------------------
+          # Locale storage: use Supabase Auth user metadata.
+          # This allows all 12 languages without changing DB checks.
+          # -------------------------------------------------------
+
+          repo = Path("lib/data/fleet_repository.dart")
+          s = repo.read_text(encoding="utf-8")
+
+          old = """  Future<UserProfile?> fetchUserProfile() async {
+              final user = currentUser;
+              if (user == null) return null;
+
+              final row = await _client
+                  .from('user_profiles')
+                  .select()
+                  .eq('user_id', user.id)
+                  .maybeSingle();
+
+              if (row == null) return null;
+              return UserProfile.fromJson(row);
+            }
+
+            Future<void> updateUserLocale(String locale) async {
+              final user = currentUser;
+              if (user == null) return;
+
+              await _client.from('user_profiles').upsert({
+                'user_id': user.id,
+                'locale': locale,
+              });
+            }"""
+
+          new = """  Future<UserProfile?> fetchUserProfile() async {
+              final user = currentUser;
+              if (user == null) return null;
+
+              Map<String, dynamic>? row;
+              try {
+                final value = await _client
+                    .from('user_profiles')
+                    .select()
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+                row = value;
+              } catch (_) {}
+
+              final metadataLocale = user.userMetadata?['locale']?.toString();
+              final storedLocale = row?['locale']?.toString();
+
+              return UserProfile(
+                userId: user.id,
+                locale: (metadataLocale != null && metadataLocale.isNotEmpty)
+                    ? metadataLocale
+                    : (storedLocale ?? 'en'),
+                displayName: row?['display_name']?.toString(),
+              );
+            }
+
+            Future<void> updateUserLocale(String locale) async {
+              final user = currentUser;
+              if (user == null) return;
+
+              await _client.auth.updateUser(
+                UserAttributes(data: {'locale': locale}),
+              );
+
+              if (locale == 'pl' || locale == 'en') {
+                try {
+                  await _client.from('user_profiles').upsert({
+                    'user_id': user.id,
+                    'locale': locale,
+                  });
+                } catch (_) {}
+              }
+            }"""
+
+          if old not in s:
+              raise SystemExit("Could not find locale repository block")
+
+          repo.write_text(s.replace(old, new), encoding="utf-8")
+
+          # -------------------------------------------------------
+          # Support all languages after login.
+          # -------------------------------------------------------
+
+          gate = Path("lib/auth/company_gate.dart")
+          s = gate.read_text(encoding="utf-8")
+
+          s = re.sub(
+              r"if \(profile != null &&\s*\(profile\.locale == 'pl' \|\|\s*profile\.locale == 'en'\)\)",
+              "if (profile != null && supportedLanguages.contains(profile.locale))",
+              s,
+          )
+
+          gate.write_text(s, encoding="utf-8")
+
+          # -------------------------------------------------------
+          # 12 languages on login.
+          # -------------------------------------------------------
+
+          login = Path("lib/auth/login_screen.dart")
+          s = login.read_text(encoding="utf-8")
+
+          old = """                              itemBuilder: (_) => [
+                                PopupMenuItem(
+                                  value: 'pl',
+                                  child: Text('🇵🇱 ${tr('polish')}'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'en',
+                                  child: Text('🇬🇧 ${tr('english')}'),
+                                ),
+                              ],"""
+
+          new = """                              itemBuilder: (_) => supportedLanguages
+                                  .map(
+                                    (code) => PopupMenuItem<String>(
+                                      value: code,
+                                      child: Text(languageLabel(code)),
+                                    ),
+                                  )
+                                  .toList(),"""
+
+          if old not in s:
+              raise SystemExit("Could not find login language selector")
+
+          login.write_text(s.replace(old, new), encoding="utf-8")
+
+          # -------------------------------------------------------
+          # 12 languages in company settings.
+          # -------------------------------------------------------
+
+          company = Path("lib/company/company_screen.dart")
+          s = company.read_text(encoding="utf-8")
+
+          old = """                  items: [
+                    DropdownMenuItem(
+                      value: 'pl',
+                      child: Text('🇵🇱 ${tr('polish')}'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'en',
+                      child: Text('🇬🇧 ${tr('english')}'),
+                    ),
+                  ],"""
+
+          new = """                  items: supportedLanguages
+                      .map(
+                        (code) => DropdownMenuItem<String>(
+                          value: code,
+                          child: Text(languageLabel(code)),
+                        ),
+                      )
+                      .toList(),"""
+
+          if old not in s:
+              raise SystemExit("Could not find settings language selector")
+
+          company.write_text(s.replace(old, new), encoding="utf-8")
+
+          # -------------------------------------------------------
+          # Translate hard-coded screens.
+          # -------------------------------------------------------
+
+          files = [
+              "lib/dashboard/dashboard_screen.dart",
+              "lib/vehicles/vehicles_screen.dart",
+              "lib/vehicles/vehicle_form_screen.dart",
+              "lib/vehicles/vehicle_detail_screen.dart",
+              "lib/drivers/drivers_screen.dart",
+              "lib/drivers/driver_form_screen.dart",
+              "lib/issues/issues_screen.dart",
+              "lib/issues/issue_form_screen.dart",
+              "lib/repairs/repairs_screen.dart",
+              "lib/repairs/repair_form_screen.dart",
+              "lib/garages/garages_screen.dart",
+              "lib/garages/garage_form_screen.dart",
+              "lib/auth/create_company_screen.dart",
+              "lib/company/company_screen.dart",
+              "lib/core/widgets.dart",
+          ]
+
+          replacements = {
+              "'Spróbuj ponownie'": "tr('try_again')",
+              "'Priorytet krytyczny'": "tr('critical_priority')",
+              "'Wysoki priorytet'": "tr('high_priority')",
+              "'Stan floty'": "tr('fleet_status')",
+              "'Dodaj pierwszy pojazd, aby rozpocząć.'": "tr('add_first_vehicle')",
+              "'Pojazdy'": "tr('vehicles')",
+              "'Niedostępne'": "tr('unavailable')",
+              "'Usterki'": "tr('issues')",
+              "'Naprawy / miesiąc'": "tr('repairs_month')",
+              "'Wymaga uwagi'": "tr('requires_attention')",
+              "'Wszystko pod kontrolą'": "tr('all_under_control')",
+              "'Brak pilnych spraw w tej chwili.'": "tr('no_urgent_items')",
+              "'Pojazd'": "tr('vehicle')",
+
+              "'Add vehicle'": "tr('add_vehicle')",
+              "'Vehicles'": "tr('vehicles')",
+              "'Search vehicles'": "tr('search_vehicles')",
+              "'Status'": "tr('status')",
+              "'All statuses'": "tr('all_statuses')",
+              "'No vehicles yet'": "tr('no_vehicles_yet')",
+              "'Add the first vehicle when you are ready to start testing the fleet workspace.'": "tr('no_vehicles_message')",
+              "'Edit'": "tr('edit')",
+              "'Archive vehicle?'": "tr('archive_vehicle_q')",
+              "'The vehicle will disappear from active lists but its historical data will be preserved.'": "tr('archive_vehicle_message')",
+              "'Cancel'": "tr('cancel')",
+              "'Archive'": "tr('archive')",
+              "'Registration *'": "tr('registration')",
+              "'Registration is required'": "tr('registration_required')",
+              "'Make'": "tr('make')",
+              "'Model'": "tr('model')",
+              "'Year'": "tr('year')",
+              "'Mileage'": "tr('mileage')",
+              "'Status'": "tr('status')",
+              "'Assigned driver'": "tr('assigned_driver')",
+              "'No driver'": "tr('no_driver')",
+              "'Inspection type'": "tr('inspection_type')",
+              "'Inspection due'": "tr('inspection_due')",
+              "'Service due date'": "tr('service_due_date')",
+              "'Service due mileage'": "tr('service_due_mileage')",
+              "'Insurance expiry'": "tr('insurance_expiry')",
+              "'Notes'": "tr('notes')",
+              "'Saving…'": "tr('saving')",
+              "'Save vehicle'": "tr('save_vehicle')",
+              "'Edit vehicle'": "tr('edit_vehicle')",
+              "'Driver'": "tr('driver')",
+              "'Unassigned'": "tr('unassigned')",
+              "'Service'": "tr('service')",
+              "'Insurance'": "tr('insurance')",
+              "'Issues'": "tr('issues')",
+              "'Add'": "tr('add')",
+              "'No issues recorded.'": "tr('no_issues_recorded')",
+              "'Repairs'": "tr('repairs')",
+              "'No repairs recorded.'": "tr('no_repairs_recorded')",
+              "'Repair'": "tr('repair')",
+
+              "'Add driver'": "tr('add_driver')",
+              "'Edit driver'": "tr('edit_driver')",
+              "'Drivers'": "tr('drivers')",
+              "'Name *'": "tr('name')",
+              "'Name is required'": "tr('name_required')",
+              "'Phone'": "tr('phone')",
+              "'Email'": "tr('email')",
+              "'Employee reference'": "tr('employee_reference')",
+              "'Save driver'": "tr('save_driver')",
+              "'No drivers yet'": "tr('no_drivers_yet')",
+              "'Driver records will be available to assign to vehicles and future issue reports.'": "tr('no_drivers_message')",
+
+              "'Add issue'": "tr('add_issue')",
+              "'Edit issue'": "tr('edit_issue')",
+              "'Vehicle *'": "tr('vehicle') + ' *'",
+              "'Select a vehicle'": "tr('select_vehicle')",
+              "'Issue title *'": "tr('issue_title')",
+              "'Title is required'": "tr('title_required')",
+              "'Description'": "tr('description')",
+              "'Priority'": "tr('priority')",
+              "'All priorities'": "tr('all_priorities')",
+              "'Reported by driver'": "tr('reported_by_driver')",
+              "'Not specified'": "tr('not_specified')",
+              "'Mileage when reported'": "tr('mileage_reported')",
+              "'Internal notes'": "tr('internal_notes')",
+              "'Save issue'": "tr('save_issue')",
+              "'No issues'": "tr('no_issues')",
+              "'Defects and operational issues will appear here.'": "tr('no_issues_message')",
+
+              "'Add repair'": "tr('add_repair')",
+              "'Edit repair'": "tr('edit_repair')",
+              "'Repair description'": "tr('repair_description')",
+              "'Garage'": "tr('garage')",
+              "'Not assigned'": "tr('not_assigned')",
+              "'Related issue'": "tr('related_issue')",
+              "'No linked issue'": "tr('no_linked_issue')",
+              "'Mileage in'": "tr('mileage_in')",
+              "'Parts cost'": "tr('parts_cost')",
+              "'Labour cost'": "tr('labour_cost')",
+              "'Other cost'": "tr('other_cost')",
+              "'Booked date'": "tr('booked_date')",
+              "'Started date'": "tr('started_date')",
+              "'Expected completion'": "tr('expected_completion')",
+              "'Completed date'": "tr('completed_date')",
+              "'Invoice reference'": "tr('invoice_reference')",
+              "'Save repair'": "tr('save_repair')",
+              "'No repairs'": "tr('no_repairs')",
+              "'Repair jobs and costs will appear here.'": "tr('no_repairs_message')",
+              "'No garage'": "tr('garage')",
+
+              "'Add garage'": "tr('add_garage')",
+              "'Edit garage'": "tr('edit_garage')",
+              "'Garages'": "tr('garages')",
+              "'Garage name *'": "tr('garage_name')",
+              "'Contact name'": "tr('contact_name')",
+              "'Address line 1'": "tr('address_line_1')",
+              "'Address line 2'": "tr('address_line_2')",
+              "'City'": "tr('city')",
+              "'Postcode'": "tr('postcode')",
+              "'Country'": "tr('country')",
+              "'Save garage'": "tr('save_garage')",
+              "'No garages yet'": "tr('no_garages_yet')",
+              "'Add workshops and garages to connect them with repairs.'": "tr('no_garages_message')",
+
+              "'Utwórz swoją flotę'": "tr('create_your_fleet')",
+              "'This workspace keeps one company’s fleet data isolated from every other company.'": "tr('workspace_message')",
+              "'Nazwa firmy'": "tr('company_name')",
+              "'Kod kraju'": "tr('country_code')",
+              "'Waluta'": "tr('currency')",
+              "'GBP — British pound'": "tr('currency_gbp')",
+              "'EUR — Euro'": "tr('currency_eur')",
+              "'PLN — Polish złoty'": "tr('currency_pln')",
+              "'USD — US dollar'": "tr('currency_usd')",
+              "'Tworzenie…'": "tr('creating')",
+              "'Utwórz flotę'": "tr('create_fleet')",
+
+              "'Admin'": "tr('admin')",
+              "'Manager'": "tr('manager')",
+              "'Viewer'": "tr('viewer')",
+              "'Company added successfully.'": "tr('company_added')",
+              "'Try again'": "tr('try_again')",
+          }
+
+          import_lines = {
+              "lib/core/widgets.dart": "import 'localization.dart';",
+          }
+
+          for filename in files:
+              path = Path(filename)
+              s = path.read_text(encoding="utf-8")
+
+              if filename == "lib/core/widgets.dart":
+                  needed = "import 'localization.dart';"
+              else:
+                  needed = "import '../core/localization.dart';"
+
+              if needed not in s:
+                  s = s.replace(
+                      "import 'package:flutter/material.dart';",
+                      "import 'package:flutter/material.dart';\n\n" + needed,
+                      1,
+                  )
+
+              for old, new in replacements.items():
+                  s = s.replace(old, new)
+
+              # Dashboard dynamic translations.
+              s = s.replace(
+                  "'Termin: ${formatDate(due)}'",
+                  "'${tr('due_date')}: ${formatDate(due)}'",
+              )
+
+              s = s.replace(
+                  "'$operational z ${data.vehicles.length} pojazdów operacyjnych'",
+                  "trf('fleet_operational', {'operational': operational, 'total': data.vehicles.length})",
+              )
+
+              # Dynamic fallback values.
+              s = s.replace(
+                  "repairs[i].garageName ?? tr('garage')",
+                  "repairs[i].garageName ?? tr('not_assigned')",
+              )
+
+              # Any widgets using translated values cannot remain const.
+              widget_names = (
+                  "Text|InputDecoration|DropdownMenuItem|EmptyState|SnackBar|"
+                  "SizedBox|Padding|Expanded|Card|Row|Column|ListTile|Center|Wrap"
+              )
+
+              s = re.sub(
+                  rf"\bconst\s+(?=(?:{widget_names})\b)",
+                  "",
+                  s,
+              )
+
+              s = s.replace("items: const [", "items: [")
+
+              path.write_text(s, encoding="utf-8")
+
+          # Make sure company screen uses localized role labels in invite dialog.
+          company = Path("lib/company/company_screen.dart")
+          s = company.read_text(encoding="utf-8")
+          s = s.replace(
+              "items: const [",
+              "items: [",
+          )
+          company.write_text(s, encoding="utf-8")
+
+          # Verify the most obvious old mixed-language strings are gone.
+          forbidden = [
+              "'Vehicles'",
+              "'Search vehicles'",
+              "'Add vehicle'",
+              "'No vehicles yet'",
+              "'Drivers'",
+              "'Add driver'",
+              "'Issues'",
+              "'Add issue'",
+              "'Repairs'",
+              "'Add repair'",
+              "'Garages'",
+              "'Add garage'",
+              "'Stan floty'",
+              "'Wymaga uwagi'",
+          ]
+
+          for filename in files:
+              content = Path(filename).read_text(encoding="utf-8")
+              for value in forbidden:
+                  if value in content:
+                      raise SystemExit(
+                          f"Untranslated UI string remains in {filename}: {value}"
+                      )
+
+          PY
+
+      - name: Format and analyze
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+
+      - name: Save localization
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lib
+
+          git commit -m "Add FleetPilot 12-language localization" || true
+          git push
+
+      - name: Deploy localized FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
