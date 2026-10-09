@@ -1,0 +1,521 @@
+name: Commercial Sprint 1 Rescue
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/commercial-sprint-1-rescue.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Recover and install Commercial Sprint
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import ast
+          import json
+
+          original = Path(
+              ".github/workflows/commercial-sprint-1.yml"
+          ).read_text(encoding="utf-8")
+
+          start = "          python3 <<'PY'\n"
+          end = "\n          PY"
+
+          if start not in original or end not in original:
+              raise SystemExit("Original sprint script not found")
+
+          raw = original.split(start, 1)[1].split(end, 1)[0]
+
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in raw.splitlines()
+          )
+
+          def extract(source, opening):
+              if opening not in source:
+                  raise SystemExit(f"Missing source: {opening}")
+              begin = source.index(opening) + len(opening)
+              finish = source.index("'''", begin)
+              return source[begin:finish].strip("\n") + "\n"
+
+          def replace_once(source, old, new, label):
+              if old not in source:
+                  raise SystemExit(f"Patch point missing: {label}")
+              return source.replace(old, new, 1)
+
+          # ==============================================
+          # 1. Subscription model
+          # ==============================================
+          model = extract(script, "model = r'''")
+
+          p = Path("lib/data/models.dart")
+          s = p.read_text(encoding="utf-8")
+
+          if "class CompanyEntitlements {" not in s:
+              s = replace_once(
+                  s,
+                  "\nclass UserProfile {",
+                  "\n" + model + "\nclass UserProfile {",
+                  "entitlements model",
+              )
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 2. Repository API
+          # ==============================================
+          method = extract(script, "method = r'''")
+
+          p = Path("lib/data/fleet_repository.dart")
+          s = p.read_text(encoding="utf-8")
+
+          if "fetchCompanyEntitlements(" not in s:
+              s = replace_once(
+                  s,
+                  "  Future<List<CompanyMember>> fetchCompanyMembers(",
+                  method + "\n  Future<List<CompanyMember>> fetchCompanyMembers(",
+                  "repository",
+              )
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 3. Translations for 12 languages
+          # ==============================================
+          opening = "translations = {"
+          closing = "\nfor code, values in translations.items():"
+
+          if closing not in script:
+              raise SystemExit("Translation data missing")
+
+          begin = script.index(opening)
+          finish = script.index(closing, begin)
+
+          values = ast.literal_eval(
+              script[begin + len("translations = "):finish].strip()
+          )
+
+          p = Path("lib/core/localization.dart")
+          s = p.read_text(encoding="utf-8")
+
+          for code, translations in values.items():
+              anchor = f'"{code}": <String, String>{{'
+
+              if anchor not in s:
+                  raise SystemExit(f"Language missing: {code}")
+
+              begin = s.index(anchor)
+              body = s.index("\n", begin) + 1
+              finish = s.index("\n  },", body)
+
+              additions = []
+
+              for key, value in translations.items():
+                  if f'"{key}":' not in s[body:finish]:
+                      additions.append(
+                          "    "
+                          + json.dumps(key, ensure_ascii=False)
+                          + ": "
+                          + json.dumps(value, ensure_ascii=False)
+                          + ",\n"
+                      )
+
+              s = s[:body] + "".join(additions) + s[body:]
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 4. Reports screen
+          # ==============================================
+          opening = (
+              'Path("lib/reports/reports_screen.dart")'
+              ".write_text(r'''"
+          )
+
+          reports = extract(script, opening)
+
+          Path("lib/reports").mkdir(
+              parents=True,
+              exist_ok=True,
+          )
+
+          Path(
+              "lib/reports/reports_screen.dart"
+          ).write_text(reports, encoding="utf-8")
+
+          # ==============================================
+          # 5. Desktop + mobile navigation
+          # ==============================================
+          p = Path("lib/shell/fleet_shell.dart")
+          s = p.read_text(encoding="utf-8")
+
+          if "../reports/reports_screen.dart" not in s:
+              s = replace_once(
+                  s,
+                  "import '../repairs/repairs_screen.dart';",
+                  "import '../repairs/repairs_screen.dart';\n"
+                  "import '../reports/reports_screen.dart';",
+                  "reports import",
+              )
+
+          if "ReportsScreen(" not in s:
+              s = replace_once(
+                  s,
+                  "      CompanyScreen(",
+                  """      ReportsScreen(
+                company: _membership,
+                refreshToken: _refreshToken,
+              ),
+              CompanyScreen(""",
+                  "reports page",
+              )
+
+          if "label: Text(tr('reports'))" not in s:
+              anchor = (
+                  "                        NavigationRailDestination(\n"
+                  "                          icon: const Icon("
+                  "Icons.business_outlined),"
+              )
+
+              extra = """                        NavigationRailDestination(
+                          icon: const Icon(Icons.bar_chart_outlined),
+                          label: Text(tr('reports')),
+                        ),
+          """
+
+              s = replace_once(
+                  s, anchor, extra + anchor, "desktop reports"
+              )
+
+          if "title: Text(tr('reports'))" not in s:
+              marker = (
+                  "            ListTile(\n"
+                  "              leading: const Icon("
+                  "Icons.business_outlined),"
+              )
+
+              extra = """            ListTile(
+                leading: const Icon(Icons.bar_chart_outlined),
+                title: Text(tr('reports')),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _index = 6);
+                },
+              ),
+          """
+
+              s = replace_once(
+                  s, marker, extra + marker, "mobile reports"
+              )
+
+              more_start = s.index(
+                  "  void _showMoreSheet(BuildContext context)"
+              )
+
+              before = s[:more_start]
+              after = s[more_start:]
+
+              after = replace_once(
+                  after,
+                  "setState(() => _index = 6);",
+                  "setState(() => _index = 7);",
+                  "company navigation index",
+              )
+
+              s = before + after
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 6. Company plan / trial / limits
+          # ==============================================
+          section = script.split(
+              "# COMPANY SCREEN", 1
+          )[1].split("# DASHBOARD", 1)[0]
+
+          plan_card = extract(section, "plan_card = r'''")
+          plan_usage = extract(section, "s += r'''")
+
+          p = Path("lib/company/company_screen.dart")
+          s = p.read_text(encoding="utf-8")
+
+          if "late Future<CompanyEntitlements>" not in s:
+              s = replace_once(
+                  s,
+                  "  late Future<List<CompanyMember>> _members;",
+                  """  late Future<List<CompanyMember>> _members;
+            late Future<CompanyEntitlements> _entitlements;""",
+                  "company entitlements future",
+              )
+
+          if "_entitlements = _repository.fetchCompanyEntitlements" not in s:
+              s = replace_once(
+                  s,
+                  """    _members = _repository.fetchCompanyMembers(widget.company.companyId);""",
+                  """    _members = _repository.fetchCompanyMembers(widget.company.companyId);
+              _entitlements =
+                  _repository.fetchCompanyEntitlements(widget.company.companyId);""",
+                  "company reload",
+              )
+
+          if "tr('current_plan')" not in s:
+              anchor = """        Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.language_rounded),"""
+
+              # Use a small, stable anchor rather than
+              # depending on every line of the card.
+              anchor = "                const Icon(Icons.language_rounded),"
+
+              pos = s.find(anchor)
+
+              if pos == -1:
+                  raise SystemExit("Company language card missing")
+
+              start = s.rfind("\n        Card(", 0, pos)
+
+              if start == -1:
+                  raise SystemExit("Company card insertion failed")
+
+              s = (
+                  s[:start]
+                  + "\n"
+                  + plan_card
+                  + "\n"
+                  + s[start:]
+              )
+
+          if "class _PlanUsage extends StatelessWidget" not in s:
+              s += "\n" + plan_usage
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 7. Dashboard clickable reminders
+          # ==============================================
+          p = Path("lib/dashboard/dashboard_screen.dart")
+          s = p.read_text(encoding="utf-8")
+
+          if "../core/constants.dart" not in s:
+              s = replace_once(
+                  s,
+                  "import '../core/localization.dart';",
+                  "import '../core/localization.dart';\n"
+                  "import '../core/constants.dart';",
+                  "dashboard constants",
+              )
+
+          if "../vehicles/vehicle_detail_screen.dart" not in s:
+              s = replace_once(
+                  s,
+                  "import '../data/models.dart';",
+                  "import '../data/models.dart';\n"
+                  "import '../vehicles/vehicle_detail_screen.dart';",
+                  "dashboard detail import",
+              )
+
+          if "Future<void> _openVehicle(" not in s:
+              anchor = """  void _load() {
+              _future = _fetch();
+            }"""
+
+              method = """
+            Future<void> _openVehicle(String vehicleId) async {
+              final changed = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => VehicleDetailScreen(
+                    company: widget.company,
+                    vehicleId: vehicleId,
+                    canManage: canManageForRole(widget.company.role),
+                  ),
+                ),
+              );
+
+              if (changed == true && mounted) {
+                setState(_load);
+              }
+            }
+          """
+
+              s = replace_once(
+                  s, anchor, anchor + method, "vehicle navigation"
+              )
+
+          if "vehicleId: vehicle.id," not in s[
+              s.index("final attention"):s.index("attention.sort")
+          ]:
+              s = replace_once(
+                  s,
+                  """              _AttentionItem(
+                icon: icon,""",
+                  """              _AttentionItem(
+                vehicleId: vehicle.id,
+                icon: icon,""",
+                  "date reminder ID",
+              )
+
+          # ==============================================
+          # 8. Mileage service reminders
+          # ==============================================
+          attention = s[
+              s.index("final attention"):s.index("attention.sort")
+          ]
+
+          if "final serviceMileage =" not in attention:
+              anchor = """          );
+                }
+
+                for (final issue in activeIssues) {"""
+
+              addition = """          );
+
+                  final serviceMileage = vehicle.serviceDueMileage;
+
+                  if (serviceMileage != null) {
+                    final remaining =
+                        serviceMileage - vehicle.mileage;
+
+                    if (remaining <= 1500) {
+                      attention.add(
+                        _AttentionItem(
+                          vehicleId: vehicle.id,
+                          icon: Icons.speed_outlined,
+                          title:
+                              '${vehicle.registration} — ${tr('service_mileage')}',
+                          subtitle: remaining <= 0
+                              ? '${tr('overdue')} • ${formatMileage(serviceMileage)} mi'
+                              : '${formatMileage(remaining)} ${tr('miles_remaining')}',
+                          sortOrder: remaining <= 0
+                              ? -8000
+                              : remaining <= 500
+                              ? 5
+                              : remaining <= 1000
+                              ? 12
+                              : 20,
+                        ),
+                      );
+                    }
+                  }
+                }
+
+                for (final issue in activeIssues) {"""
+
+              s = replace_once(
+                  s, anchor, addition, "mileage reminders"
+              )
+
+          if "vehicleId: issue.vehicleId," not in s:
+              s = replace_once(
+                  s,
+                  """              _AttentionItem(
+                icon: Icons.warning_amber_rounded,""",
+                  """              _AttentionItem(
+                vehicleId: issue.vehicleId,
+                icon: Icons.warning_amber_rounded,""",
+                  "issue reminder ID",
+              )
+
+          if "_openVehicle(attention[i].vehicleId)" not in s:
+              s = replace_once(
+                  s,
+                  """                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(""",
+                  """                        ListTile(
+                          onTap: () =>
+                              _openVehicle(attention[i].vehicleId),
+                          contentPadding: const EdgeInsets.symmetric(""",
+                  "clickable reminder",
+              )
+
+          if "final String vehicleId;" not in s[
+              s.index("class _AttentionItem"):
+          ]:
+              start = s.index("class _AttentionItem")
+              before = s[:start]
+              after = s[start:]
+
+              after = replace_once(
+                  after,
+                  "    required this.icon,",
+                  "    required this.vehicleId,\n    required this.icon,",
+                  "attention constructor",
+              )
+
+              after = replace_once(
+                  after,
+                  "  final IconData icon;",
+                  "  final String vehicleId;\n  final IconData icon;",
+                  "attention field",
+              )
+
+              s = before + after
+
+          p.write_text(s, encoding="utf-8")
+
+          # ==============================================
+          # 9. Preserve original SaaS migration
+          # ==============================================
+          sql_marker = (
+              "          cat > "
+              "supabase/migrations/002_saas_foundation.sql"
+              " <<'SQL'\n"
+          )
+
+          if sql_marker not in original:
+              raise SystemExit("SaaS SQL migration missing")
+
+          sql_raw = original.split(
+              sql_marker, 1
+          )[1].split("\n          SQL", 1)[0]
+
+          sql = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in sql_raw.splitlines()
+          ) + "\n"
+
+          Path(
+              "supabase/migrations/002_saas_foundation.sql"
+          ).write_text(sql, encoding="utf-8")
+
+          print("Commercial Sprint 1 recovery complete")
+          PY
+
+      - name: Test and validate
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Save changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lib supabase/migrations/002_saas_foundation.sql
+          git commit -m "Commercial Sprint 1 SaaS foundation"
+          git push
+
+      - name: Deploy FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
