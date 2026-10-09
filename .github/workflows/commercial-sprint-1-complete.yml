@@ -1,0 +1,114 @@
+name: Commercial Sprint 1 Complete
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/commercial-sprint-1-complete.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Apply sprint and repair navigation
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          workflow = Path(
+              ".github/workflows/commercial-sprint-1-final.yml"
+          ).read_text(encoding="utf-8")
+
+          opening = "          python3 <<'PY'\n"
+          closing = "\n          PY"
+
+          script = workflow.split(opening, 1)[1]
+          script = script.split(closing, 1)[0]
+
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in script.splitlines()
+          )
+
+          # The previous sprint generated the application
+          # successfully. Remove only its faulty navigation fix.
+          marker = "# Correct mobile navigation indices."
+
+          if marker not in script:
+              raise SystemExit("Navigation marker missing")
+
+          script = script[:script.index(marker)]
+
+          exec(compile(script, "sprint.py", "exec"))
+
+          # Set correct navigation indices explicitly.
+          path = Path("lib/shell/fleet_shell.dart")
+          content = path.read_text(encoding="utf-8")
+
+          marker = "  void _showMoreSheet(BuildContext context)"
+          if marker not in content:
+              raise SystemExit("Mobile navigation not found")
+
+          before, mobile = content.split(marker, 1)
+
+          for name, index in [
+              ("reports", 6),
+              ("company", 7),
+          ]:
+              label = f"title: Text(tr('{name}'))"
+
+              if label not in mobile:
+                  raise SystemExit(f"Missing navigation: {name}")
+
+              position = mobile.index(label)
+              opening = "setState(() => _index = "
+              start = mobile.index(opening, position)
+              end = mobile.index(");", start) + 2
+
+              mobile = (
+                  mobile[:start]
+                  + f"setState(() => _index = {index});"
+                  + mobile[end:]
+              )
+
+          path.write_text(
+              before + marker + mobile,
+              encoding="utf-8",
+          )
+
+          print("Commercial Sprint 1 ready for tests")
+          PY
+
+      - name: Validate
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lib supabase/migrations/002_saas_foundation.sql
+          git commit -m "Complete FleetPilot Commercial Sprint 1"
+          git push
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
