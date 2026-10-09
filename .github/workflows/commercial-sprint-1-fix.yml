@@ -1,0 +1,102 @@
+name: Commercial Sprint 1 Fix
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/commercial-sprint-1-fix.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Apply corrected sprint
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          source = Path(
+              ".github/workflows/commercial-sprint-1-rescue.yml"
+          ).read_text(encoding="utf-8")
+
+          begin = "          python3 <<'PY'\n"
+          end = "\n          PY"
+
+          if begin not in source or end not in source:
+              raise SystemExit("Rescue script not found")
+
+          raw = source.split(begin, 1)[1].split(end, 1)[0]
+
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in raw.splitlines()
+          )
+
+          old = '''def replace_once(source, old, new, label):
+              if old not in source:
+                  raise SystemExit(f"Patch point missing: {label}")
+              return source.replace(old, new, 1)'''
+
+          new = '''def replace_once(source, old, new, label):
+              import re
+
+              if old in source:
+                  return source.replace(old, new, 1)
+
+              pattern = r"\\\\n".join(
+                  r"[ \\\\t]*" + re.escape(line.strip())
+                  if line.strip() else r"[ \\\\t]*"
+                  for line in old.split("\\\\n")
+              )
+
+              match = re.search(pattern, source)
+
+              if match is None:
+                  raise SystemExit(f"Patch point missing: {label}")
+
+              return (
+                  source[:match.start()]
+                  + new
+                  + source[match.end():]
+              )'''
+
+          if old not in script:
+              raise SystemExit("Patch helper not found")
+
+          script = script.replace(old, new, 1)
+
+          exec(compile(script, "sprint_recovery.py", "exec"))
+          PY
+
+      - name: Validate Flutter
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib supabase/migrations/002_saas_foundation.sql
+          git commit -m "Complete Commercial Sprint 1"
+          git push
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
