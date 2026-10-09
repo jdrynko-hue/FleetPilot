@@ -1,0 +1,219 @@
+name: FleetPilot CSV Export
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fleetpilot-csv-export.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  csv_export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Add Excel-compatible CSV export
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          import json
+
+          csv_path = Path('lib/core/fleet_csv_export.dart')
+          if csv_path.exists():
+              raise SystemExit('CSV export already installed')
+          csv_path.write_text('import \'../data/models.dart\';\n\nenum FleetExportType { vehicles, repairs, issues, drivers, costs }\n\n// Spreadsheet applications may interpret untrusted cells as formulas.\n// Neutralize spreadsheet formula prefixes before CSV escaping.\nString escapeFleetCsvValue(Object? value) {\n  if (value == null) return \'\';\n  var cell = value.toString();\n  if (value is String) {\n    final trimmed = cell.trimLeft();\n    if (trimmed.isNotEmpty &&\n        (\'=+-@\'.contains(trimmed[0]) ||\n            trimmed.codeUnitAt(0) == 0x09 ||\n            trimmed.codeUnitAt(0) == 0x0d ||\n            trimmed.codeUnitAt(0) == 0x0a)) {\n      cell = "\'$trimmed";\n    }\n  }\n  if (cell.contains(\',\') ||\n      cell.contains(\'"\') ||\n      cell.contains(\'\n\') ||\n      cell.contains(\'\\r\')) {\n    return \'"${cell.replaceAll(\'"\', \'""\')}"\';\n  }\n  return cell;\n}\n\nString encodeFleetCsv(List<List<Object?>> rows) {\n  // UTF-8 BOM ensures Excel displays Polish and other Unicode characters.\n  return \'\\uFEFF${rows.map((row) => row.map(escapeFleetCsvValue).join(\',\')).join(\'\\r\n\')}\\r\n\';\n}\n\nString _date(DateTime? value) =>\n    value == null ? \'\' : value.toIso8601String().substring(0, 10);\n\nString _amount(double value) => value.toStringAsFixed(2);\n\nDateTime? _repairDate(Repair r) =>\n    r.completedAt ?? r.startedAt ?? r.bookedAt;\n\nList<List<Object?>> buildFleetExportRows({\n  required FleetExportType type,\n  required String currency,\n  required List<Vehicle> vehicles,\n  required List<Repair> repairs,\n  required List<FleetIssue> issues,\n  required List<Driver> drivers,\n}) {\n  switch (type) {\n    case FleetExportType.vehicles:\n      return <List<Object?>>[\n        <Object?>[\n          \'Registration\', \'Make\', \'Model\', \'Year\', \'VIN\', \'Mileage\',\n          \'Status\', \'Driver\', \'Inspection type\', \'Inspection due\',\n          \'Service due\', \'Service mileage\', \'Insurance expiry\', \'Notes\',\n        ],\n        for (final vehicle in vehicles)\n          <Object?>[\n            vehicle.registration, vehicle.make, vehicle.model,\n            vehicle.year, vehicle.vin, vehicle.mileage, vehicle.status,\n            vehicle.currentDriverName, vehicle.inspectionType,\n            _date(vehicle.inspectionDueDate),\n            _date(vehicle.serviceDueDate), vehicle.serviceDueMileage,\n            _date(vehicle.insuranceExpiryDate), vehicle.notes,\n          ],\n      ];\n\n    case FleetExportType.repairs:\n      return <List<Object?>>[\n        <Object?>[\n          \'Registration\', \'Repair\', \'Status\', \'Garage\', \'Booked\',\n          \'Started\', \'Completed\', \'Mileage\', \'Parts cost\',\n          \'Labour cost\', \'Other cost\', \'Total cost\', \'Currency\',\n          \'Invoice reference\', \'Notes\',\n        ],\n        for (final repair in repairs)\n          <Object?>[\n            repair.registration, repair.description, repair.status,\n            repair.garageName, _date(repair.bookedAt),\n            _date(repair.startedAt), _date(repair.completedAt),\n            repair.mileageIn, _amount(repair.partsCost),\n            _amount(repair.labourCost), _amount(repair.otherCost),\n            _amount(repair.totalCost), currency,\n            repair.invoiceReference, repair.notes,\n          ],\n      ];\n\n    case FleetExportType.issues:\n      return <List<Object?>>[\n        <Object?>[\n          \'Registration\', \'Issue\', \'Priority\', \'Status\', \'Reported\',\n          \'Resolved\', \'Mileage\', \'Description\', \'Notes\',\n        ],\n        for (final issue in issues)\n          <Object?>[\n            issue.registration, issue.title, issue.priority,\n            issue.status, _date(issue.reportedAt),\n            _date(issue.resolvedAt), issue.mileageAtReport,\n            issue.description, issue.notes,\n          ],\n      ];\n\n    case FleetExportType.drivers:\n      return <List<Object?>>[\n        <Object?>[\n          \'Name\', \'Status\', \'Employee reference\', \'Phone\',\n          \'Email\', \'Notes\',\n        ],\n        for (final driver in drivers)\n          <Object?>[\n            driver.name, driver.status, driver.employeeReference,\n            driver.phone, driver.email, driver.notes,\n          ],\n      ];\n\n    case FleetExportType.costs:\n      final today = DateTime.now();\n      double costSince(int days) {\n        final cutoff = today.subtract(Duration(days: days));\n        return repairs.where((repair) {\n          final date = _repairDate(repair);\n          return date != null && !date.isBefore(cutoff);\n        }).fold<double>(0, (sum, repair) => sum + repair.totalCost);\n      }\n\n      final cutoff365 = today.subtract(const Duration(days: 365));\n      final costByVehicle = <String, double>{};\n      final names = <String, String>{};\n      for (final repair in repairs) {\n        final date = _repairDate(repair);\n        if (date == null || date.isBefore(cutoff365)) continue;\n        costByVehicle.update(\n          repair.vehicleId,\n          (previous) => previous + repair.totalCost,\n          ifAbsent: () => repair.totalCost,\n        );\n        names[repair.vehicleId] = repair.registration ?? repair.vehicleId;\n      }\n      final ranking = costByVehicle.entries.toList()\n        ..sort((a, b) => b.value.compareTo(a.value));\n\n      return <List<Object?>>[\n        <Object?>[\'Group\', \'Label\', \'Value\', \'Currency\'],\n        <Object?>[\'Summary\', \'Last 30 days\', _amount(costSince(30)), currency],\n        <Object?>[\'Summary\', \'Last 90 days\', _amount(costSince(90)), currency],\n        <Object?>[\n          \'Summary\', \'Last 365 days\', _amount(costSince(365)), currency,\n        ],\n        for (final entry in ranking)\n          <Object?>[\n            \'Vehicle / last 365 days\',\n            names[entry.key],\n            _amount(entry.value),\n            currency,\n          ],\n      ];\n  }\n}\n', encoding='utf-8')
+
+          Path('test/fleet_csv_export_test.dart').write_text('import \'package:flutter_test/flutter_test.dart\';\nimport \'package:fleetpilot/core/fleet_csv_export.dart\';\n\nvoid main() {\n  test(\'Quotes CSV separators, quotes and line breaks\', () {\n    expect(escapeFleetCsvValue(\'A,B\'), \'"A,B"\');\n    expect(escapeFleetCsvValue(\'He said "yes"\'), \'"He said ""yes"""\');\n    expect(escapeFleetCsvValue(\'Line 1\nLine 2\'), \'"Line 1\nLine 2"\');\n  });\n\n  test(\'Neutralizes spreadsheet formula injection\', () {\n    expect(escapeFleetCsvValue(\'=1+1\'), "\'=1+1");\n    expect(escapeFleetCsvValue(\'  +SUM(A1)\'), "\'+SUM(A1)");\n    expect(escapeFleetCsvValue(\'@IMPORT\'), "\'@IMPORT");\n    expect(escapeFleetCsvValue(\'-42\'), "\'-42");\n    expect(escapeFleetCsvValue(-42), \'-42\');\n  });\n\n  test(\'CSV is UTF-8 Excel-friendly and CRLF delimited\', () {\n    final csv = encodeFleetCsv([\n      [\'Name\', \'Cost\'],\n      [\'Łukasz\', 12.5],\n    ]);\n    expect(csv.startsWith(\'\\uFEFF\'), isTrue);\n    expect(csv, contains(\'Łukasz,12.5\\r\n\'));\n  });\n}\n', encoding='utf-8')
+
+          pubspec = Path('pubspec.yaml')
+          s = pubspec.read_text(encoding='utf-8')
+          anchor = '  url_launcher: ^6.3.3\n'
+          assert s.count(anchor) == 1, 'Dependency insertion point changed'
+          s = s.replace(anchor, anchor + '  file_saver: ^0.3.1\n', 1)
+          pubspec.write_text(s, encoding='utf-8')
+
+          reports = Path('lib/reports/reports_screen.dart')
+          s = reports.read_text(encoding='utf-8')
+          s = s.replace("import 'package:flutter/material.dart';", "import 'dart:convert';\nimport 'dart:typed_data';\n\nimport 'package:file_saver/file_saver.dart';\nimport 'package:flutter/material.dart';", 1)
+          s = s.replace("import '../core/formatters.dart';", "import '../core/fleet_csv_export.dart';\nimport '../core/formatters.dart';", 1)
+          anchor = '  late Future<_ReportsData> _future;'
+          assert s.count(anchor) == 1, 'Reports state anchor changed'
+          s = s.replace(anchor, anchor + '\n  bool _exporting = false;', 1)
+
+          old = '''      _repository.fetchRepairs(widget.company.companyId),
+              ]);'''
+          new = '''      _repository.fetchRepairs(widget.company.companyId),
+                _repository.fetchDrivers(widget.company.companyId),
+              ]);'''
+          assert s.count(old) == 1, 'Reports fetch anchor changed'
+          s = s.replace(old, new, 1)
+          old = '''      repairs: results[2] as List<Repair>,
+              );'''
+          new = '''      repairs: results[2] as List<Repair>,
+                drivers: results[3] as List<Driver>,
+              );'''
+          assert s.count(old) == 1, 'Reports result anchor changed'
+          s = s.replace(old, new, 1)
+
+          export_method = r'''
+            Future<void> _exportCsv(FleetExportType type, _ReportsData data) async {
+              if (_exporting) return;
+              setState(() => _exporting = true);
+              try {
+                final rows = buildFleetExportRows(
+                  type: type,
+                  currency: widget.company.currency,
+                  vehicles: data.vehicles,
+                  repairs: data.repairs,
+                  issues: data.issues,
+                  drivers: data.drivers,
+                );
+                final csv = encodeFleetCsv(rows);
+                final stamp = DateTime.now().toIso8601String().substring(0, 10);
+                await FileSaver.instance.saveFile(
+                  name: 'fleetpilot_${type.name}_$stamp',
+                  bytes: Uint8List.fromList(utf8.encode(csv)),
+                  fileExtension: 'csv',
+                  mimeType: MimeType.custom,
+                  customMimeType: 'text/csv',
+                );
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(tr('csv_saved'))),
+                );
+              } catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("${tr('csv_error')}: $error")),
+                );
+              } finally {
+                if (mounted) setState(() => _exporting = false);
+              }
+            }
+          '''
+          anchor = '  @override\n  Widget build(BuildContext context) {'
+          assert s.count(anchor) == 1, 'Reports build anchor changed'
+          s = s.replace(anchor, export_method + '\n' + anchor, 1)
+
+          menu = r'''              Wrap(
+                          spacing: 12,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(tr('costs_and_performance')),
+                            PopupMenuButton<FleetExportType>(
+                              enabled: !_exporting,
+                              tooltip: tr('export_csv'),
+                              onSelected: (value) => _exportCsv(value, data),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: FleetExportType.vehicles,
+                                  child: Text(tr('export_vehicles')),
+                                ),
+                                PopupMenuItem(
+                                  value: FleetExportType.repairs,
+                                  child: Text(tr('export_repairs')),
+                                ),
+                                PopupMenuItem(
+                                  value: FleetExportType.issues,
+                                  child: Text(tr('export_issues')),
+                                ),
+                                PopupMenuItem(
+                                  value: FleetExportType.drivers,
+                                  child: Text(tr('export_drivers')),
+                                ),
+                                PopupMenuItem(
+                                  value: FleetExportType.costs,
+                                  child: Text(tr('export_costs')),
+                                ),
+                              ],
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outlineVariant,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.download_outlined, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(tr('export_csv')),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),'''
+          old = '''              Text(tr('costs_and_performance')),
+                        const SizedBox(height: 20),'''
+          assert s.count(old) == 1, 'Reports export menu insertion changed'
+          s = s.replace(old, menu, 1)
+
+          old = '''    required this.repairs,
+            });'''
+          new = '''    required this.repairs,
+              required this.drivers,
+            });'''
+          assert s.count(old) == 1, 'Reports data constructor anchor changed'
+          s = s.replace(old, new, 1)
+          old = '  final List<Repair> repairs;\n}'
+          new = '  final List<Repair> repairs;\n  final List<Driver> drivers;\n}'
+          assert s.count(old) == 1, 'Reports data fields anchor changed'
+          s = s.replace(old, new, 1)
+          reports.write_text(s, encoding='utf-8')
+
+          labels = {'pl': ['Eksport CSV', 'Eksportuj pojazdy', 'Eksportuj naprawy', 'Eksportuj usterki', 'Eksportuj kierowców', 'Eksportuj koszty', 'Plik CSV został zapisany', 'Nie udało się wyeksportować CSV'], 'en': ['Export CSV', 'Export vehicles', 'Export repairs', 'Export issues', 'Export drivers', 'Export costs', 'CSV file saved', 'Could not export CSV'], 'de': ['CSV exportieren', 'Fahrzeuge exportieren', 'Reparaturen exportieren', 'Mängel exportieren', 'Fahrer exportieren', 'Kosten exportieren', 'CSV-Datei gespeichert', 'CSV-Export fehlgeschlagen'], 'sk': ['Export CSV', 'Export vozidiel', 'Export opráv', 'Export problémov', 'Export vodičov', 'Export nákladov', 'Súbor CSV uložený', 'Export CSV zlyhal'], 'cs': ['Export CSV', 'Export vozidel', 'Export oprav', 'Export závad', 'Export řidičů', 'Export nákladů', 'Soubor CSV uložen', 'Export CSV se nezdařil'], 'hu': ['CSV-exportálás', 'Járművek exportálása', 'Javítások exportálása', 'Hibák exportálása', 'Sofőrök exportálása', 'Költségek exportálása', 'CSV-fájl mentve', 'A CSV-exportálás sikertelen'], 'ro': ['Export CSV', 'Export vehicule', 'Export reparații', 'Export probleme', 'Export șoferi', 'Export costuri', 'Fișier CSV salvat', 'Exportul CSV a eșuat'], 'es': ['Exportar CSV', 'Exportar vehículos', 'Exportar reparaciones', 'Exportar incidencias', 'Exportar conductores', 'Exportar costes', 'Archivo CSV guardado', 'No se pudo exportar el CSV'], 'fr': ['Exporter en CSV', 'Exporter les véhicules', 'Exporter les réparations', 'Exporter les incidents', 'Exporter les conducteurs', 'Exporter les coûts', 'Fichier CSV enregistré', 'Échec de l’export CSV'], 'it': ['Esporta CSV', 'Esporta veicoli', 'Esporta riparazioni', 'Esporta problemi', 'Esporta autisti', 'Esporta costi', 'File CSV salvato', 'Esportazione CSV non riuscita'], 'uk': ['Експорт CSV', 'Експорт автомобілів', 'Експорт ремонтів', 'Експорт несправностей', 'Експорт водіїв', 'Експорт витрат', 'Файл CSV збережено', 'Помилка експорту CSV'], 'pt': ['Exportar CSV', 'Exportar veículos', 'Exportar reparações', 'Exportar problemas', 'Exportar motoristas', 'Exportar custos', 'Ficheiro CSV guardado', 'Falha ao exportar CSV']}
+          keys = [
+              'export_csv', 'export_vehicles', 'export_repairs',
+              'export_issues', 'export_drivers', 'export_costs',
+              'csv_saved', 'csv_error',
+          ]
+          locale_path = Path('lib/core/localization.dart')
+          s = locale_path.read_text(encoding='utf-8')
+          count = 0
+          for language, values in labels.items():
+              marker = '  "' + language + '": <String, String>{\n'
+              assert s.count(marker) == 1, 'Language missing or duplicate: ' + language
+              generated = ''.join('    "' + key + '": ' + json.dumps(value, ensure_ascii=False) + ',\n'
+                                   for key, value in zip(keys, values))
+              s = s.replace(marker, marker + generated, 1)
+              count += 1
+          assert count == 12
+          locale_path.write_text(s, encoding='utf-8')
+          print('Installed CSV export for 12 languages and 5 reports')
+          PY
+      - name: Run Flutter analyzer and unit tests
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Commit validated export
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/core/fleet_csv_export.dart lib/reports/reports_screen.dart lib/core/localization.dart pubspec.yaml test/fleet_csv_export_test.dart
+          git commit -m "Add multilingual fleet CSV exports"
+          git push
+
+      - name: Deploy updated FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
