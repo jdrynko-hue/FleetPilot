@@ -1,4 +1,4 @@
-name: Upgrade FleetPilot UI
+name: FleetPilot UI v2
 
 on:
   push:
@@ -8,114 +8,753 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
-  upgrade:
+  redesign:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upgrade UI
+      - name: Create new FleetPilot design
         run: |
           cat > lib/core/theme.dart <<'DART'
           import 'package:flutter/material.dart';
 
           ThemeData buildFleetPilotTheme() {
+            const navy = Color(0xFF102A43);
+            const blue = Color(0xFF2563EB);
+            const background = Color(0xFFF3F6FA);
+
             final scheme = ColorScheme.fromSeed(
-              seedColor: const Color(0xFF234E84),
+              seedColor: blue,
               brightness: Brightness.light,
             );
 
             return ThemeData(
-              colorScheme: scheme,
               useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFFF3F6FA),
+              colorScheme: scheme,
+              scaffoldBackgroundColor: background,
+
               appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.white,
-                surfaceTintColor: Colors.transparent,
+                backgroundColor: navy,
+                foregroundColor: Colors.white,
                 elevation: 0,
+                surfaceTintColor: Colors.transparent,
               ),
+
+              textTheme: const TextTheme(
+                headlineMedium: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+                titleLarge: TextStyle(
+                  fontWeight: FontWeight.w800,
+                ),
+                titleMedium: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+              cardTheme: CardThemeData(
+                color: Colors.white,
+                elevation: 0,
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(
+                    color: Color(0xFFE3E9F0),
+                  ),
+                ),
+              ),
+
               inputDecorationTheme: InputDecorationTheme(
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-              cardTheme: CardThemeData(
-                elevation: 0,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD8E0E8),
+                  ),
                 ),
               ),
+
               navigationBarTheme: NavigationBarThemeData(
-                height: 72,
+                height: 74,
                 backgroundColor: Colors.white,
                 indicatorColor: scheme.primaryContainer,
+                elevation: 8,
               ),
             );
           }
           DART
 
-          python3 <<'PY'
-          from pathlib import Path
+          cat > lib/dashboard/dashboard_screen.dart <<'DART'
+          import 'package:flutter/material.dart';
 
-          files = {
-            "lib/shell/fleet_shell.dart": {
-              "'Dashboard'": "'Start'",
-              "'Vehicles'": "'Pojazdy'",
-              "'Drivers'": "'Kierowcy'",
-              "'Issues'": "'Usterki'",
-              "'Repairs'": "'Naprawy'",
-              "'Garages'": "'Warsztaty'",
-              "'Company'": "'Firma'",
-              "'More'": "'Więcej'",
-              "'Refresh'": "'Odśwież'",
-              "'Sign out'": "'Wyloguj'",
-            },
-            "lib/dashboard/dashboard_screen.dart": {
-              "'Dashboard'": "'Panel floty'",
-              "'Vehicles'": "'Pojazdy'",
-              "'Unavailable'": "'Niedostępne'",
-              "'Open issues'": "'Otwarte usterki'",
-              "'Repair spend this month'": "'Koszt napraw w tym miesiącu'",
-              "'Needs attention'": "'Wymaga uwagi'",
-              "'Nothing urgent right now.'": "'Brak pilnych spraw.'",
-              "'No driver assigned'": "'Brak przypisanego kierowcy'",
-            },
-            "lib/auth/login_screen.dart": {
-              "'Create your account'": "'Utwórz konto'",
-              "'Sign in to your fleet workspace'": "'Zaloguj się do swojej floty'",
-              "'Password'": "'Hasło'",
-              "'Create account'": "'Utwórz konto'",
-              "'Sign in'": "'Zaloguj'",
-              "'Already have an account? Sign in'": "'Masz już konto? Zaloguj się'",
-              "'New to FleetPilot? Create an account'": "'Nie masz konta? Utwórz je'",
-            },
-            "lib/auth/create_company_screen.dart": {
-              "'Create your workspace'": "'Utwórz swoją flotę'",
-              "'Company name'": "'Nazwa firmy'",
-              "'Country code'": "'Kod kraju'",
-              "'Currency'": "'Waluta'",
-              "'Create workspace'": "'Utwórz flotę'",
-              "'Creating…'": "'Tworzenie…'",
-            },
+          import '../core/formatters.dart';
+          import '../data/fleet_repository.dart';
+          import '../data/models.dart';
+
+          class DashboardScreen extends StatefulWidget {
+            const DashboardScreen({
+              required this.company,
+              required this.refreshToken,
+              super.key,
+            });
+
+            final CompanyMembership company;
+            final int refreshToken;
+
+            @override
+            State<DashboardScreen> createState() =>
+                _DashboardScreenState();
           }
 
-          for file, replacements in files.items():
-              p = Path(file)
-              text = p.read_text()
-              for old, new in replacements.items():
-                  text = text.replace(old, new)
-              p.write_text(text)
-          PY
+          class _DashboardScreenState
+              extends State<DashboardScreen> {
+            final _repository = FleetRepository();
 
-      - name: Save changes
+            late Future<_DashboardData> _future;
+
+            @override
+            void initState() {
+              super.initState();
+              _load();
+            }
+
+            @override
+            void didUpdateWidget(
+              covariant DashboardScreen oldWidget,
+            ) {
+              super.didUpdateWidget(oldWidget);
+
+              if (oldWidget.refreshToken !=
+                      widget.refreshToken ||
+                  oldWidget.company.companyId !=
+                      widget.company.companyId) {
+                _load();
+              }
+            }
+
+            void _load() {
+              _future = _fetch();
+            }
+
+            Future<_DashboardData> _fetch() async {
+              final results = await Future.wait([
+                _repository.fetchVehicles(
+                  widget.company.companyId,
+                ),
+                _repository.fetchIssues(
+                  widget.company.companyId,
+                ),
+                _repository.fetchRepairs(
+                  widget.company.companyId,
+                ),
+              ]);
+
+              return _DashboardData(
+                vehicles: results[0] as List<Vehicle>,
+                issues: results[1] as List<FleetIssue>,
+                repairs: results[2] as List<Repair>,
+              );
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return FutureBuilder<_DashboardData>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState !=
+                      ConnectionState.done) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              snapshot.error.toString(),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  setState(_load),
+                              icon: const Icon(
+                                Icons.refresh,
+                              ),
+                              label: const Text(
+                                'Spróbuj ponownie',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final data = snapshot.data!;
+
+                  final activeIssues = data.issues
+                      .where(
+                        (issue) =>
+                            issue.status != 'closed' &&
+                            issue.status != 'resolved',
+                      )
+                      .toList();
+
+                  final unavailable = data.vehicles
+                      .where(
+                        (vehicle) =>
+                            vehicle.status == 'workshop' ||
+                            vehicle.status ==
+                                'maintenance' ||
+                            vehicle.status == 'off_road',
+                      )
+                      .length;
+
+                  final operational = data.vehicles
+                      .where(
+                        (vehicle) =>
+                            vehicle.status == 'available' ||
+                            vehicle.status == 'in_use',
+                      )
+                      .length;
+
+                  final now = DateTime.now();
+
+                  final monthStart = DateTime(
+                    now.year,
+                    now.month,
+                    1,
+                  );
+
+                  final monthSpend = data.repairs
+                      .where((repair) {
+                        final date =
+                            repair.completedAt ??
+                            repair.bookedAt;
+
+                        return date != null &&
+                            !date.isBefore(monthStart);
+                      })
+                      .fold<double>(
+                        0,
+                        (sum, repair) =>
+                            sum + repair.totalCost,
+                      );
+
+                  final attention = <_AttentionItem>[];
+
+                  for (final vehicle in data.vehicles) {
+                    final due =
+                        vehicle.inspectionDueDate;
+
+                    if (due != null &&
+                        due.isBefore(
+                          now.add(
+                            const Duration(days: 30),
+                          ),
+                        )) {
+                      attention.add(
+                        _AttentionItem(
+                          icon:
+                              Icons.event_busy_outlined,
+                          title:
+                              '${vehicle.registration} — ${vehicle.inspectionType}',
+                          subtitle:
+                              'Termin: ${formatDate(due)}',
+                        ),
+                      );
+                    }
+                  }
+
+                  for (final issue in activeIssues) {
+                    if (issue.priority == 'high' ||
+                        issue.priority ==
+                            'critical') {
+                      attention.add(
+                        _AttentionItem(
+                          icon:
+                              Icons.warning_amber_rounded,
+                          title:
+                              '${issue.registration ?? 'Pojazd'} — ${issue.title}',
+                          subtitle:
+                              issue.priority ==
+                                      'critical'
+                                  ? 'Priorytet krytyczny'
+                                  : 'Wysoki priorytet',
+                        ),
+                      );
+                    }
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      setState(_load);
+                    },
+                    child: ListView(
+                      physics:
+                          const AlwaysScrollableScrollPhysics(),
+                      padding:
+                          const EdgeInsets.fromLTRB(
+                        16,
+                        18,
+                        16,
+                        30,
+                      ),
+                      children: [
+                        Container(
+                          padding:
+                              const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF102A43),
+                            borderRadius:
+                                BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.company.companyName,
+                                      maxLines: 1,
+                                      overflow:
+                                          TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color:
+                                            Colors.white70,
+                                        fontWeight:
+                                            FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Stan floty',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 27,
+                                        fontWeight:
+                                            FontWeight.w900,
+                                        letterSpacing:
+                                            -0.6,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      data.vehicles.isEmpty
+                                          ? 'Dodaj pierwszy pojazd, aby rozpocząć.'
+                                          : '$operational z ${data.vehicles.length} pojazdów operacyjnych',
+                                      style:
+                                          const TextStyle(
+                                        color:
+                                            Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.white
+                                      .withOpacity(0.12),
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    18,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons
+                                      .local_shipping_rounded,
+                                  color: Colors.white,
+                                  size: 31,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        LayoutBuilder(
+                          builder:
+                              (context, constraints) {
+                            final cardWidth =
+                                (constraints.maxWidth -
+                                        12) /
+                                    2;
+
+                            return Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                _MetricCard(
+                                  width: cardWidth,
+                                  icon: Icons
+                                      .local_shipping_rounded,
+                                  value: data
+                                      .vehicles.length
+                                      .toString(),
+                                  label: 'Pojazdy',
+                                ),
+                                _MetricCard(
+                                  width: cardWidth,
+                                  icon:
+                                      Icons.car_repair,
+                                  value: unavailable
+                                      .toString(),
+                                  label:
+                                      'Niedostępne',
+                                ),
+                                _MetricCard(
+                                  width: cardWidth,
+                                  icon: Icons
+                                      .warning_amber_rounded,
+                                  value: activeIssues
+                                      .length
+                                      .toString(),
+                                  label: 'Usterki',
+                                ),
+                                _MetricCard(
+                                  width: cardWidth,
+                                  icon:
+                                      Icons.payments_outlined,
+                                  value: formatMoney(
+                                    monthSpend,
+                                    currency: widget
+                                        .company.currency,
+                                  ),
+                                  label:
+                                      'Naprawy / miesiąc',
+                                  smallValue: true,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 26),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Wymaga uwagi',
+                                style:
+                                    Theme.of(context)
+                                        .textTheme
+                                        .titleLarge,
+                              ),
+                            ),
+                            if (attention.isNotEmpty)
+                              Container(
+                                padding:
+                                    const EdgeInsets
+                                        .symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration:
+                                    BoxDecoration(
+                                  color:
+                                      const Color(
+                                    0xFFFDE8E8,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    30,
+                                  ),
+                                ),
+                                child: Text(
+                                  attention.length
+                                      .toString(),
+                                  style:
+                                      const TextStyle(
+                                    color:
+                                        Color(0xFFB42318),
+                                    fontWeight:
+                                        FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        if (attention.isEmpty)
+                          Card(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.all(
+                                18,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    decoration:
+                                        BoxDecoration(
+                                      color:
+                                          const Color(
+                                        0xFFE9F8EF,
+                                      ),
+                                      borderRadius:
+                                          BorderRadius
+                                              .circular(
+                                        14,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons
+                                          .check_circle_outline,
+                                      color:
+                                          Color(
+                                        0xFF16803C,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 14,
+                                  ),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment
+                                              .start,
+                                      children: [
+                                        Text(
+                                          'Wszystko pod kontrolą',
+                                          style:
+                                              TextStyle(
+                                            fontWeight:
+                                                FontWeight
+                                                    .w800,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          height: 4,
+                                        ),
+                                        Text(
+                                          'Brak pilnych spraw w tej chwili.',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Card(
+                            child: Column(
+                              children: [
+                                for (var i = 0;
+                                    i <
+                                            attention
+                                                .length &&
+                                        i < 6;
+                                    i++) ...[
+                                  ListTile(
+                                    contentPadding:
+                                        const EdgeInsets
+                                            .symmetric(
+                                      horizontal: 16,
+                                      vertical: 5,
+                                    ),
+                                    leading:
+                                        CircleAvatar(
+                                      backgroundColor:
+                                          const Color(
+                                        0xFFFDE8E8,
+                                      ),
+                                      child: Icon(
+                                        attention[i]
+                                            .icon,
+                                        color:
+                                            const Color(
+                                          0xFFB42318,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      attention[i]
+                                          .title,
+                                      style:
+                                          const TextStyle(
+                                        fontWeight:
+                                            FontWeight
+                                                .w700,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      attention[i]
+                                          .subtitle,
+                                    ),
+                                  ),
+                                  if (i <
+                                          attention
+                                                  .length -
+                                              1 &&
+                                      i < 5)
+                                    const Divider(
+                                      height: 1,
+                                    ),
+                                ],
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+          }
+
+          class _MetricCard extends StatelessWidget {
+            const _MetricCard({
+              required this.width,
+              required this.icon,
+              required this.value,
+              required this.label,
+              this.smallValue = false,
+            });
+
+            final double width;
+            final IconData icon;
+            final String value;
+            final String label;
+            final bool smallValue;
+
+            @override
+            Widget build(BuildContext context) {
+              return SizedBox(
+                width: width,
+                child: Card(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 39,
+                          height: 39,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer,
+                            borderRadius:
+                                BorderRadius.circular(
+                              12,
+                            ),
+                          ),
+                          child: Icon(
+                            icon,
+                            size: 21,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow:
+                              TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize:
+                                smallValue ? 20 : 28,
+                            fontWeight:
+                                FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow:
+                              TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+
+          class _DashboardData {
+            _DashboardData({
+              required this.vehicles,
+              required this.issues,
+              required this.repairs,
+            });
+
+            final List<Vehicle> vehicles;
+            final List<FleetIssue> issues;
+            final List<Repair> repairs;
+          }
+
+          class _AttentionItem {
+            _AttentionItem({
+              required this.icon,
+              required this.title,
+              required this.subtitle,
+            });
+
+            final IconData icon;
+            final String title;
+            final String subtitle;
+          }
+          DART
+
+      - name: Save new design
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib
-          git commit -m "Upgrade FleetPilot UI" || exit 0
+
+          git add lib/core/theme.dart
+          git add lib/dashboard/dashboard_screen.dart
+
+          git commit -m "FleetPilot dashboard redesign" || true
           git push
+
+      - name: Deploy new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
