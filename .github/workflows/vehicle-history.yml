@@ -1,0 +1,414 @@
+name: Vehicle History
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/vehicle-history.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Add vehicle history
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          # ---------------------------------------------------------
+          # Models
+          # ---------------------------------------------------------
+          path = Path("lib/data/models.dart")
+          s = path.read_text(encoding="utf-8")
+
+          if "class VehicleAssignment {" not in s:
+              marker = "\nclass Driver {"
+
+              assignment_model = r'''
+          class VehicleAssignment {
+            VehicleAssignment({
+              required this.id,
+              required this.companyId,
+              required this.vehicleId,
+              required this.driverId,
+              required this.driverName,
+              required this.startsAt,
+              this.endsAt,
+            });
+
+            final String id;
+            final String companyId;
+            final String vehicleId;
+            final String driverId;
+            final String driverName;
+            final DateTime startsAt;
+            final DateTime? endsAt;
+
+            factory VehicleAssignment.fromJson(Json json) {
+              final driver =
+                  (json['drivers'] as Map?)?.cast<String, dynamic>();
+
+              return VehicleAssignment(
+                id: json['id'].toString(),
+                companyId: json['company_id'].toString(),
+                vehicleId: json['vehicle_id'].toString(),
+                driverId: json['driver_id'].toString(),
+                driverName: driver?['name']?.toString() ?? '—',
+                startsAt: parseDate(json['starts_at']) ?? DateTime.now(),
+                endsAt: parseDate(json['ends_at']),
+              );
+            }
+          }
+          '''
+
+              if marker not in s:
+                  raise SystemExit("Could not find Driver model")
+
+              s = s.replace(marker, "\n" + assignment_model + marker, 1)
+
+          if "final DateTime? createdAt;" not in s:
+              s = s.replace(
+                  """    this.invoiceReference,
+              this.notes,
+            });""",
+                  """    this.invoiceReference,
+              this.createdAt,
+              this.notes,
+            });""",
+                  1,
+              )
+
+              s = s.replace(
+                  """  final String? invoiceReference;
+            final String? notes;""",
+                  """  final String? invoiceReference;
+            final DateTime? createdAt;
+            final String? notes;""",
+                  1,
+              )
+
+              s = s.replace(
+                  """      invoiceReference: json['invoice_reference']?.toString(),
+              notes: json['notes']?.toString(),""",
+                  """      invoiceReference: json['invoice_reference']?.toString(),
+              createdAt: parseDate(json['created_at']),
+              notes: json['notes']?.toString(),""",
+                  1,
+              )
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------------------------------------------------------
+          # Repository
+          # ---------------------------------------------------------
+          path = Path("lib/data/fleet_repository.dart")
+          s = path.read_text(encoding="utf-8")
+
+          if "fetchVehicleAssignments" not in s:
+              marker = """  Future<void> createVehicle(Json values) async {"""
+
+              method = r'''
+            Future<List<VehicleAssignment>> fetchVehicleAssignments(
+              String companyId,
+              String vehicleId,
+            ) async {
+              final rows = await _client
+                  .from('vehicle_assignments')
+                  .select('*, drivers(name)')
+                  .eq('company_id', companyId)
+                  .eq('vehicle_id', vehicleId)
+                  .order('starts_at', ascending: false);
+
+              return (rows as List)
+                  .map(
+                    (row) => VehicleAssignment.fromJson(
+                      (row as Map).cast<String, dynamic>(),
+                    ),
+                  )
+                  .toList();
+            }
+
+          '''
+
+              if marker not in s:
+                  raise SystemExit("Could not find repository insertion point")
+
+              s = s.replace(marker, method + marker, 1)
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------------------------------------------------------
+          # Localization - History in all 12 languages
+          # ---------------------------------------------------------
+          path = Path("lib/core/localization.dart")
+          s = path.read_text(encoding="utf-8")
+
+          translations = {
+              "pl": "Historia",
+              "en": "History",
+              "de": "Verlauf",
+              "sk": "História",
+              "cs": "Historie",
+              "hu": "Előzmények",
+              "ro": "Istoric",
+              "es": "Historial",
+              "fr": "Historique",
+              "it": "Cronologia",
+              "uk": "Історія",
+              "pt": "Histórico",
+          }
+
+          if '"history":' not in s:
+              for code, value in translations.items():
+                  pattern = rf'("{code}": <String, String>\{{\n)'
+                  replacement = rf'\1    "history": "{value}",\n'
+                  s, count = re.subn(
+                      pattern,
+                      replacement,
+                      s,
+                      count=1,
+                  )
+
+                  if count != 1:
+                      raise SystemExit(
+                          f"Could not add history translation for {code}"
+                      )
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------------------------------------------------------
+          # Vehicle Detail screen
+          # ---------------------------------------------------------
+          path = Path("lib/vehicles/vehicle_detail_screen.dart")
+          s = path.read_text(encoding="utf-8")
+
+          if "fetchVehicleAssignments" not in s:
+              old = """      _repository.fetchRepairs(
+                widget.company.companyId,
+                vehicleId: widget.vehicleId,
+              ),
+            ]);"""
+
+              new = """      _repository.fetchRepairs(
+                widget.company.companyId,
+                vehicleId: widget.vehicleId,
+              ),
+              _repository.fetchVehicleAssignments(
+                widget.company.companyId,
+                widget.vehicleId,
+              ),
+            ]);"""
+
+              if old not in s:
+                  raise SystemExit("Could not patch detail fetch")
+
+              s = s.replace(old, new, 1)
+
+          if "assignments: results[3]" not in s:
+              old = """      repairs: results[2] as List<Repair>,
+            );"""
+
+              new = """      repairs: results[2] as List<Repair>,
+              assignments: results[3] as List<VehicleAssignment>,
+            );"""
+
+              if old not in s:
+                  raise SystemExit("Could not patch detail data")
+
+              s = s.replace(old, new, 1)
+
+          if "final timeline = <_TimelineEvent>[" not in s:
+              marker = """        final totalRepairCost = data.repairs.fold<double>(
+                  0,
+                  (sum, repair) => sum + repair.totalCost,
+                );"""
+
+              addition = r'''
+
+                final timeline = <_TimelineEvent>[
+                  for (final assignment in data.assignments)
+                    _TimelineEvent(
+                      date: assignment.startsAt,
+                      icon: Icons.person_outline,
+                      title: '${tr('driver')}: ${assignment.driverName}',
+                      subtitle: assignment.endsAt == null
+                          ? tr('active')
+                          : '${formatDateTime(assignment.startsAt)} — ${formatDateTime(assignment.endsAt!)}',
+                    ),
+                  for (final issue in data.issues)
+                    _TimelineEvent(
+                      date: issue.reportedAt,
+                      icon: Icons.warning_amber_outlined,
+                      title: '${tr('issues')}: ${issue.title}',
+                      subtitle:
+                          '${tr(issue.priority)} • ${tr(issue.status)}',
+                    ),
+                  for (final repair in data.repairs)
+                    if ((repair.completedAt ??
+                            repair.startedAt ??
+                            repair.bookedAt ??
+                            repair.createdAt) !=
+                        null)
+                      _TimelineEvent(
+                        date: repair.completedAt ??
+                            repair.startedAt ??
+                            repair.bookedAt ??
+                            repair.createdAt!,
+                        icon: Icons.build_circle_outlined,
+                        title: repair.description ?? tr('repair'),
+                        subtitle:
+                            '${tr(repair.status)} • ${formatMoney(repair.totalCost, currency: widget.company.currency)}',
+                      ),
+                ]..sort((a, b) => b.date.compareTo(a.date));
+          '''
+
+              if marker not in s:
+                  raise SystemExit("Could not find timeline insertion point")
+
+              s = s.replace(marker, marker + addition, 1)
+
+          if "title: tr('history')" not in s:
+              marker = """                if ((vehicle.notes ?? '').trim().isNotEmpty) ...["""
+
+              history_ui = r'''
+                if (timeline.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  _SectionTitle(
+                    icon: Icons.history_rounded,
+                    title: tr('history'),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < timeline.length; i++) ...[
+                          _TimelineTile(event: timeline[i]),
+                          if (i != timeline.length - 1)
+                            const Divider(height: 1),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+
+          '''
+
+              if marker not in s:
+                  raise SystemExit("Could not find history UI insertion point")
+
+              s = s.replace(marker, history_ui + marker, 1)
+
+          if "class _TimelineEvent {" not in s:
+              marker = """class _VehicleDetailData {"""
+
+              classes = r'''
+          class _TimelineTile extends StatelessWidget {
+            const _TimelineTile({required this.event});
+
+            final _TimelineEvent event;
+
+            @override
+            Widget build(BuildContext context) {
+              return ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: CircleAvatar(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onPrimaryContainer,
+                  child: Icon(event.icon, size: 20),
+                ),
+                title: Text(
+                  event.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  event.subtitle.isEmpty
+                      ? formatDateTime(event.date)
+                      : '${formatDateTime(event.date)}\n${event.subtitle}',
+                ),
+                isThreeLine: event.subtitle.isNotEmpty,
+              );
+            }
+          }
+
+          class _TimelineEvent {
+            const _TimelineEvent({
+              required this.date,
+              required this.icon,
+              required this.title,
+              required this.subtitle,
+            });
+
+            final DateTime date;
+            final IconData icon;
+            final String title;
+            final String subtitle;
+          }
+
+          '''
+
+              if marker not in s:
+                  raise SystemExit("Could not insert timeline classes")
+
+              s = s.replace(marker, classes + marker, 1)
+
+          if "required this.assignments" not in s:
+              old = """    required this.repairs,
+            });
+
+            final Vehicle vehicle;
+            final List<FleetIssue> issues;
+            final List<Repair> repairs;"""
+
+              new = """    required this.repairs,
+              required this.assignments,
+            });
+
+            final Vehicle vehicle;
+            final List<FleetIssue> issues;
+            final List<Repair> repairs;
+            final List<VehicleAssignment> assignments;"""
+
+              if old not in s:
+                  raise SystemExit("Could not extend VehicleDetailData")
+
+              s = s.replace(old, new, 1)
+
+          path.write_text(s, encoding="utf-8")
+          PY
+
+      - name: Test
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib
+          git commit -m "Add vehicle history timeline"
+          git push
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
