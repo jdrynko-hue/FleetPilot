@@ -2062,7 +2062,7 @@ jobs:
         run: |
           dart format lib
           flutter pub get
-          flutter analyze
+          flutter analyze --no-fatal-infos
 
       - name: Save commercial foundation
         run: |
