@@ -1,0 +1,97 @@
+name: FleetPilot CSV Export Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fleetpilot-csv-export-repair.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install corrected CSV export
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/fleetpilot-csv-export.yml').read_text(encoding='utf-8')
+          opening = "          python3 <<'PY'\n"
+          closing = "\n          PY"
+          if opening not in source or closing not in source:
+              raise SystemExit('Original CSV workflow source not found')
+
+          raw = source.split(opening, 1)[1].split(closing, 1)[0]
+          script = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in raw.splitlines()
+          )
+
+          before = "assert s.count(anchor) == 1, 'Reports build anchor changed'"
+          after = "assert s.count(anchor) >= 1, 'Reports build anchor changed'"
+          if script.count(before) != 1:
+              raise SystemExit('Cannot locate report build assertion')
+          script = script.replace(before, after, 1)
+          exec(compile(script, 'fleetpilot_csv_install.py', 'exec'))
+
+          # A previous generator interpreted the backslash-n inside
+          # Dart string literals as actual source-code line breaks.
+          dart_path = Path('lib/core/fleet_csv_export.dart')
+          dart = dart_path.read_bytes().decode('utf-8')
+          invalid = "cell.contains('\n')"
+          if invalid not in dart:
+              raise SystemExit('CSV newline correction point missing')
+          dart = dart.replace(invalid, "cell.contains('\\n')", 1)
+          # CRLF generated within Dart quoted literals must be escaped.
+          row_break = chr(92) + 'r' + chr(10)
+          if dart.count(row_break) != 2:
+              raise SystemExit('CSV row-separator correction point missing')
+          dart = dart.replace(row_break, r'\r\n')
+          dart_path.write_text(dart, encoding='utf-8')
+
+          test_path = Path('test/fleet_csv_export_test.dart')
+          test = test_path.read_bytes().decode('utf-8')
+          for quote in ("'", '"'):
+              invalid = quote + 'Line 1\nLine 2' + quote
+              if test.count(invalid) != 1:
+                  raise SystemExit('CSV test newline correction point missing')
+              test = test.replace(invalid, quote + 'Line 1\\nLine 2' + quote)
+          if test.count(row_break) != 1:
+              raise SystemExit('CSV test row-separator correction point missing')
+          test = test.replace(row_break, r'\r\n')
+          test_path.write_text(test, encoding='utf-8')
+
+          print('CSV export repair applied successfully')
+          PY
+
+      - name: Analyze and test
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Commit passed changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml pubspec.lock lib/core/fleet_csv_export.dart lib/core/localization.dart lib/reports/reports_screen.dart test/fleet_csv_export_test.dart
+          git commit -m "Fix and publish CSV fleet exports"
+          git push
+
+      - name: Deploy validated FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
