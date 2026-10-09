@@ -1,0 +1,42 @@
+name: Fix Localization Workflow
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/fix-localization-workflow.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fix indentation
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path(".github/workflows/full-localization.yml")
+          text = path.read_text(encoding="utf-8")
+
+          old = '                    start = s.find("                              itemBuilder: (_) => [")'
+          new = '          start = s.find("                              itemBuilder: (_) => [")'
+
+          if old not in text:
+              raise SystemExit("Target line not found")
+
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Save fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/full-localization.yml
+          git commit -m "Fix localization workflow indentation"
+          git push
