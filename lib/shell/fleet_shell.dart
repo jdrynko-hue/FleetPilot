@@ -10,6 +10,7 @@ import '../drivers/drivers_screen.dart';
 import '../garages/garages_screen.dart';
 import '../issues/issues_screen.dart';
 import '../repairs/repairs_screen.dart';
+import '../reports/reports_screen.dart';
 import '../vehicles/vehicles_screen.dart';
 
 class FleetShell extends StatefulWidget {
@@ -100,6 +101,7 @@ class _FleetShellState extends State<FleetShell> {
         refreshToken: _refreshToken,
         onDataChanged: _refreshAll,
       ),
+      ReportsScreen(company: _membership, refreshToken: _refreshToken),
       CompanyScreen(
         company: _membership,
         onMembershipChanged: _reloadMemberships,
@@ -201,6 +203,10 @@ class _FleetShellState extends State<FleetShell> {
                           label: Text(tr('garages')),
                         ),
                         NavigationRailDestination(
+                          icon: const Icon(Icons.bar_chart_outlined),
+                          label: Text(tr('reports')),
+                        ),
+                        NavigationRailDestination(
                           icon: const Icon(Icons.business_outlined),
                           label: Text(tr('company')),
                         ),
@@ -275,12 +281,20 @@ class _FleetShellState extends State<FleetShell> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.bar_chart_outlined),
+              title: Text(tr('reports')),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _index = 6);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.business_outlined),
               title: Text(tr('company')),
               subtitle: Text('${tr('team')} • ${tr('settings')}'),
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _index = 6);
+                setState(() => _index = 7);
               },
             ),
           ],

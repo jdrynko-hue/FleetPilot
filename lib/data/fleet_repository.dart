@@ -256,6 +256,21 @@ class FleetRepository {
     }
   }
 
+  Future<CompanyEntitlements> fetchCompanyEntitlements(String companyId) async {
+    final result = await _client.rpc(
+      'get_company_entitlements',
+      params: {'_company_id': companyId},
+    );
+
+    if (result is List && result.isNotEmpty) {
+      return CompanyEntitlements.fromJson(
+        (result.first as Map).cast<String, dynamic>(),
+      );
+    }
+
+    throw StateError('Company subscription was not found');
+  }
+
   Future<List<CompanyMember>> fetchCompanyMembers(String companyId) async {
     final rows = await _client.rpc(
       'list_company_members',

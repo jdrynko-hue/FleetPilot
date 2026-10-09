@@ -26,6 +26,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
   final _inviteCode = TextEditingController();
 
   late Future<List<CompanyMember>> _members;
+  late Future<CompanyEntitlements> _entitlements;
   Future<List<CompanyInvite>>? _invites;
 
   bool get _canAdmin =>
@@ -54,6 +55,9 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
   void _reload() {
     _members = _repository.fetchCompanyMembers(widget.company.companyId);
+    _entitlements = _repository.fetchCompanyEntitlements(
+      widget.company.companyId,
+    );
 
     if (_canAdmin) {
       _invites = _repository.fetchCompanyInvites(widget.company.companyId);
@@ -247,6 +251,88 @@ class _CompanyScreenState extends State<CompanyScreen> {
         ),
 
         SizedBox(height: 16),
+
+        FutureBuilder<CompanyEntitlements>(
+          future: _entitlements,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
+
+            final plan = snapshot.data!;
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          child: const Icon(Icons.workspace_premium_outlined),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tr('current_plan'),
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              Text(
+                                plan.planName,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Chip(label: Text(tr(plan.subscriptionStatus))),
+                      ],
+                    ),
+                    if (plan.subscriptionStatus == 'trialing' &&
+                        plan.trialDaysRemaining != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        trf('trial_days_left', {
+                          'days': plan.trialDaysRemaining!,
+                        }),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Text(
+                      tr('plan_usage'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _PlanUsage(
+                      label: tr('vehicles_used'),
+                      current: plan.vehicleCount,
+                      limit: plan.vehicleLimit,
+                    ),
+                    const SizedBox(height: 12),
+                    _PlanUsage(
+                      label: tr('team_members_used'),
+                      current: plan.memberCount,
+                      limit: plan.memberLimit,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+
+        const SizedBox(height: 16),
 
         Card(
           child: Padding(
@@ -471,6 +557,42 @@ class _CompanyScreenState extends State<CompanyScreen> {
           icon: const Icon(Icons.logout),
           label: Text(tr('sign_out')),
         ),
+      ],
+    );
+  }
+}
+
+class _PlanUsage extends StatelessWidget {
+  const _PlanUsage({
+    required this.label,
+    required this.current,
+    required this.limit,
+  });
+
+  final String label;
+  final int current;
+  final int? limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = limit == null || limit == 0
+        ? 0.0
+        : (current / limit!).clamp(0.0, 1.0).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(label)),
+            Text(
+              limit == null ? '$current / ∞' : '$current / $limit',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(value: limit == null ? null : progress),
       ],
     );
   }

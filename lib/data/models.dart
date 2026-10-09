@@ -26,6 +26,61 @@ class CompanyMembership {
   }
 }
 
+class CompanyEntitlements {
+  CompanyEntitlements({
+    required this.planCode,
+    required this.planName,
+    required this.subscriptionStatus,
+    required this.isAccessActive,
+    required this.vehicleCount,
+    required this.canAddVehicle,
+    required this.memberCount,
+    required this.canAddMember,
+    required this.features,
+    this.trialEndsAt,
+    this.trialDaysRemaining,
+    this.vehicleLimit,
+    this.memberLimit,
+  });
+
+  final String planCode;
+  final String planName;
+  final String subscriptionStatus;
+  final DateTime? trialEndsAt;
+  final int? trialDaysRemaining;
+  final bool isAccessActive;
+
+  final int? vehicleLimit;
+  final int vehicleCount;
+  final bool canAddVehicle;
+
+  final int? memberLimit;
+  final int memberCount;
+  final bool canAddMember;
+
+  final Map<String, dynamic> features;
+
+  bool hasFeature(String key) => features[key] == true;
+
+  factory CompanyEntitlements.fromJson(Json json) {
+    return CompanyEntitlements(
+      planCode: json['plan_code']?.toString() ?? 'trial',
+      planName: json['plan_name']?.toString() ?? 'Trial',
+      subscriptionStatus: json['subscription_status']?.toString() ?? 'trialing',
+      trialEndsAt: parseDate(json['trial_ends_at']),
+      trialDaysRemaining: (json['trial_days_remaining'] as num?)?.toInt(),
+      isAccessActive: json['is_access_active'] as bool? ?? false,
+      vehicleLimit: (json['vehicle_limit'] as num?)?.toInt(),
+      vehicleCount: (json['vehicle_count'] as num?)?.toInt() ?? 0,
+      canAddVehicle: json['can_add_vehicle'] as bool? ?? false,
+      memberLimit: (json['member_limit'] as num?)?.toInt(),
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+      canAddMember: json['can_add_member'] as bool? ?? false,
+      features: (json['features'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+  }
+}
+
 class UserProfile {
   UserProfile({required this.userId, required this.locale, this.displayName});
 

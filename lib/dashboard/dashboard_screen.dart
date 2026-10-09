@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
+import '../core/constants.dart';
 
 import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
+import '../vehicles/vehicle_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -43,6 +45,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _load() {
     _future = _fetch();
+  }
+
+  Future<void> _openVehicle(String vehicleId) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => VehicleDetailScreen(
+          company: widget.company,
+          vehicleId: vehicleId,
+          canManage: canManageForRole(widget.company.role),
+        ),
+      ),
+    );
+
+    if (changed == true && mounted) {
+      setState(_load);
+    }
   }
 
   Future<_DashboardData> _fetch() async {
@@ -155,6 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (days <= 30) {
             attention.add(
               _AttentionItem(
+                vehicleId: vehicle.id,
                 icon: icon,
                 title: '${vehicle.registration} — $label',
                 subtitle:
@@ -186,12 +205,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
             date: vehicle.insuranceExpiryDate,
             icon: Icons.shield_outlined,
           );
+
+          final serviceMileage = vehicle.serviceDueMileage;
+
+          if (serviceMileage != null) {
+            final remaining = serviceMileage - vehicle.mileage;
+
+            if (remaining <= 1500) {
+              attention.add(
+                _AttentionItem(
+                  vehicleId: vehicle.id,
+                  icon: Icons.speed_outlined,
+                  title: '${vehicle.registration} — ${tr('service_mileage')}',
+                  subtitle: remaining <= 0
+                      ? '${tr('overdue')} • ${formatMileage(serviceMileage)} mi'
+                      : '${formatMileage(remaining)} ${tr('miles_remaining')}',
+                  sortOrder: remaining <= 0
+                      ? -8000
+                      : remaining <= 500
+                      ? 5
+                      : remaining <= 1000
+                      ? 12
+                      : 20,
+                ),
+              );
+            }
+          }
         }
 
         for (final issue in activeIssues) {
           if (issue.priority == 'high' || issue.priority == 'critical') {
             attention.add(
               _AttentionItem(
+                vehicleId: issue.vehicleId,
                 icon: Icons.warning_amber_rounded,
                 title:
                     '${issue.registration ?? tr('vehicle')} — ${issue.title}',
@@ -394,6 +440,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       for (var i = 0; i < attention.length && i < 6; i++) ...[
                         ListTile(
+                          onTap: () => _openVehicle(attention[i].vehicleId),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 5,
@@ -503,12 +550,14 @@ class _DashboardData {
 
 class _AttentionItem {
   _AttentionItem({
+    required this.vehicleId,
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.sortOrder,
   });
 
+  final String vehicleId;
   final IconData icon;
   final String title;
   final String subtitle;
