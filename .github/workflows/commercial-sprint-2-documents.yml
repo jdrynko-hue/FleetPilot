@@ -1,0 +1,499 @@
+name: Commercial Sprint 2 Documents
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/commercial-sprint-2-documents.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  documents:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Create private document screen
+        run: |
+          mkdir -p lib/documents
+          cat > lib/documents/vehicle_documents_screen.dart <<'DART'
+          import 'package:file_picker/file_picker.dart';
+          import 'package:flutter/material.dart';
+          import 'package:supabase_flutter/supabase_flutter.dart';
+          import 'package:url_launcher/url_launcher.dart';
+          
+          import '../core/localization.dart';
+          import '../data/fleet_repository.dart';
+          import '../data/models.dart';
+          
+          class VehicleDocumentsScreen extends StatefulWidget {
+            const VehicleDocumentsScreen({
+              required this.company,
+              required this.vehicleId,
+              required this.registration,
+              required this.canManage,
+              super.key,
+            });
+          
+            final CompanyMembership company;
+            final String vehicleId;
+            final String registration;
+            final bool canManage;
+          
+            @override
+            State<VehicleDocumentsScreen> createState() => _VehicleDocumentsScreenState();
+          }
+          
+          class _VehicleDocumentsScreenState extends State<VehicleDocumentsScreen> {
+            static const _bucket = 'fleetpilot-documents';
+            static const _maxBytes = 15 * 1024 * 1024;
+            static const _categories = [
+              'mot', 'insurance', 'registration', 'service',
+              'repair_invoice', 'damage_photo', 'other',
+            ];
+          
+            final _client = Supabase.instance.client;
+            final _repository = FleetRepository();
+            late Future<List<Map<String, dynamic>>> _future;
+            bool _busy = false;
+          
+            @override
+            void initState() {
+              super.initState();
+              _load();
+            }
+          
+            void _load() {
+              _future = _fetch();
+            }
+          
+            Future<List<Map<String, dynamic>>> _fetch() async {
+              final rows = await _client
+                  .from('fleet_documents')
+                  .select()
+                  .eq('company_id', widget.company.companyId)
+                  .eq('vehicle_id', widget.vehicleId)
+                  .order('created_at', ascending: false);
+              return (rows as List)
+                  .map((row) => (row as Map).cast<String, dynamic>())
+                  .toList();
+            }
+          
+            Future<void> _refresh() async {
+              setState(_load);
+              await _future;
+            }
+          
+            void _message(Object message) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(message.toString())),
+              );
+            }
+          
+            String _mimeFor(String extension) => switch (extension) {
+              'pdf' => 'application/pdf',
+              'jpg' || 'jpeg' => 'image/jpeg',
+              'png' => 'image/png',
+              'webp' => 'image/webp',
+              'heic' => 'image/heic',
+              'heif' => 'image/heif',
+              'doc' => 'application/msword',
+              'docx' =>
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              _ => '',
+            };
+          
+            Future<void> _add() async {
+              if (_busy || !widget.canManage) return;
+              try {
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: [
+                    'pdf', 'jpg', 'jpeg', 'png', 'webp',
+                    'heic', 'heif', 'doc', 'docx',
+                  ],
+                  withData: true,
+                );
+                if (result == null || result.files.isEmpty) return;
+          
+                final file = result.files.single;
+                final extension = file.name.split('.').last.toLowerCase();
+                final mime = _mimeFor(extension);
+                final bytes = file.bytes;
+                if (mime.isEmpty || file.size == 0 || file.size > _maxBytes ||
+                    bytes == null || bytes.isEmpty || bytes.length > _maxBytes) {
+                  _message(tr('document_invalid'));
+                  return;
+                }
+          
+                final repairs = await _repository.fetchRepairs(
+                  widget.company.companyId,
+                  vehicleId: widget.vehicleId,
+                );
+                if (!mounted) return;
+          
+                final controller = TextEditingController(text: file.name);
+                String category = 'other';
+                String? repairId;
+                final details = await showDialog<({String title, String category, String? repairId})>(
+                  context: context,
+                  builder: (context) => StatefulBuilder(
+                    builder: (context, update) => AlertDialog(
+                      title: Text(tr('add_document')),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextField(
+                              controller: controller,
+                              maxLength: 180,
+                              decoration: InputDecoration(labelText: tr('document_title')),
+                            ),
+                            DropdownButtonFormField<String>(
+                              initialValue: category,
+                              isExpanded: true,
+                              decoration: InputDecoration(labelText: tr('document_category')),
+                              items: [
+                                for (final value in _categories)
+                                  DropdownMenuItem(
+                                    value: value,
+                                    child: Text(tr('document_$value')),
+                                  ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                update(() {
+                                  category = value;
+                                  if (category != 'repair_invoice') repairId = null;
+                                });
+                              },
+                            ),
+                            if (category == 'repair_invoice' && repairs.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                initialValue: repairId,
+                                isExpanded: true,
+                                decoration: InputDecoration(labelText: tr('linked_repair')),
+                                items: [
+                                  DropdownMenuItem(
+                                    value: '',
+                                    child: Text(tr('not_assigned')),
+                                  ),
+                                  for (final repair in repairs)
+                                    DropdownMenuItem(
+                                      value: repair.id,
+                                      child: Text(
+                                        '${repair.description ?? tr('repair')} (${repair.status})',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                                onChanged: (value) => update(
+                                  () => repairId = (value == null || value.isEmpty) ? null : value,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(tr('cancel')),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            final title = controller.text.trim();
+                            if (title.isEmpty) return;
+                            Navigator.pop(
+                              context,
+                              (title: title, category: category, repairId: repairId),
+                            );
+                          },
+                          child: Text(tr('upload_document')),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                controller.dispose();
+                if (details == null || !mounted) return;
+          
+                setState(() => _busy = true);
+                final filename = '${DateTime.now().microsecondsSinceEpoch}.$extension';
+                final path = '${widget.company.companyId}/${widget.vehicleId}/$filename';
+                var uploaded = false;
+                try {
+                  await _client.storage.from(_bucket).uploadBinary(
+                    path,
+                    bytes,
+                    fileOptions: FileOptions(contentType: mime, upsert: false),
+                  );
+                  uploaded = true;
+                  await _client.from('fleet_documents').insert({
+                    'company_id': widget.company.companyId,
+                    'vehicle_id': widget.vehicleId,
+                    'title': details.title,
+                    'category': details.category,
+                    'repair_id': details.repairId,
+                    'original_filename': file.name,
+                    'mime_type': mime,
+                    'size_bytes': bytes.length,
+                    'storage_path': path,
+                  });
+                  await _refresh();
+                  _message(tr('document_uploaded'));
+                } catch (error) {
+                  if (uploaded) {
+                    try {
+                      await _client.storage.from(_bucket).remove([path]);
+                    } catch (_) {}
+                  }
+                  _message(error);
+                } finally {
+                  if (mounted) setState(() => _busy = false);
+                }
+              } catch (error) {
+                _message(error);
+              }
+            }
+          
+            Future<void> _open(Map<String, dynamic> row) async {
+              try {
+                final url = await _client.storage.from(_bucket).createSignedUrl(
+                  row['storage_path'].toString(),
+                  120,
+                );
+                if (!await launchUrl(Uri.parse(url), mode: LaunchMode.platformDefault)) {
+                  throw StateError(tr('document_open_failed'));
+                }
+              } catch (error) {
+                _message(error);
+              }
+            }
+          
+            Future<void> _remove(Map<String, dynamic> row) async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text(tr('delete_document')),
+                  content: Text(row['title'].toString()),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(tr('cancel')),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(tr('delete_document')),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !mounted) return;
+              setState(() => _busy = true);
+              try {
+                await _client
+                    .from('fleet_documents')
+                    .delete()
+                    .eq('company_id', widget.company.companyId)
+                    .eq('id', row['id'].toString());
+                await _client.storage.from(_bucket).remove([
+                  row['storage_path'].toString(),
+                ]);
+                await _refresh();
+              } catch (error) {
+                _message(error);
+              } finally {
+                if (mounted) setState(() => _busy = false);
+              }
+            }
+          
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: Text('${tr('documents')} • ${widget.registration}')),
+                floatingActionButton: widget.canManage
+                    ? FloatingActionButton.extended(
+                        onPressed: _busy ? null : _add,
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: Text(tr('add_document')),
+                      )
+                    : null,
+                body: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: TextButton(
+                          onPressed: () => setState(_load),
+                          child: Text('${tr('try_again')}: ${snapshot.error}'),
+                        ),
+                      );
+                    }
+                    final documents = snapshot.data!;
+                    return RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
+                        children: documents.isEmpty
+                            ? [
+                                const SizedBox(height: 90),
+                                const Icon(Icons.folder_open_outlined, size: 64),
+                                const SizedBox(height: 12),
+                                Center(child: Text(tr('no_documents'))),
+                              ]
+                            : [
+                                for (final document in documents)
+                                  Card(
+                                    child: ListTile(
+                                      leading: Icon(
+                                        document['category'] == 'damage_photo'
+                                            ? Icons.photo_camera_outlined
+                                            : Icons.description_outlined,
+                                      ),
+                                      title: Text(document['title'].toString()),
+                                      subtitle: Text(
+                                        '${tr('document_${document['category']}')} • '
+                                        '${document['original_filename']}',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onTap: () => _open(document),
+                                      trailing: widget.canManage
+                                          ? IconButton(
+                                              tooltip: tr('delete_document'),
+                                              onPressed: _busy ? null : () => _remove(document),
+                                              icon: const Icon(Icons.delete_outline),
+                                            )
+                                          : const Icon(Icons.open_in_new),
+                                    ),
+                                  ),
+                              ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+          }
+          DART
+      - name: Install routes, dependencies and translations
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+          
+          p = Path('pubspec.yaml')
+          s = p.read_text(encoding='utf-8')
+          if 'file_picker:' not in s:
+              s = s.replace('  supabase_flutter: ^2.18.0\n',
+                            '  supabase_flutter: ^2.18.0\n  file_picker: ^10.3.10\n  url_launcher: ^6.3.3\n')
+          if 'file_picker:' not in s or 'url_launcher:' not in s:
+              raise SystemExit('Cannot patch dependencies')
+          p.write_text(s, encoding='utf-8')
+          
+          p = Path('lib/vehicles/vehicle_detail_screen.dart')
+          s = p.read_text(encoding='utf-8')
+          if "import '../documents/vehicle_documents_screen.dart';" not in s:
+              s = s.replace("import '../data/models.dart';",
+                            "import '../data/models.dart';\nimport '../documents/vehicle_documents_screen.dart';")
+          point = '                if (timeline.isNotEmpty) ...['
+          if 'VehicleDocumentsScreen(' not in s:
+              if point not in s:
+                  raise SystemExit('Vehicle documents insertion point not found')
+              insert = '''                const SizedBox(height: 28),
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.folder_copy_outlined),
+                              title: Text(tr('documents')),
+                              subtitle: Text(tr('documents_subtitle')),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => Navigator.push<void>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => VehicleDocumentsScreen(
+                                    company: widget.company,
+                                    vehicleId: vehicle.id,
+                                    registration: vehicle.registration,
+                                    canManage: widget.canManage,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+          
+          '''
+              s = s.replace(point, insert + point, 1)
+          p.write_text(s, encoding='utf-8')
+          
+          # Add translations to all 12 languages, preserving existing entries.
+          keys = [
+           'documents','documents_subtitle','add_document','upload_document',
+           'document_title','document_category','document_invalid',
+           'document_uploaded','document_open_failed','delete_document',
+           'no_documents','linked_repair','document_mot','document_insurance',
+           'document_registration','document_service','document_repair_invoice',
+           'document_damage_photo','document_other'
+          ]
+          strings = {
+           'en': 'Documents|Private files, invoices and photos|Add document|Upload|Document title|Document type|Unsupported file or file exceeds 15 MB|Document uploaded|Cannot open document|Delete document|No documents yet|Related repair|MOT / inspection|Insurance|Registration|Service|Repair invoice|Damage photo|Other',
+           'pl': 'Dokumenty|Prywatne pliki, faktury i zdjęcia|Dodaj dokument|Prześlij|Nazwa dokumentu|Typ dokumentu|Nieobsługiwany plik lub przekroczono 15 MB|Dokument przesłany|Nie można otworzyć dokumentu|Usuń dokument|Brak dokumentów|Powiązana naprawa|Przegląd / MOT|Ubezpieczenie|Dowód rejestracyjny|Serwis|Faktura za naprawę|Zdjęcie uszkodzenia|Inne',
+           'de': 'Dokumente|Private Dateien, Rechnungen und Fotos|Dokument hinzufügen|Hochladen|Dokumenttitel|Dokumenttyp|Datei nicht unterstützt oder über 15 MB|Dokument hochgeladen|Dokument kann nicht geöffnet werden|Dokument löschen|Noch keine Dokumente|Zugehörige Reparatur|TÜV / Prüfung|Versicherung|Zulassung|Service|Reparaturrechnung|Schadensfoto|Sonstiges',
+           'sk': 'Dokumenty|Súkromné súbory, faktúry a fotografie|Pridať dokument|Nahrať|Názov dokumentu|Typ dokumentu|Nepodporovaný súbor alebo nad 15 MB|Dokument nahraný|Dokument nemožno otvoriť|Vymazať dokument|Zatiaľ žiadne dokumenty|Súvisiaca oprava|STK / kontrola|Poistenie|Registrácia|Servis|Faktúra za opravu|Fotografia poškodenia|Ostatné',
+           'cs': 'Dokumenty|Soukromé soubory, faktury a fotografie|Přidat dokument|Nahrát|Název dokumentu|Typ dokumentu|Nepodporovaný soubor nebo více než 15 MB|Dokument nahrán|Dokument nelze otevřít|Smazat dokument|Zatím žádné dokumenty|Související oprava|STK / kontrola|Pojištění|Registrace|Servis|Faktura za opravu|Fotografie poškození|Ostatní',
+           'hu': 'Dokumentumok|Privát fájlok, számlák és fényképek|Dokumentum hozzáadása|Feltöltés|Dokumentum címe|Dokumentum típusa|Nem támogatott vagy 15 MB feletti fájl|Dokumentum feltöltve|A dokumentum nem nyitható meg|Dokumentum törlése|Még nincsenek dokumentumok|Kapcsolódó javítás|Műszaki vizsga|Biztosítás|Forgalmi engedély|Szerviz|Javítási számla|Sérülés fényképe|Egyéb',
+           'ro': 'Documente|Fișiere private, facturi și fotografii|Adaugă document|Încarcă|Titlul documentului|Tipul documentului|Fișier neacceptat sau peste 15 MB|Document încărcat|Documentul nu poate fi deschis|Șterge documentul|Niciun document încă|Reparație asociată|Inspecție tehnică|Asigurare|Înmatriculare|Service|Factură de reparație|Fotografie avarie|Altele',
+           'es': 'Documentos|Archivos privados, facturas y fotos|Añadir documento|Subir|Título del documento|Tipo de documento|Archivo no compatible o superior a 15 MB|Documento subido|No se puede abrir el documento|Eliminar documento|Aún no hay documentos|Reparación relacionada|Inspección técnica|Seguro|Matrícula|Servicio|Factura de reparación|Foto de daños|Otro',
+           'fr': 'Documents|Fichiers privés, factures et photos|Ajouter un document|Téléverser|Titre du document|Type de document|Fichier non pris en charge ou supérieur à 15 Mo|Document téléversé|Impossible d’ouvrir le document|Supprimer le document|Aucun document|Réparation associée|Contrôle technique|Assurance|Immatriculation|Entretien|Facture de réparation|Photo des dommages|Autre',
+           'it': 'Documenti|File privati, fatture e foto|Aggiungi documento|Carica|Titolo del documento|Tipo di documento|File non supportato o superiore a 15 MB|Documento caricato|Impossibile aprire il documento|Elimina documento|Nessun documento|Riparazione collegata|Revisione|Assicurazione|Immatricolazione|Manutenzione|Fattura di riparazione|Foto del danno|Altro',
+           'uk': 'Документи|Приватні файли, рахунки та фото|Додати документ|Завантажити|Назва документа|Тип документа|Непідтримуваний файл або понад 15 МБ|Документ завантажено|Не вдалося відкрити документ|Видалити документ|Документів ще немає|Пов’язаний ремонт|Техогляд|Страхування|Реєстрація|Сервіс|Рахунок за ремонт|Фото пошкодження|Інше',
+           'pt': 'Documentos|Ficheiros privados, faturas e fotografias|Adicionar documento|Carregar|Título do documento|Tipo de documento|Ficheiro não suportado ou superior a 15 MB|Documento carregado|Não foi possível abrir o documento|Eliminar documento|Ainda não há documentos|Reparação associada|Inspeção|Seguro|Registo|Serviço|Fatura de reparação|Fotografia de danos|Outro',
+          }
+          p = Path('lib/core/localization.dart')
+          s = p.read_text(encoding='utf-8')
+          for language, phrase in strings.items():
+              values = phrase.split('|')
+              if len(values) != len(keys):
+                  raise SystemExit(f'Bad translations for {language}: {len(values)}')
+              marker = f'  "{language}": <String, String>{{\n'
+              if marker not in s:
+                  raise SystemExit(f'Language marker missing: {language}')
+              entries = ''.join(f'    {json.dumps(key, ensure_ascii=False)}: {json.dumps(value, ensure_ascii=False)},\n'
+                                for key, value in zip(keys, values))
+              if f'"documents":' not in s.split(marker, 1)[1].split('\n  },', 1)[0]:
+                  s = s.replace(marker, marker + entries, 1)
+          p.write_text(s, encoding='utf-8')
+          print('Sprint 2 documents and translations prepared')
+          PY
+      - name: Validate Flutter
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+          flutter test
+      - name: Save code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib pubspec.yaml
+          if [ -f pubspec.lock ]; then git add -f pubspec.lock; fi
+          git commit -m "Sprint 2: secure vehicle documents"
+          git push
+      - name: Deploy new FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
