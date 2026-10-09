@@ -5,6 +5,7 @@ import '../core/localization.dart';
 import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
+import '../documents/vehicle_documents_screen.dart';
 import '../issues/issue_form_screen.dart';
 import '../repairs/repair_form_screen.dart';
 import 'vehicle_form_screen.dart';
@@ -393,6 +394,27 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                             ],
                           ],
                         ),
+                ),
+
+                const SizedBox(height: 28),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.folder_copy_outlined),
+                    title: Text(tr('documents')),
+                    subtitle: Text(tr('documents_subtitle')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VehicleDocumentsScreen(
+                          company: widget.company,
+                          vehicleId: vehicle.id,
+                          registration: vehicle.registration,
+                          canManage: widget.canManage,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
 
                 if (timeline.isNotEmpty) ...[
