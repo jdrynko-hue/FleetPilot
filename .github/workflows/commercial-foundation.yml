@@ -1,0 +1,2082 @@
+name: FleetPilot Commercial Foundation
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/commercial-foundation.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  commercial:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Add localization
+        run: |
+          cat > lib/core/localization.dart <<'DART'
+          import 'package:flutter/foundation.dart';
+
+          class AppLocale {
+            static final ValueNotifier<String> language =
+                ValueNotifier<String>('en');
+          }
+
+          const _pl = <String, String>{
+            'dashboard': 'Start',
+            'vehicles': 'Pojazdy',
+            'drivers': 'Kierowcy',
+            'issues': 'Usterki',
+            'repairs': 'Naprawy',
+            'garages': 'Warsztaty',
+            'company': 'Firma',
+            'more': 'Więcej',
+            'refresh': 'Odśwież',
+            'sign_out': 'Wyloguj',
+            'language': 'Język',
+            'settings': 'Ustawienia',
+            'team': 'Zespół',
+            'team_description': 'Osoby mające dostęp do tej floty',
+            'invite_member': 'Zaproś użytkownika',
+            'email': 'E-mail',
+            'role': 'Rola',
+            'create_invite': 'Utwórz zaproszenie',
+            'invite_created': 'Link zaproszenia został skopiowany',
+            'pending_invites': 'Oczekujące zaproszenia',
+            'no_invites': 'Brak oczekujących zaproszeń',
+            'revoke': 'Anuluj',
+            'remove': 'Usuń',
+            'join_company': 'Dołącz do istniejącej firmy',
+            'invite_code': 'Kod zaproszenia',
+            'accept_invite': 'Dołącz',
+            'members': 'Członkowie zespołu',
+            'your_role': 'Twoja rola',
+            'currency': 'Waluta',
+            'polish': 'Polski',
+            'english': 'English',
+            'owner': 'Właściciel',
+            'admin': 'Administrator',
+            'manager': 'Manager',
+            'viewer': 'Podgląd',
+            'try_again': 'Spróbuj ponownie',
+            'create_account': 'Utwórz konto',
+            'sign_in': 'Zaloguj',
+            'sign_in_subtitle': 'Zaloguj się do swojej floty',
+            'password': 'Hasło',
+            'have_account': 'Masz już konto? Zaloguj się',
+            'no_account': 'Nie masz konta? Utwórz je',
+            'invalid_email': 'Podaj poprawny adres e-mail',
+            'short_password': 'Hasło musi mieć co najmniej 8 znaków',
+            'available': 'Dostępny',
+            'in_use': 'W użyciu',
+            'workshop': 'Warsztat',
+            'maintenance': 'Serwis',
+            'off_road': 'Wyłączony z ruchu',
+            'sold': 'Sprzedany',
+            'active': 'Aktywny',
+            'inactive': 'Nieaktywny',
+            'holiday': 'Urlop',
+            'suspended': 'Zawieszony',
+            'low': 'Niski',
+            'medium': 'Średni',
+            'high': 'Wysoki',
+            'critical': 'Krytyczny',
+            'open': 'Otwarta',
+            'booked': 'Umówiona',
+            'in_progress': 'W trakcie',
+            'resolved': 'Rozwiązana',
+            'closed': 'Zamknięta',
+            'planned': 'Planowana',
+            'ready': 'Gotowa',
+            'completed': 'Zakończona',
+            'cancelled': 'Anulowana',
+          };
+
+          const _en = <String, String>{
+            'dashboard': 'Home',
+            'vehicles': 'Vehicles',
+            'drivers': 'Drivers',
+            'issues': 'Issues',
+            'repairs': 'Repairs',
+            'garages': 'Garages',
+            'company': 'Company',
+            'more': 'More',
+            'refresh': 'Refresh',
+            'sign_out': 'Sign out',
+            'language': 'Language',
+            'settings': 'Settings',
+            'team': 'Team',
+            'team_description': 'People with access to this fleet',
+            'invite_member': 'Invite user',
+            'email': 'Email',
+            'role': 'Role',
+            'create_invite': 'Create invitation',
+            'invite_created': 'Invitation link copied',
+            'pending_invites': 'Pending invitations',
+            'no_invites': 'No pending invitations',
+            'revoke': 'Revoke',
+            'remove': 'Remove',
+            'join_company': 'Join an existing company',
+            'invite_code': 'Invitation code',
+            'accept_invite': 'Join',
+            'members': 'Team members',
+            'your_role': 'Your role',
+            'currency': 'Currency',
+            'polish': 'Polski',
+            'english': 'English',
+            'owner': 'Owner',
+            'admin': 'Administrator',
+            'manager': 'Manager',
+            'viewer': 'Viewer',
+            'try_again': 'Try again',
+            'create_account': 'Create account',
+            'sign_in': 'Sign in',
+            'sign_in_subtitle': 'Sign in to your fleet',
+            'password': 'Password',
+            'have_account': 'Already have an account? Sign in',
+            'no_account': 'New to FleetPilot? Create an account',
+            'invalid_email': 'Enter a valid email',
+            'short_password': 'Use at least 8 characters',
+            'available': 'Available',
+            'in_use': 'In use',
+            'workshop': 'Workshop',
+            'maintenance': 'Maintenance',
+            'off_road': 'Off road',
+            'sold': 'Sold',
+            'active': 'Active',
+            'inactive': 'Inactive',
+            'holiday': 'Holiday',
+            'suspended': 'Suspended',
+            'low': 'Low',
+            'medium': 'Medium',
+            'high': 'High',
+            'critical': 'Critical',
+            'open': 'Open',
+            'booked': 'Booked',
+            'in_progress': 'In progress',
+            'resolved': 'Resolved',
+            'closed': 'Closed',
+            'planned': 'Planned',
+            'ready': 'Ready',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled',
+          };
+
+          String tr(String key) {
+            final map = AppLocale.language.value == 'pl' ? _pl : _en;
+            return map[key] ?? key;
+          }
+          DART
+
+      - name: Add commercial models
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path("lib/data/models.dart")
+          s = p.read_text()
+
+          marker = "class Vehicle {"
+
+          commercial = r'''
+          class UserProfile {
+            UserProfile({
+              required this.userId,
+              required this.locale,
+              this.displayName,
+            });
+
+            final String userId;
+            final String locale;
+            final String? displayName;
+
+            factory UserProfile.fromJson(Json json) => UserProfile(
+                  userId: json['user_id'].toString(),
+                  locale: json['locale']?.toString() ?? 'en',
+                  displayName: json['display_name']?.toString(),
+                );
+          }
+
+          class CompanyMember {
+            CompanyMember({
+              required this.userId,
+              required this.email,
+              required this.role,
+              required this.joinedAt,
+              this.displayName,
+            });
+
+            final String userId;
+            final String email;
+            final String? displayName;
+            final String role;
+            final DateTime joinedAt;
+
+            factory CompanyMember.fromJson(Json json) => CompanyMember(
+                  userId: json['user_id'].toString(),
+                  email: json['email']?.toString() ?? '',
+                  displayName: json['display_name']?.toString(),
+                  role: json['role']?.toString() ?? 'viewer',
+                  joinedAt:
+                      parseDate(json['joined_at']) ?? DateTime.now(),
+                );
+          }
+
+          class CompanyInvite {
+            CompanyInvite({
+              required this.id,
+              required this.email,
+              required this.role,
+              required this.inviteCode,
+              required this.status,
+              required this.expiresAt,
+              required this.createdAt,
+            });
+
+            final String id;
+            final String email;
+            final String role;
+            final String inviteCode;
+            final String status;
+            final DateTime expiresAt;
+            final DateTime createdAt;
+
+            factory CompanyInvite.fromJson(Json json) => CompanyInvite(
+                  id: json['id'].toString(),
+                  email: json['email']?.toString() ?? '',
+                  role: json['role']?.toString() ?? 'manager',
+                  inviteCode: json['invite_code'].toString(),
+                  status: json['status']?.toString() ?? 'pending',
+                  expiresAt:
+                      parseDate(json['expires_at']) ?? DateTime.now(),
+                  createdAt:
+                      parseDate(json['created_at']) ?? DateTime.now(),
+                );
+          }
+
+          '''
+
+          if "class UserProfile {" not in s:
+              s = s.replace(marker, commercial + marker)
+
+          p.write_text(s)
+          PY
+
+      - name: Add commercial repository functions
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path("lib/data/fleet_repository.dart")
+          s = p.read_text()
+
+          s = s.replace(
+          """Future<bool> signUp({required String email, required String password}) async {
+              final response = await _client.auth.signUp(email: email, password: password);
+              return response.session != null;
+            }""",
+          """Future<bool> signUp({
+              required String email,
+              required String password,
+              String locale = 'en',
+            }) async {
+              final response = await _client.auth.signUp(
+                email: email,
+                password: password,
+                data: {'locale': locale},
+              );
+              return response.session != null;
+            }"""
+          )
+
+          insert = r'''
+            Future<UserProfile?> fetchUserProfile() async {
+              final user = currentUser;
+              if (user == null) return null;
+
+              final row = await _client
+                  .from('user_profiles')
+                  .select()
+                  .eq('user_id', user.id)
+                  .maybeSingle();
+
+              if (row == null) return null;
+              return UserProfile.fromJson(row);
+            }
+
+            Future<void> updateUserLocale(String locale) async {
+              final user = currentUser;
+              if (user == null) return;
+
+              await _client.from('user_profiles').upsert({
+                'user_id': user.id,
+                'locale': locale,
+              });
+            }
+
+            Future<List<CompanyMember>> fetchCompanyMembers(
+              String companyId,
+            ) async {
+              final rows = await _client.rpc(
+                'list_company_members',
+                params: {'_company_id': companyId},
+              );
+
+              return (rows as List)
+                  .map(
+                    (row) => CompanyMember.fromJson(
+                      (row as Map).cast<String, dynamic>(),
+                    ),
+                  )
+                  .toList();
+            }
+
+            Future<List<CompanyInvite>> fetchCompanyInvites(
+              String companyId,
+            ) async {
+              final rows = await _client.rpc(
+                'list_company_invites',
+                params: {'_company_id': companyId},
+              );
+
+              return (rows as List)
+                  .map(
+                    (row) => CompanyInvite.fromJson(
+                      (row as Map).cast<String, dynamic>(),
+                    ),
+                  )
+                  .toList();
+            }
+
+            Future<String> createCompanyInvite({
+              required String companyId,
+              required String email,
+              required String role,
+            }) async {
+              final code = await _client.rpc(
+                'create_company_invite',
+                params: {
+                  '_company_id': companyId,
+                  '_email': email,
+                  '_role': role,
+                },
+              );
+
+              return code.toString();
+            }
+
+            Future<void> acceptCompanyInvite(String code) async {
+              await _client.rpc(
+                'accept_company_invite',
+                params: {'_invite_code': code},
+              );
+            }
+
+            Future<void> updateCompanyMemberRole({
+              required String companyId,
+              required String userId,
+              required String role,
+            }) async {
+              await _client.rpc(
+                'update_company_member_role',
+                params: {
+                  '_company_id': companyId,
+                  '_user_id': userId,
+                  '_role': role,
+                },
+              );
+            }
+
+            Future<void> removeCompanyMember({
+              required String companyId,
+              required String userId,
+            }) async {
+              await _client.rpc(
+                'remove_company_member',
+                params: {
+                  '_company_id': companyId,
+                  '_user_id': userId,
+                },
+              );
+            }
+
+            Future<void> revokeCompanyInvite(String inviteId) async {
+              await _client.rpc(
+                'revoke_company_invite',
+                params: {'_invite_id': inviteId},
+              );
+            }
+
+          '''
+
+          pos = s.rfind("}")
+          if "fetchUserProfile()" not in s:
+              s = s[:pos] + insert + s[pos:]
+
+          p.write_text(s)
+          PY
+
+      - name: Localize status values
+        run: |
+          cat > lib/core/constants.dart <<'DART'
+          import 'localization.dart';
+
+          const vehicleStatuses = <String>[
+            'available',
+            'in_use',
+            'workshop',
+            'maintenance',
+            'off_road',
+            'sold',
+          ];
+
+          const driverStatuses = <String>[
+            'active',
+            'inactive',
+            'holiday',
+            'suspended',
+          ];
+
+          const issuePriorities = <String>[
+            'low',
+            'medium',
+            'high',
+            'critical',
+          ];
+
+          const issueStatuses = <String>[
+            'open',
+            'booked',
+            'in_progress',
+            'resolved',
+            'closed',
+          ];
+
+          const repairStatuses = <String>[
+            'planned',
+            'booked',
+            'in_progress',
+            'ready',
+            'completed',
+            'cancelled',
+          ];
+
+          const companyRoles = <String>[
+            'owner',
+            'admin',
+            'manager',
+            'viewer',
+          ];
+
+          bool canManageForRole(String role) =>
+              role == 'owner' ||
+              role == 'admin' ||
+              role == 'manager';
+
+          String prettifyEnum(String value) {
+            const translatable = {
+              'available',
+              'in_use',
+              'workshop',
+              'maintenance',
+              'off_road',
+              'sold',
+              'active',
+              'inactive',
+              'holiday',
+              'suspended',
+              'low',
+              'medium',
+              'high',
+              'critical',
+              'open',
+              'booked',
+              'in_progress',
+              'resolved',
+              'closed',
+              'planned',
+              'ready',
+              'completed',
+              'cancelled',
+              'owner',
+              'admin',
+              'manager',
+              'viewer',
+            };
+
+            if (translatable.contains(value)) {
+              return tr(value);
+            }
+
+            if (value.isEmpty) return value;
+
+            return value
+                .split('_')
+                .map(
+                  (part) => part.isEmpty
+                      ? part
+                      : '${part[0].toUpperCase()}${part.substring(1)}',
+                )
+                .join(' ');
+          }
+          DART
+
+      - name: Upgrade app language state
+        run: |
+          cat > lib/app.dart <<'DART'
+          import 'package:flutter/material.dart';
+
+          import 'auth/auth_gate.dart';
+          import 'core/app_config.dart';
+          import 'core/localization.dart';
+          import 'core/theme.dart';
+
+          class FleetPilotApp extends StatelessWidget {
+            const FleetPilotApp({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return ValueListenableBuilder<String>(
+                valueListenable: AppLocale.language,
+                builder: (context, language, _) {
+                  return MaterialApp(
+                    key: ValueKey(language),
+                    title: 'FleetPilot',
+                    debugShowCheckedModeBanner: false,
+                    theme: buildFleetPilotTheme(),
+                    home: AppConfig.isConfigured
+                        ? const AuthGate()
+                        : const _MissingConfigurationScreen(),
+                  );
+                },
+              );
+            }
+          }
+
+          class _MissingConfigurationScreen extends StatelessWidget {
+            const _MissingConfigurationScreen();
+
+            @override
+            Widget build(BuildContext context) {
+              return const Scaffold(
+                body: Center(
+                  child: Text(
+                    'FleetPilot configuration is missing.',
+                  ),
+                ),
+              );
+            }
+          }
+          DART
+
+      - name: Upgrade login and registration
+        run: |
+          cat > lib/auth/login_screen.dart <<'DART'
+          import 'package:flutter/material.dart';
+
+          import '../core/localization.dart';
+          import '../data/fleet_repository.dart';
+
+          class LoginScreen extends StatefulWidget {
+            const LoginScreen({super.key});
+
+            @override
+            State<LoginScreen> createState() => _LoginScreenState();
+          }
+
+          class _LoginScreenState extends State<LoginScreen> {
+            final _repository = FleetRepository();
+            final _email = TextEditingController();
+            final _password = TextEditingController();
+            final _formKey = GlobalKey<FormState>();
+
+            bool _registerMode = false;
+            bool _busy = false;
+            bool _obscurePassword = true;
+
+            String get _language => AppLocale.language.value;
+
+            @override
+            void dispose() {
+              _email.dispose();
+              _password.dispose();
+              super.dispose();
+            }
+
+            Future<void> _submit() async {
+              if (!_formKey.currentState!.validate()) return;
+
+              setState(() => _busy = true);
+
+              try {
+                if (_registerMode) {
+                  await _repository.signUp(
+                    email: _email.text.trim(),
+                    password: _password.text,
+                    locale: _language,
+                  );
+                } else {
+                  await _repository.signIn(
+                    email: _email.text.trim(),
+                    password: _password.text,
+                  );
+                }
+              } catch (error) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error.toString())),
+                );
+              } finally {
+                if (mounted) {
+                  setState(() => _busy = false);
+                }
+              }
+            }
+
+            void _setLanguage(String value) {
+              AppLocale.language.value = value;
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                body: SafeArea(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                        constraints:
+                            const BoxConstraints(maxWidth: 460),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const CircleAvatar(
+                                        child: Icon(
+                                          Icons.local_shipping_rounded,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'FleetPilot',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium,
+                                        ),
+                                      ),
+                                      PopupMenuButton<String>(
+                                        tooltip: tr('language'),
+                                        initialValue: _language,
+                                        onSelected: _setLanguage,
+                                        itemBuilder: (_) => [
+                                          PopupMenuItem(
+                                            value: 'pl',
+                                            child: Text(
+                                              '🇵🇱 ${tr('polish')}',
+                                            ),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'en',
+                                            child: Text(
+                                              '🇬🇧 ${tr('english')}',
+                                            ),
+                                          ),
+                                        ],
+                                        icon: const Icon(
+                                          Icons.language_rounded,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    _registerMode
+                                        ? tr('create_account')
+                                        : tr('sign_in_subtitle'),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  TextFormField(
+                                    controller: _email,
+                                    keyboardType:
+                                        TextInputType.emailAddress,
+                                    autocorrect: false,
+                                    decoration: InputDecoration(
+                                      labelText: tr('email'),
+                                      prefixIcon: const Icon(
+                                        Icons.email_outlined,
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      final v =
+                                          value?.trim() ?? '';
+
+                                      if (!v.contains('@') ||
+                                          !v.contains('.')) {
+                                        return tr('invalid_email');
+                                      }
+
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _password,
+                                    obscureText: _obscurePassword,
+                                    decoration: InputDecoration(
+                                      labelText: tr('password'),
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline,
+                                      ),
+                                      suffixIcon: IconButton(
+                                        onPressed: () => setState(
+                                          () => _obscurePassword =
+                                              !_obscurePassword,
+                                        ),
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility
+                                              : Icons.visibility_off,
+                                        ),
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if ((value ?? '').length < 8) {
+                                        return tr('short_password');
+                                      }
+
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 20),
+                                  FilledButton(
+                                    onPressed:
+                                        _busy ? null : _submit,
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      child: _busy
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Text(
+                                              _registerMode
+                                                  ? tr(
+                                                      'create_account',
+                                                    )
+                                                  : tr('sign_in'),
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: _busy
+                                        ? null
+                                        : () => setState(
+                                              () => _registerMode =
+                                                  !_registerMode,
+                                            ),
+                                    child: Text(
+                                      _registerMode
+                                          ? tr('have_account')
+                                          : tr('no_account'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+          DART
+
+      - name: Bootstrap language and invitations
+        run: |
+          cat > lib/auth/company_gate.dart <<'DART'
+          import 'package:flutter/material.dart';
+
+          import '../core/localization.dart';
+          import '../data/fleet_repository.dart';
+          import '../data/models.dart';
+          import '../shell/fleet_shell.dart';
+          import 'create_company_screen.dart';
+
+          class CompanyGate extends StatefulWidget {
+            const CompanyGate({super.key});
+
+            @override
+            State<CompanyGate> createState() =>
+                _CompanyGateState();
+          }
+
+          class _CompanyGateState extends State<CompanyGate> {
+            final _repository = FleetRepository();
+
+            late Future<List<CompanyMembership>> _future;
+
+            @override
+            void initState() {
+              super.initState();
+              _reload();
+            }
+
+            void _reload() {
+              _future = _bootstrap();
+            }
+
+            Future<List<CompanyMembership>> _bootstrap() async {
+              final invite =
+                  Uri.base.queryParameters['invite'];
+
+              if (invite != null && invite.isNotEmpty) {
+                try {
+                  await _repository.acceptCompanyInvite(invite);
+                } catch (_) {
+                  // Invitation may already have been accepted.
+                }
+              }
+
+              try {
+                final profile =
+                    await _repository.fetchUserProfile();
+
+                if (profile != null &&
+                    (profile.locale == 'pl' ||
+                        profile.locale == 'en')) {
+                  AppLocale.language.value =
+                      profile.locale;
+                }
+              } catch (_) {}
+
+              return _repository.fetchMemberships();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return FutureBuilder<List<CompanyMembership>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState !=
+                      ConnectionState.done) {
+                    return const Scaffold(
+                      body: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Scaffold(
+                      body: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                snapshot.error.toString(),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: () =>
+                                    setState(_reload),
+                                child: Text(
+                                  tr('try_again'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final memberships =
+                      snapshot.data ?? [];
+
+                  if (memberships.isEmpty) {
+                    return CreateCompanyScreen(
+                      onCreated: () =>
+                          setState(_reload),
+                    );
+                  }
+
+                  return FleetShell(
+                    memberships: memberships,
+                  );
+                },
+              );
+            }
+          }
+          DART
+
+      - name: Add professional team and settings
+        run: |
+          cat > lib/company/company_screen.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter/services.dart';
+
+          import '../core/constants.dart';
+          import '../core/formatters.dart';
+          import '../core/localization.dart';
+          import '../data/fleet_repository.dart';
+          import '../data/models.dart';
+
+          class CompanyScreen extends StatefulWidget {
+            const CompanyScreen({
+              required this.company,
+              required this.onMembershipChanged,
+              super.key,
+            });
+
+            final CompanyMembership company;
+            final Future<void> Function() onMembershipChanged;
+
+            @override
+            State<CompanyScreen> createState() =>
+                _CompanyScreenState();
+          }
+
+          class _CompanyScreenState
+              extends State<CompanyScreen> {
+            final _repository = FleetRepository();
+            final _inviteCode = TextEditingController();
+
+            late Future<List<CompanyMember>> _members;
+            Future<List<CompanyInvite>>? _invites;
+
+            bool get _canAdmin =>
+                widget.company.role == 'owner' ||
+                widget.company.role == 'admin';
+
+            @override
+            void initState() {
+              super.initState();
+              _reload();
+            }
+
+            @override
+            void didUpdateWidget(
+              covariant CompanyScreen oldWidget,
+            ) {
+              super.didUpdateWidget(oldWidget);
+
+              if (oldWidget.company.companyId !=
+                  widget.company.companyId) {
+                _reload();
+              }
+            }
+
+            @override
+            void dispose() {
+              _inviteCode.dispose();
+              super.dispose();
+            }
+
+            void _reload() {
+              _members = _repository.fetchCompanyMembers(
+                widget.company.companyId,
+              );
+
+              if (_canAdmin) {
+                _invites =
+                    _repository.fetchCompanyInvites(
+                  widget.company.companyId,
+                );
+              } else {
+                _invites = null;
+              }
+            }
+
+            Future<void> _changeLanguage(
+              String value,
+            ) async {
+              await _repository.updateUserLocale(value);
+              AppLocale.language.value = value;
+
+              if (mounted) setState(() {});
+            }
+
+            Future<void> _createInvite() async {
+              final email = TextEditingController();
+              var role = 'manager';
+
+              final result =
+                  await showDialog<Map<String, String>>(
+                context: context,
+                builder: (context) => StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    return AlertDialog(
+                      title: Text(tr('invite_member')),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextField(
+                            controller: email,
+                            keyboardType:
+                                TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: tr('email'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            initialValue: role,
+                            decoration: InputDecoration(
+                              labelText: tr('role'),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'admin',
+                                child: Text('Admin'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'manager',
+                                child: Text('Manager'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'viewer',
+                                child: Text('Viewer'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(
+                                  () => role = value,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.pop(
+                            context,
+                            {
+                              'email':
+                                  email.text.trim(),
+                              'role': role,
+                            },
+                          ),
+                          child:
+                              Text(tr('create_invite')),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              );
+
+              email.dispose();
+
+              if (result == null ||
+                  result['email']!.isEmpty) {
+                return;
+              }
+
+              try {
+                final code =
+                    await _repository.createCompanyInvite(
+                  companyId:
+                      widget.company.companyId,
+                  email: result['email']!,
+                  role: result['role']!,
+                );
+
+                final params =
+                    Map<String, String>.from(
+                  Uri.base.queryParameters,
+                );
+
+                params['invite'] = code;
+
+                final link = Uri.base
+                    .replace(queryParameters: params)
+                    .toString();
+
+                await Clipboard.setData(
+                  ClipboardData(text: link),
+                );
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      tr('invite_created'),
+                    ),
+                  ),
+                );
+
+                setState(_reload);
+              } catch (error) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  SnackBar(
+                    content: Text(error.toString()),
+                  ),
+                );
+              }
+            }
+
+            Future<void> _acceptCode() async {
+              final code =
+                  _inviteCode.text.trim();
+
+              if (code.isEmpty) return;
+
+              try {
+                await _repository
+                    .acceptCompanyInvite(code);
+
+                _inviteCode.clear();
+
+                await widget.onMembershipChanged();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Company added successfully.',
+                    ),
+                  ),
+                );
+              } catch (error) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  SnackBar(
+                    content: Text(error.toString()),
+                  ),
+                );
+              }
+            }
+
+            Future<void> _updateRole(
+              CompanyMember member,
+              String role,
+            ) async {
+              await _repository.updateCompanyMemberRole(
+                companyId:
+                    widget.company.companyId,
+                userId: member.userId,
+                role: role,
+              );
+
+              setState(_reload);
+            }
+
+            Future<void> _removeMember(
+              CompanyMember member,
+            ) async {
+              await _repository.removeCompanyMember(
+                companyId:
+                    widget.company.companyId,
+                userId: member.userId,
+              );
+
+              setState(_reload);
+            }
+
+            Future<void> _revokeInvite(
+              CompanyInvite invite,
+            ) async {
+              await _repository
+                  .revokeCompanyInvite(invite.id);
+
+              setState(_reload);
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              final currentUserId =
+                  _repository.currentUser?.id;
+
+              return ListView(
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  16,
+                  18,
+                  16,
+                  32,
+                ),
+                children: [
+                  Text(
+                    tr('company'),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineMedium,
+                  ),
+                  const SizedBox(height: 16),
+
+                  Card(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.company.companyName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${tr('your_role')}: ${prettifyEnum(widget.company.role)}',
+                          ),
+                          Text(
+                            '${tr('currency')}: ${widget.company.currency}',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Card(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.language_rounded,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              tr('language'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium,
+                            ),
+                          ),
+                          DropdownButton<String>(
+                            value:
+                                AppLocale.language.value,
+                            items: [
+                              DropdownMenuItem(
+                                value: 'pl',
+                                child: Text(
+                                  '🇵🇱 ${tr('polish')}',
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'en',
+                                child: Text(
+                                  '🇬🇧 ${tr('english')}',
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                _changeLanguage(value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tr('team'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              tr('team_description'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_canAdmin)
+                        FilledButton.icon(
+                          onPressed: _createInvite,
+                          icon:
+                              const Icon(Icons.person_add),
+                          label: Text(
+                            tr('invite_member'),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  FutureBuilder<List<CompanyMember>>(
+                    future: _members,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Card(
+                          child: Padding(
+                            padding:
+                                EdgeInsets.all(30),
+                            child: Center(
+                              child:
+                                  CircularProgressIndicator(),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final members =
+                          snapshot.data!;
+
+                      return Card(
+                        child: Column(
+                          children: [
+                            for (var i = 0;
+                                i < members.length;
+                                i++) ...[
+                              ListTile(
+                                leading: CircleAvatar(
+                                  child: Text(
+                                    (members[i]
+                                                    .displayName ??
+                                                members[i]
+                                                    .email)
+                                            .isEmpty
+                                        ? '?'
+                                        : (members[i]
+                                                    .displayName ??
+                                                members[i]
+                                                    .email)[0]
+                                            .toUpperCase(),
+                                  ),
+                                ),
+                                title: Text(
+                                  members[i]
+                                          .displayName ??
+                                      members[i].email,
+                                ),
+                                subtitle: Text(
+                                  '${members[i].email} • ${formatDate(members[i].joinedAt)}',
+                                ),
+                                trailing: members[i].role ==
+                                        'owner'
+                                    ? Text(
+                                        tr('owner'),
+                                      )
+                                    : _canAdmin &&
+                                            members[i]
+                                                    .userId !=
+                                                currentUserId
+                                        ? PopupMenuButton<
+                                            String>(
+                                            onSelected:
+                                                (value) {
+                                              if (value ==
+                                                  'remove') {
+                                                _removeMember(
+                                                  members[i],
+                                                );
+                                              } else {
+                                                _updateRole(
+                                                  members[i],
+                                                  value,
+                                                );
+                                              }
+                                            },
+                                            itemBuilder: (_) => [
+                                              PopupMenuItem(
+                                                value:
+                                                    'admin',
+                                                child: Text(
+                                                  tr('admin'),
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value:
+                                                    'manager',
+                                                child: Text(
+                                                  tr(
+                                                    'manager',
+                                                  ),
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value:
+                                                    'viewer',
+                                                child: Text(
+                                                  tr(
+                                                    'viewer',
+                                                  ),
+                                                ),
+                                              ),
+                                              const PopupMenuDivider(),
+                                              PopupMenuItem(
+                                                value:
+                                                    'remove',
+                                                child: Text(
+                                                  tr(
+                                                    'remove',
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                            child: Text(
+                                              prettifyEnum(
+                                                members[i]
+                                                    .role,
+                                              ),
+                                            ),
+                                          )
+                                        : Text(
+                                            prettifyEnum(
+                                              members[i].role,
+                                            ),
+                                          ),
+                              ),
+                              if (i !=
+                                  members.length - 1)
+                                const Divider(
+                                  height: 1,
+                                ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  if (_canAdmin &&
+                      _invites != null) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      tr('pending_invites'),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge,
+                    ),
+                    const SizedBox(height: 10),
+                    FutureBuilder<
+                        List<CompanyInvite>>(
+                      future: _invites,
+                      builder:
+                          (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const SizedBox(
+                            height: 40,
+                            child: Center(
+                              child:
+                                  CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+
+                        final invites = snapshot.data!
+                            .where(
+                              (invite) =>
+                                  invite.status ==
+                                  'pending',
+                            )
+                            .toList();
+
+                        if (invites.isEmpty) {
+                          return Card(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.all(
+                                18,
+                              ),
+                              child: Text(
+                                tr('no_invites'),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Card(
+                          child: Column(
+                            children: [
+                              for (var i = 0;
+                                  i < invites.length;
+                                  i++) ...[
+                                ListTile(
+                                  leading:
+                                      const Icon(
+                                    Icons
+                                        .mail_outline_rounded,
+                                  ),
+                                  title: Text(
+                                    invites[i].email,
+                                  ),
+                                  subtitle: Text(
+                                    '${prettifyEnum(invites[i].role)} • ${formatDate(invites[i].expiresAt)}',
+                                  ),
+                                  trailing:
+                                      TextButton(
+                                    onPressed: () =>
+                                        _revokeInvite(
+                                      invites[i],
+                                    ),
+                                    child: Text(
+                                      tr('revoke'),
+                                    ),
+                                  ),
+                                ),
+                                if (i !=
+                                    invites.length - 1)
+                                  const Divider(
+                                    height: 1,
+                                  ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  Text(
+                    tr('join_company'),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge,
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Card(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _inviteCode,
+                              decoration:
+                                  InputDecoration(
+                                labelText:
+                                    tr('invite_code'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          FilledButton(
+                            onPressed: _acceptCode,
+                            child: Text(
+                              tr('accept_invite'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _repository.signOut(),
+                    icon:
+                        const Icon(Icons.logout),
+                    label: Text(tr('sign_out')),
+                  ),
+                ],
+              );
+            }
+          }
+          DART
+
+      - name: Upgrade multi-company navigation
+        run: |
+          cat > lib/shell/fleet_shell.dart <<'DART'
+          import 'package:flutter/material.dart';
+
+          import '../company/company_screen.dart';
+          import '../core/constants.dart';
+          import '../core/localization.dart';
+          import '../dashboard/dashboard_screen.dart';
+          import '../data/fleet_repository.dart';
+          import '../data/models.dart';
+          import '../drivers/drivers_screen.dart';
+          import '../garages/garages_screen.dart';
+          import '../issues/issues_screen.dart';
+          import '../repairs/repairs_screen.dart';
+          import '../vehicles/vehicles_screen.dart';
+
+          class FleetShell extends StatefulWidget {
+            const FleetShell({
+              required this.memberships,
+              super.key,
+            });
+
+            final List<CompanyMembership> memberships;
+
+            @override
+            State<FleetShell> createState() =>
+                _FleetShellState();
+          }
+
+          class _FleetShellState extends State<FleetShell> {
+            final _repository = FleetRepository();
+
+            late List<CompanyMembership> _memberships;
+            late CompanyMembership _membership;
+
+            int _index = 0;
+            int _refreshToken = 0;
+
+            @override
+            void initState() {
+              super.initState();
+
+              _memberships =
+                  List.from(widget.memberships);
+
+              _membership = _memberships.first;
+            }
+
+            void _refreshAll() {
+              setState(() => _refreshToken++);
+            }
+
+            Future<void> _reloadMemberships() async {
+              final memberships =
+                  await _repository.fetchMemberships();
+
+              if (memberships.isEmpty || !mounted) {
+                return;
+              }
+
+              setState(() {
+                final currentId =
+                    _membership.companyId;
+
+                _memberships = memberships;
+
+                _membership =
+                    memberships.firstWhere(
+                  (m) => m.companyId == currentId,
+                  orElse: () =>
+                      memberships.first,
+                );
+
+                _refreshToken++;
+              });
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              final canManage =
+                  canManageForRole(_membership.role);
+
+              final pages = [
+                DashboardScreen(
+                  company: _membership,
+                  refreshToken: _refreshToken,
+                ),
+                VehiclesScreen(
+                  company: _membership,
+                  canManage: canManage,
+                  refreshToken: _refreshToken,
+                  onDataChanged: _refreshAll,
+                ),
+                DriversScreen(
+                  company: _membership,
+                  canManage: canManage,
+                  refreshToken: _refreshToken,
+                  onDataChanged: _refreshAll,
+                ),
+                IssuesScreen(
+                  company: _membership,
+                  canManage: canManage,
+                  refreshToken: _refreshToken,
+                  onDataChanged: _refreshAll,
+                ),
+                RepairsScreen(
+                  company: _membership,
+                  canManage: canManage,
+                  refreshToken: _refreshToken,
+                  onDataChanged: _refreshAll,
+                ),
+                GaragesScreen(
+                  company: _membership,
+                  canManage: canManage,
+                  refreshToken: _refreshToken,
+                  onDataChanged: _refreshAll,
+                ),
+                CompanyScreen(
+                  company: _membership,
+                  onMembershipChanged:
+                      _reloadMemberships,
+                ),
+              ];
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide =
+                      constraints.maxWidth >= 900;
+
+                  final body = IndexedStack(
+                    index: _index,
+                    children: pages,
+                  );
+
+                  return Scaffold(
+                    appBar: AppBar(
+                      title: const Text('FleetPilot'),
+                      actions: [
+                        if (_memberships.length > 1)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
+                            child:
+                                DropdownButtonHideUnderline(
+                              child: DropdownButton<
+                                  String>(
+                                dropdownColor:
+                                    const Color(
+                                  0xFF102A43,
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                ),
+                                iconEnabledColor:
+                                    Colors.white,
+                                value:
+                                    _membership.companyId,
+                                items: _memberships
+                                    .map(
+                                      (m) =>
+                                          DropdownMenuItem(
+                                        value:
+                                            m.companyId,
+                                        child: Text(
+                                          m.companyName,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (id) {
+                                  if (id == null) {
+                                    return;
+                                  }
+
+                                  setState(() {
+                                    _membership =
+                                        _memberships
+                                            .firstWhere(
+                                      (m) =>
+                                          m.companyId ==
+                                          id,
+                                    );
+
+                                    _index = 0;
+                                    _refreshToken++;
+                                  });
+                                },
+                              ),
+                            ),
+                          )
+                        else
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _membership.companyName,
+                              ),
+                            ),
+                          ),
+                        IconButton(
+                          tooltip: tr('refresh'),
+                          onPressed: _refreshAll,
+                          icon:
+                              const Icon(Icons.refresh),
+                        ),
+                        IconButton(
+                          tooltip: tr('sign_out'),
+                          onPressed: () =>
+                              _repository.signOut(),
+                          icon:
+                              const Icon(Icons.logout),
+                        ),
+                      ],
+                    ),
+                    body: wide
+                        ? Row(
+                            children: [
+                              NavigationRail(
+                                selectedIndex: _index,
+                                onDestinationSelected:
+                                    (value) => setState(
+                                  () => _index = value,
+                                ),
+                                labelType:
+                                    NavigationRailLabelType
+                                        .all,
+                                destinations: [
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons
+                                          .dashboard_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('dashboard'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons
+                                          .local_shipping_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('vehicles'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons.people_outline,
+                                    ),
+                                    label: Text(
+                                      tr('drivers'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons
+                                          .report_problem_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('issues'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons.build_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('repairs'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons.garage_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('garages'),
+                                    ),
+                                  ),
+                                  NavigationRailDestination(
+                                    icon: const Icon(
+                                      Icons
+                                          .business_outlined,
+                                    ),
+                                    label: Text(
+                                      tr('company'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const VerticalDivider(
+                                width: 1,
+                              ),
+                              Expanded(child: body),
+                            ],
+                          )
+                        : body,
+                    bottomNavigationBar: wide
+                        ? null
+                        : NavigationBar(
+                            selectedIndex:
+                                _index > 4 ? 4 : _index,
+                            onDestinationSelected:
+                                (value) {
+                              if (value < 4) {
+                                setState(
+                                  () => _index = value,
+                                );
+                              } else {
+                                _showMoreSheet(
+                                  context,
+                                );
+                              }
+                            },
+                            destinations: [
+                              NavigationDestination(
+                                icon: const Icon(
+                                  Icons
+                                      .dashboard_outlined,
+                                ),
+                                label:
+                                    tr('dashboard'),
+                              ),
+                              NavigationDestination(
+                                icon: const Icon(
+                                  Icons
+                                      .local_shipping_outlined,
+                                ),
+                                label:
+                                    tr('vehicles'),
+                              ),
+                              NavigationDestination(
+                                icon: const Icon(
+                                  Icons.people_outline,
+                                ),
+                                label: tr('drivers'),
+                              ),
+                              NavigationDestination(
+                                icon: const Icon(
+                                  Icons
+                                      .report_problem_outlined,
+                                ),
+                                label: tr('issues'),
+                              ),
+                              NavigationDestination(
+                                icon: const Icon(
+                                  Icons.more_horiz,
+                                ),
+                                label: tr('more'),
+                              ),
+                            ],
+                          ),
+                  );
+                },
+              );
+            }
+
+            void _showMoreSheet(
+              BuildContext context,
+            ) {
+              showModalBottomSheet<void>(
+                context: context,
+                showDragHandle: true,
+                builder: (context) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.build_outlined,
+                        ),
+                        title:
+                            Text(tr('repairs')),
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _index = 4);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.garage_outlined,
+                        ),
+                        title:
+                            Text(tr('garages')),
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _index = 5);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.business_outlined,
+                        ),
+                        title:
+                            Text(tr('company')),
+                        subtitle: Text(
+                          '${tr('team')} • ${tr('settings')}',
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _index = 6);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+          DART
+
+      - name: Format and test
+        run: |
+          dart format lib
+          flutter pub get
+          flutter analyze
+
+      - name: Save commercial foundation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lib
+
+          git commit -m "FleetPilot commercial foundation" || true
+          git push
+
+      - name: Deploy commercial version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
