@@ -5,6 +5,7 @@ import '../core/localization.dart';
 import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
+import '../checks/vehicle_checks_screen.dart';
 import '../documents/vehicle_documents_screen.dart';
 import '../issues/issue_form_screen.dart';
 import '../repairs/repair_form_screen.dart';
@@ -397,6 +398,28 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 ),
 
                 const SizedBox(height: 28),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: Text(tr('walkaround_checks')),
+                    subtitle: Text(tr('walkaround_checks_subtitle')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VehicleChecksScreen(
+                            company: widget.company,
+                            vehicle: vehicle,
+                            canManage: widget.canManage,
+                          ),
+                        ),
+                      );
+                      if (changed == true) await _refresh();
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.folder_copy_outlined),
