@@ -1,0 +1,103 @@
+name: Run Fixed Localization 2
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/run-localization-fixed2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  localization:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Run corrected localization
+        run: |
+          python3 <<'RUNNER'
+          from pathlib import Path
+
+          path = Path(".github/workflows/full-localization.yml")
+          lines = path.read_text(encoding="utf-8").splitlines()
+
+          start = next(i for i, line in enumerate(lines) if "python3 <<'PY'" in line)
+          end = next(
+              i for i in range(start + 1, len(lines))
+              if lines[i].strip() == "PY"
+          )
+
+          indent = len(lines[start]) - len(lines[start].lstrip())
+          code_lines = []
+
+          for line in lines[start + 1:end]:
+              if line.startswith(" " * indent):
+                  line = line[indent:]
+              code_lines.append(line)
+
+          code = "\n".join(code_lines)
+
+          # Fix login selector indentation
+          code = code.replace(
+              '          start = s.find("                              itemBuilder: (_) => [")',
+              'start = s.find("                              itemBuilder: (_) => [")',
+              1,
+          )
+
+          # Replace fragile company language selector block
+          section = code.find("# 12 languages in company settings.")
+          block_start = code.find('old = """', section)
+          marker = 'company.write_text(s.replace(old, new), encoding="utf-8")'
+          block_end = code.find(marker, block_start)
+
+          if section == -1 or block_start == -1 or block_end == -1:
+              raise SystemExit("Company language section not found")
+
+          block_end += len(marker)
+
+          replacement = '''start = s.find("                  items: [")
+          end = s.find("                  ],", start)
+
+          if start == -1 or end == -1:
+              raise SystemExit("Could not replace settings language selector")
+
+          end += len("                  ],")
+
+          new = """                  items: supportedLanguages
+                      .map(
+                        (code) => DropdownMenuItem<String>(
+                          value: code,
+                          child: Text(languageLabel(code)),
+                        ),
+                      )
+                      .toList(),"""
+
+          s = s[:start] + new + s[end:]
+
+          company.write_text(s, encoding="utf-8")'''
+
+          code = code[:block_start] + replacement + code[block_end:]
+
+          exec(compile(code, "full-localization", "exec"))
+          RUNNER
+
+      - name: Test
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib
+          git commit -m "Add full 12-language localization" || true
+          git push
