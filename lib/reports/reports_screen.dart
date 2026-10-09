@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 
+import '../core/fleet_csv_export.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
 import '../data/fleet_repository.dart';
@@ -22,6 +27,7 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   final _repository = FleetRepository();
   late Future<_ReportsData> _future;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -48,12 +54,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _repository.fetchVehicles(widget.company.companyId),
       _repository.fetchIssues(widget.company.companyId),
       _repository.fetchRepairs(widget.company.companyId),
+      _repository.fetchDrivers(widget.company.companyId),
     ]);
 
     return _ReportsData(
       vehicles: results[0] as List<Vehicle>,
       issues: results[1] as List<FleetIssue>,
       repairs: results[2] as List<Repair>,
+      drivers: results[3] as List<Driver>,
     );
   }
 
@@ -70,6 +78,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
           return date != null && !date.isBefore(cutoff);
         })
         .fold<double>(0, (sum, repair) => sum + repair.totalCost);
+  }
+
+  Future<void> _exportCsv(FleetExportType type, _ReportsData data) async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final rows = buildFleetExportRows(
+        type: type,
+        currency: widget.company.currency,
+        vehicles: data.vehicles,
+        repairs: data.repairs,
+        issues: data.issues,
+        drivers: data.drivers,
+      );
+      final csv = encodeFleetCsv(rows);
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      await FileSaver.instance.saveFile(
+        name: 'fleetpilot_${type.name}_$stamp',
+        bytes: Uint8List.fromList(utf8.encode(csv)),
+        fileExtension: 'csv',
+        mimeType: MimeType.custom,
+        customMimeType: 'text/csv',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('csv_saved'))));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("${tr('csv_error')}: $error")));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -141,7 +184,61 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 4),
-              Text(tr('costs_and_performance')),
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(tr('costs_and_performance')),
+                  PopupMenuButton<FleetExportType>(
+                    enabled: !_exporting,
+                    tooltip: tr('export_csv'),
+                    onSelected: (value) => _exportCsv(value, data),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: FleetExportType.vehicles,
+                        child: Text(tr('export_vehicles')),
+                      ),
+                      PopupMenuItem(
+                        value: FleetExportType.repairs,
+                        child: Text(tr('export_repairs')),
+                      ),
+                      PopupMenuItem(
+                        value: FleetExportType.issues,
+                        child: Text(tr('export_issues')),
+                      ),
+                      PopupMenuItem(
+                        value: FleetExportType.drivers,
+                        child: Text(tr('export_drivers')),
+                      ),
+                      PopupMenuItem(
+                        value: FleetExportType.costs,
+                        child: Text(tr('export_costs')),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.download_outlined, size: 18),
+                          const SizedBox(width: 8),
+                          Text(tr('export_csv')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
 
               LayoutBuilder(
@@ -330,9 +427,11 @@ class _ReportsData {
     required this.vehicles,
     required this.issues,
     required this.repairs,
+    required this.drivers,
   });
 
   final List<Vehicle> vehicles;
   final List<FleetIssue> issues;
   final List<Repair> repairs;
+  final List<Driver> drivers;
 }
