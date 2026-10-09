@@ -160,6 +160,40 @@ class Vehicle {
   }
 }
 
+class VehicleAssignment {
+  VehicleAssignment({
+    required this.id,
+    required this.companyId,
+    required this.vehicleId,
+    required this.driverId,
+    required this.driverName,
+    required this.startsAt,
+    this.endsAt,
+  });
+
+  final String id;
+  final String companyId;
+  final String vehicleId;
+  final String driverId;
+  final String driverName;
+  final DateTime startsAt;
+  final DateTime? endsAt;
+
+  factory VehicleAssignment.fromJson(Json json) {
+    final driver = (json['drivers'] as Map?)?.cast<String, dynamic>();
+
+    return VehicleAssignment(
+      id: json['id'].toString(),
+      companyId: json['company_id'].toString(),
+      vehicleId: json['vehicle_id'].toString(),
+      driverId: json['driver_id'].toString(),
+      driverName: driver?['name']?.toString() ?? '—',
+      startsAt: parseDate(json['starts_at']) ?? DateTime.now(),
+      endsAt: parseDate(json['ends_at']),
+    );
+  }
+}
+
 class Driver {
   Driver({
     required this.id,

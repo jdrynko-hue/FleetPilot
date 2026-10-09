@@ -51,12 +51,17 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         widget.company.companyId,
         vehicleId: widget.vehicleId,
       ),
+      _repository.fetchVehicleAssignments(
+        widget.company.companyId,
+        widget.vehicleId,
+      ),
     ]);
 
     return _VehicleDetailData(
       vehicle: results[0] as Vehicle,
       issues: results[1] as List<FleetIssue>,
       repairs: results[2] as List<Repair>,
+      assignments: results[3] as List<VehicleAssignment>,
     );
   }
 
@@ -109,6 +114,36 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           0,
           (sum, repair) => sum + repair.totalCost,
         );
+
+        final timeline = <_TimelineEvent>[
+          for (final assignment in data.assignments)
+            _TimelineEvent(
+              date: assignment.startsAt,
+              icon: Icons.person_outline,
+              title: '${tr('driver')}: ${assignment.driverName}',
+              subtitle: assignment.endsAt == null
+                  ? tr('active')
+                  : '${formatDateTime(assignment.startsAt)} — ${formatDateTime(assignment.endsAt!)}',
+            ),
+          for (final issue in data.issues)
+            _TimelineEvent(
+              date: issue.reportedAt,
+              icon: Icons.warning_amber_outlined,
+              title: '${tr('issues')}: ${issue.title}',
+              subtitle: '${tr(issue.priority)} • ${tr(issue.status)}',
+            ),
+          for (final repair in data.repairs)
+            if ((repair.completedAt ?? repair.startedAt ?? repair.bookedAt) !=
+                null)
+              _TimelineEvent(
+                date:
+                    repair.completedAt ?? repair.startedAt ?? repair.bookedAt!,
+                icon: Icons.build_circle_outlined,
+                title: repair.description ?? tr('repair'),
+                subtitle:
+                    '${tr(repair.status)} • ${formatMoney(repair.totalCost, currency: widget.company.currency)}',
+              ),
+        ]..sort((a, b) => b.date.compareTo(a.date));
 
         return Scaffold(
           appBar: AppBar(
@@ -359,6 +394,27 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           ],
                         ),
                 ),
+
+                if (timeline.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  _SectionTitle(
+                    icon: Icons.history_rounded,
+                    title: tr('history'),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < timeline.length; i++) ...[
+                          _TimelineTile(event: timeline[i]),
+                          if (i != timeline.length - 1)
+                            const Divider(height: 1),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
 
                 if ((vehicle.notes ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 28),
@@ -695,14 +751,54 @@ class _RepairTile extends StatelessWidget {
   }
 }
 
+class _TimelineTile extends StatelessWidget {
+  const _TimelineTile({required this.event});
+
+  final _TimelineEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        child: Icon(event.icon, size: 20),
+      ),
+      title: Text(
+        event.title,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text('${formatDateTime(event.date)}\n${event.subtitle}'),
+      isThreeLine: true,
+    );
+  }
+}
+
+class _TimelineEvent {
+  const _TimelineEvent({
+    required this.date,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final DateTime date;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+}
+
 class _VehicleDetailData {
   _VehicleDetailData({
     required this.vehicle,
     required this.issues,
     required this.repairs,
+    required this.assignments,
   });
 
   final Vehicle vehicle;
   final List<FleetIssue> issues;
   final List<Repair> repairs;
+  final List<VehicleAssignment> assignments;
 }

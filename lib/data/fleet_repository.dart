@@ -83,6 +83,25 @@ class FleetRepository {
     return Vehicle.fromJson(row);
   }
 
+  Future<List<VehicleAssignment>> fetchVehicleAssignments(
+    String companyId,
+    String vehicleId,
+  ) async {
+    final rows = await _client
+        .from('vehicle_assignments')
+        .select('*, drivers(name)')
+        .eq('company_id', companyId)
+        .eq('vehicle_id', vehicleId)
+        .order('starts_at', ascending: false);
+
+    return (rows as List)
+        .map(
+          (row) =>
+              VehicleAssignment.fromJson((row as Map).cast<String, dynamic>()),
+        )
+        .toList();
+  }
+
   Future<void> createVehicle(Json values) async {
     await _client.from('vehicles').insert(values);
   }

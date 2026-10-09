@@ -36,6 +36,7 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
+    "history": "Historia",
     "dashboard": "Start",
     "vehicles": "Pojazdy",
     "drivers": "Kierowcy",
@@ -220,6 +221,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
+    "history": "History",
     "dashboard": "Home",
     "vehicles": "Vehicles",
     "drivers": "Drivers",
@@ -405,6 +407,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
+    "history": "Verlauf",
     "dashboard": "Start",
     "vehicles": "Fahrzeuge",
     "drivers": "Fahrer",
@@ -591,6 +594,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
+    "history": "História",
     "dashboard": "Domov",
     "vehicles": "Vozidlá",
     "drivers": "Vodiči",
@@ -776,6 +780,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
+    "history": "Historie",
     "dashboard": "Domů",
     "vehicles": "Vozidla",
     "drivers": "Řidiči",
@@ -961,6 +966,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
+    "history": "Előzmények",
     "dashboard": "Kezdőlap",
     "vehicles": "Járművek",
     "drivers": "Sofőrök",
@@ -1146,6 +1152,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
+    "history": "Istoric",
     "dashboard": "Acasă",
     "vehicles": "Vehicule",
     "drivers": "Șoferi",
@@ -1331,6 +1338,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
+    "history": "Historial",
     "dashboard": "Inicio",
     "vehicles": "Vehículos",
     "drivers": "Conductores",
@@ -1517,6 +1525,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
+    "history": "Historique",
     "dashboard": "Accueil",
     "vehicles": "Véhicules",
     "drivers": "Conducteurs",
@@ -1702,6 +1711,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
+    "history": "Cronologia",
     "dashboard": "Home",
     "vehicles": "Veicoli",
     "drivers": "Autisti",
@@ -1887,6 +1897,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
+    "history": "Історія",
     "dashboard": "Головна",
     "vehicles": "Транспорт",
     "drivers": "Водії",
@@ -2072,6 +2083,7 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
+    "history": "Histórico",
     "dashboard": "Início",
     "vehicles": "Veículos",
     "drivers": "Condutores",
