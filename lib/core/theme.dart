@@ -1,38 +1,71 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildFleetPilotTheme() {
+  const navy = Color(0xFF102A43);
+  const blue = Color(0xFF2563EB);
+  const background = Color(0xFFF3F6FA);
+
   final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF234E84),
+    seedColor: blue,
     brightness: Brightness.light,
   );
 
   return ThemeData(
-    colorScheme: scheme,
     useMaterial3: true,
-    scaffoldBackgroundColor: const Color(0xFFF3F6FA),
+    colorScheme: scheme,
+    scaffoldBackgroundColor: background,
+
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
+      backgroundColor: navy,
+      foregroundColor: Colors.white,
       elevation: 0,
+      surfaceTintColor: Colors.transparent,
     ),
+
+    textTheme: const TextTheme(
+      headlineMedium: TextStyle(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+      ),
+      titleLarge: TextStyle(
+        fontWeight: FontWeight.w800,
+      ),
+      titleMedium: TextStyle(
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+
+    cardTheme: CardThemeData(
+      color: Colors.white,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(
+          color: Color(0xFFE3E9F0),
+        ),
+      ),
+    ),
+
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: Color(0xFFD8E0E8),
+        ),
       ),
     ),
+
     navigationBarTheme: NavigationBarThemeData(
-      height: 72,
+      height: 74,
       backgroundColor: Colors.white,
       indicatorColor: scheme.primaryContainer,
+      elevation: 8,
     ),
   );
 }

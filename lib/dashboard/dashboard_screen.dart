@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants.dart';
 import '../core/formatters.dart';
-import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 
@@ -17,11 +15,14 @@ class DashboardScreen extends StatefulWidget {
   final int refreshToken;
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() =>
+      _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState
+    extends State<DashboardScreen> {
   final _repository = FleetRepository();
+
   late Future<_DashboardData> _future;
 
   @override
@@ -31,10 +32,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
-  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+  void didUpdateWidget(
+    covariant DashboardScreen oldWidget,
+  ) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken ||
-        oldWidget.company.companyId != widget.company.companyId) {
+
+    if (oldWidget.refreshToken !=
+            widget.refreshToken ||
+        oldWidget.company.companyId !=
+            widget.company.companyId) {
       _load();
     }
   }
@@ -45,10 +51,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<_DashboardData> _fetch() async {
     final results = await Future.wait([
-      _repository.fetchVehicles(widget.company.companyId),
-      _repository.fetchIssues(widget.company.companyId),
-      _repository.fetchRepairs(widget.company.companyId),
+      _repository.fetchVehicles(
+        widget.company.companyId,
+      ),
+      _repository.fetchIssues(
+        widget.company.companyId,
+      ),
+      _repository.fetchRepairs(
+        widget.company.companyId,
+      ),
     ]);
+
     return _DashboardData(
       vehicles: results[0] as List<Vehicle>,
       issues: results[1] as List<FleetIssue>,
@@ -61,102 +74,461 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return FutureBuilder<_DashboardData>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState !=
+            ConnectionState.done) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
+
         if (snapshot.hasError) {
-          return ErrorState(error: snapshot.error!, onRetry: () => setState(_load));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    snapshot.error.toString(),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        setState(_load),
+                    icon: const Icon(
+                      Icons.refresh,
+                    ),
+                    label: const Text(
+                      'Spróbuj ponownie',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         final data = snapshot.data!;
-        final now = DateTime.now();
-        final inThirtyDays = now.add(const Duration(days: 30));
-        final activeIssues = data.issues.where((i) => i.status != 'closed' && i.status != 'resolved').toList();
-        final today = DateTime(now.year, now.month, now.day);
-        final dueSoon = data.vehicles.where((v) {
-          final due = v.inspectionDueDate;
-          return due != null && due.isBefore(inThirtyDays.add(const Duration(days: 1)));
-        }).toList();
-        final unavailable = data.vehicles.where((v) => ['workshop', 'maintenance', 'off_road'].contains(v.status)).length;
-        final monthStart = DateTime(now.year, now.month, 1);
-        final monthSpend = data.repairs.where((r) {
-          final date = r.completedAt ?? r.bookedAt;
-          return date != null && date.isAfter(monthStart.subtract(const Duration(seconds: 1)));
-        }).fold<double>(0, (sum, r) => sum + r.totalCost);
 
-        final attention = <_AttentionItem>[
-          ...dueSoon.map((v) => _AttentionItem(
-                icon: Icons.event_busy_outlined,
-                title: v.inspectionDueDate!.isBefore(today)
-                    ? '${v.registration} — ${v.inspectionType} OVERDUE (${formatDate(v.inspectionDueDate)})'
-                    : '${v.registration} — ${v.inspectionType} due ${formatDate(v.inspectionDueDate)}',
-                subtitle: '${v.make ?? ''} ${v.model ?? ''}'.trim(),
-              )),
-          ...activeIssues
-              .where((i) => i.priority == 'critical' || i.priority == 'high')
-              .map((i) => _AttentionItem(
-                    icon: Icons.report_problem_outlined,
-                    title: '${i.registration ?? 'Vehicle'} — ${i.title}',
-                    subtitle: '${prettifyEnum(i.priority)} priority • ${prettifyEnum(i.status)}',
-                  )),
-          ...data.vehicles
-              .where((v) => v.status == 'off_road' || v.status == 'workshop')
-              .map((v) => _AttentionItem(
-                    icon: Icons.car_repair_outlined,
-                    title: '${v.registration} — ${prettifyEnum(v.status)}',
-                    subtitle: v.currentDriverName ?? 'Brak przypisanego kierowcy',
-                  )),
-        ];
+        final activeIssues = data.issues
+            .where(
+              (issue) =>
+                  issue.status != 'closed' &&
+                  issue.status != 'resolved',
+            )
+            .toList();
+
+        final unavailable = data.vehicles
+            .where(
+              (vehicle) =>
+                  vehicle.status == 'workshop' ||
+                  vehicle.status ==
+                      'maintenance' ||
+                  vehicle.status == 'off_road',
+            )
+            .length;
+
+        final operational = data.vehicles
+            .where(
+              (vehicle) =>
+                  vehicle.status == 'available' ||
+                  vehicle.status == 'in_use',
+            )
+            .length;
+
+        final now = DateTime.now();
+
+        final monthStart = DateTime(
+          now.year,
+          now.month,
+          1,
+        );
+
+        final monthSpend = data.repairs
+            .where((repair) {
+              final date =
+                  repair.completedAt ??
+                  repair.bookedAt;
+
+              return date != null &&
+                  !date.isBefore(monthStart);
+            })
+            .fold<double>(
+              0,
+              (sum, repair) =>
+                  sum + repair.totalCost,
+            );
+
+        final attention = <_AttentionItem>[];
+
+        for (final vehicle in data.vehicles) {
+          final due =
+              vehicle.inspectionDueDate;
+
+          if (due != null &&
+              due.isBefore(
+                now.add(
+                  const Duration(days: 30),
+                ),
+              )) {
+            attention.add(
+              _AttentionItem(
+                icon:
+                    Icons.event_busy_outlined,
+                title:
+                    '${vehicle.registration} — ${vehicle.inspectionType}',
+                subtitle:
+                    'Termin: ${formatDate(due)}',
+              ),
+            );
+          }
+        }
+
+        for (final issue in activeIssues) {
+          if (issue.priority == 'high' ||
+              issue.priority ==
+                  'critical') {
+            attention.add(
+              _AttentionItem(
+                icon:
+                    Icons.warning_amber_rounded,
+                title:
+                    '${issue.registration ?? 'Pojazd'} — ${issue.title}',
+                subtitle:
+                    issue.priority ==
+                            'critical'
+                        ? 'Priorytet krytyczny'
+                        : 'Wysoki priorytet',
+              ),
+            );
+          }
+        }
 
         return RefreshIndicator(
-          onRefresh: () async => setState(_load),
+          onRefresh: () async {
+            setState(_load);
+          },
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            physics:
+                const AlwaysScrollableScrollPhysics(),
+            padding:
+                const EdgeInsets.fromLTRB(
+              16,
+              18,
+              16,
+              30,
+            ),
             children: [
-              Text('Panel floty', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(widget.company.companyName),
-              const SizedBox(height: 16),
+              Container(
+                padding:
+                    const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color:
+                      const Color(0xFF102A43),
+                  borderRadius:
+                      BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.company.companyName,
+                            maxLines: 1,
+                            overflow:
+                                TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color:
+                                  Colors.white70,
+                              fontWeight:
+                                  FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Stan floty',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 27,
+                              fontWeight:
+                                  FontWeight.w900,
+                              letterSpacing:
+                                  -0.6,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            data.vehicles.isEmpty
+                                ? 'Dodaj pierwszy pojazd, aby rozpocząć.'
+                                : '$operational z ${data.vehicles.length} pojazdów operacyjnych',
+                            style:
+                                const TextStyle(
+                              color:
+                                  Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white
+                            .withOpacity(0.12),
+                        borderRadius:
+                            BorderRadius.circular(
+                          18,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons
+                            .local_shipping_rounded,
+                        color: Colors.white,
+                        size: 31,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
               LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 1000 ? 4 : constraints.maxWidth >= 600 ? 2 : 1;
-                  const gap = 12.0;
-                  final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-                  final cards = [
-                    MetricCard(label: 'Pojazdy', value: data.vehicles.length.toString(), icon: Icons.local_shipping_outlined),
-                    MetricCard(label: 'Niedostępne', value: unavailable.toString(), icon: Icons.car_repair_outlined),
-                    MetricCard(label: 'Otwarte usterki', value: activeIssues.length.toString(), icon: Icons.report_problem_outlined),
-                    MetricCard(label: 'Koszt napraw w tym miesiącu', value: formatMoney(monthSpend, currency: widget.company.currency), icon: Icons.payments_outlined),
-                  ];
+                builder:
+                    (context, constraints) {
+                  final cardWidth =
+                      (constraints.maxWidth -
+                              12) /
+                          2;
+
                   return Wrap(
-                    spacing: gap,
-                    runSpacing: gap,
-                    children: cards.map((card) => SizedBox(width: width, child: card)).toList(),
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _MetricCard(
+                        width: cardWidth,
+                        icon: Icons
+                            .local_shipping_rounded,
+                        value: data
+                            .vehicles.length
+                            .toString(),
+                        label: 'Pojazdy',
+                      ),
+                      _MetricCard(
+                        width: cardWidth,
+                        icon:
+                            Icons.car_repair,
+                        value: unavailable
+                            .toString(),
+                        label:
+                            'Niedostępne',
+                      ),
+                      _MetricCard(
+                        width: cardWidth,
+                        icon: Icons
+                            .warning_amber_rounded,
+                        value: activeIssues
+                            .length
+                            .toString(),
+                        label: 'Usterki',
+                      ),
+                      _MetricCard(
+                        width: cardWidth,
+                        icon:
+                            Icons.payments_outlined,
+                        value: formatMoney(
+                          monthSpend,
+                          currency: widget
+                              .company.currency,
+                        ),
+                        label:
+                            'Naprawy / miesiąc',
+                        smallValue: true,
+                      ),
+                    ],
                   );
                 },
               ),
-              const SizedBox(height: 24),
-              Text('Wymaga uwagi', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
+
+              const SizedBox(height: 26),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Wymaga uwagi',
+                      style:
+                          Theme.of(context)
+                              .textTheme
+                              .titleLarge,
+                    ),
+                  ),
+                  if (attention.isNotEmpty)
+                    Container(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration:
+                          BoxDecoration(
+                        color:
+                            const Color(
+                          0xFFFDE8E8,
+                        ),
+                        borderRadius:
+                            BorderRadius.circular(
+                          30,
+                        ),
+                      ),
+                      child: Text(
+                        attention.length
+                            .toString(),
+                        style:
+                            const TextStyle(
+                          color:
+                              Color(0xFFB42318),
+                          fontWeight:
+                              FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
               if (attention.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('Brak pilnych spraw.'),
+                    padding:
+                        const EdgeInsets.all(
+                      18,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration:
+                              BoxDecoration(
+                            color:
+                                const Color(
+                              0xFFE9F8EF,
+                            ),
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              14,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons
+                                .check_circle_outline,
+                            color:
+                                Color(
+                              0xFF16803C,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 14,
+                        ),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                'Wszystko pod kontrolą',
+                                style:
+                                    TextStyle(
+                                  fontWeight:
+                                      FontWeight
+                                          .w800,
+                                ),
+                              ),
+                              SizedBox(
+                                height: 4,
+                              ),
+                              Text(
+                                'Brak pilnych spraw w tej chwili.',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               else
                 Card(
                   child: Column(
                     children: [
-                      for (var i = 0; i < attention.length; i++) ...[
+                      for (var i = 0;
+                          i <
+                                  attention
+                                      .length &&
+                              i < 6;
+                          i++) ...[
                         ListTile(
-                          leading: Icon(attention[i].icon),
-                          title: Text(attention[i].title),
-                          subtitle: attention[i].subtitle.isEmpty ? null : Text(attention[i].subtitle),
+                          contentPadding:
+                              const EdgeInsets
+                                  .symmetric(
+                            horizontal: 16,
+                            vertical: 5,
+                          ),
+                          leading:
+                              CircleAvatar(
+                            backgroundColor:
+                                const Color(
+                              0xFFFDE8E8,
+                            ),
+                            child: Icon(
+                              attention[i]
+                                  .icon,
+                              color:
+                                  const Color(
+                                0xFFB42318,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            attention[i]
+                                .title,
+                            style:
+                                const TextStyle(
+                              fontWeight:
+                                  FontWeight
+                                      .w700,
+                            ),
+                          ),
+                          subtitle: Text(
+                            attention[i]
+                                .subtitle,
+                          ),
                         ),
-                        if (i != attention.length - 1) const Divider(height: 1),
+                        if (i <
+                                attention
+                                        .length -
+                                    1 &&
+                            i < 5)
+                          const Divider(
+                            height: 1,
+                          ),
                       ],
                     ],
                   ),
@@ -169,8 +541,91 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.width,
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.smallValue = false,
+  });
+
+  final double width;
+  final IconData icon;
+  final String value;
+  final String label;
+  final bool smallValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        child: Padding(
+          padding:
+              const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 39,
+                height: 39,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer,
+                  borderRadius:
+                      BorderRadius.circular(
+                    12,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 21,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                value,
+                maxLines: 1,
+                overflow:
+                    TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize:
+                      smallValue ? 20 : 28,
+                  fontWeight:
+                      FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow:
+                    TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DashboardData {
-  _DashboardData({required this.vehicles, required this.issues, required this.repairs});
+  _DashboardData({
+    required this.vehicles,
+    required this.issues,
+    required this.repairs,
+  });
 
   final List<Vehicle> vehicles;
   final List<FleetIssue> issues;
@@ -178,7 +633,11 @@ class _DashboardData {
 }
 
 class _AttentionItem {
-  _AttentionItem({required this.icon, required this.title, required this.subtitle});
+  _AttentionItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   final IconData icon;
   final String title;
