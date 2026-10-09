@@ -128,18 +128,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final attention = <_AttentionItem>[];
 
-        for (final vehicle in data.vehicles) {
-          final due = vehicle.inspectionDueDate;
+        final today = DateTime(now.year, now.month, now.day);
 
-          if (due != null && due.isBefore(now.add(const Duration(days: 30)))) {
+        int daysUntil(DateTime date) {
+          final target = DateTime(date.year, date.month, date.day);
+          return target.difference(today).inDays;
+        }
+
+        String reminderBand(int days) {
+          if (days < 0) return '!';
+          if (days <= 7) return '≤7d';
+          if (days <= 14) return '≤14d';
+          return '≤30d';
+        }
+
+        void addDateReminder({
+          required Vehicle vehicle,
+          required String label,
+          required DateTime? date,
+          required IconData icon,
+        }) {
+          if (date == null) return;
+
+          final days = daysUntil(date);
+
+          if (days <= 30) {
             attention.add(
               _AttentionItem(
-                icon: Icons.event_busy_outlined,
-                title: '${vehicle.registration} — ${vehicle.inspectionType}',
-                subtitle: '${tr('due_date')}: ${formatDate(due)}',
+                icon: icon,
+                title: '${vehicle.registration} — $label',
+                subtitle:
+                    '${reminderBand(days)} • ${tr('due_date')}: ${formatDate(date)}',
+                sortOrder: days,
               ),
             );
           }
+        }
+
+        for (final vehicle in data.vehicles) {
+          addDateReminder(
+            vehicle: vehicle,
+            label: vehicle.inspectionType,
+            date: vehicle.inspectionDueDate,
+            icon: Icons.fact_check_outlined,
+          );
+
+          addDateReminder(
+            vehicle: vehicle,
+            label: tr('service'),
+            date: vehicle.serviceDueDate,
+            icon: Icons.build_outlined,
+          );
+
+          addDateReminder(
+            vehicle: vehicle,
+            label: tr('insurance'),
+            date: vehicle.insuranceExpiryDate,
+            icon: Icons.shield_outlined,
+          );
         }
 
         for (final issue in activeIssues) {
@@ -152,10 +198,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 subtitle: issue.priority == 'critical'
                     ? tr('critical_priority')
                     : tr('high_priority'),
+                sortOrder: issue.priority == 'critical' ? -10000 : -9000,
               ),
             );
           }
         }
+
+        attention.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -457,9 +506,11 @@ class _AttentionItem {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.sortOrder,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final int sortOrder;
 }
