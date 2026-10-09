@@ -16,62 +16,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upgrade mobile UI
+      - name: Upgrade UI
         run: |
           cat > lib/core/theme.dart <<'DART'
           import 'package:flutter/material.dart';
 
           ThemeData buildFleetPilotTheme() {
             final scheme = ColorScheme.fromSeed(
-              seedColor: const Color(0xFF315A9A),
+              seedColor: const Color(0xFF234E84),
               brightness: Brightness.light,
             );
 
             return ThemeData(
               colorScheme: scheme,
               useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFFF4F7FB),
+              scaffoldBackgroundColor: const Color(0xFFF3F6FA),
               appBarTheme: const AppBarTheme(
                 backgroundColor: Colors.white,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
               ),
               inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFFD9E0EA)),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               cardTheme: CardThemeData(
                 elevation: 0,
                 color: Colors.white,
-                margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0xFFE7EBF1)),
-                ),
-              ),
-              filledButtonTheme: FilledButtonThemeData(
-                style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
                 ),
               ),
               navigationBarTheme: NavigationBarThemeData(
+                height: 72,
                 backgroundColor: Colors.white,
                 indicatorColor: scheme.primaryContainer,
-                height: 72,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               ),
             );
           }
@@ -80,171 +62,60 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          def change(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              if old not in text:
-                  raise SystemExit(f"Nie znaleziono fragmentu w {path}")
-              p.write_text(text.replace(old, new))
-
-          change(
-              "lib/shell/fleet_shell.dart",
-              """      DashboardScreen(
-                company: _membership,
-                refreshToken: _refreshToken,
-              ),""",
-              """      DashboardScreen(
-                company: _membership,
-                refreshToken: _refreshToken,
-                onOpenVehicles: () => setState(() => _index = 1),
-                onOpenIssues: () => setState(() => _index = 3),
-                onOpenRepairs: () => setState(() => _index = 4),
-              ),"""
-          )
-
-          p = Path("lib/shell/fleet_shell.dart")
-          s = p.read_text()
-          replacements = {
-              "tooltip: 'Refresh'": "tooltip: 'Odśwież'",
-              "tooltip: 'Sign out'": "tooltip: 'Wyloguj'",
-              "label: Text('Dashboard')": "label: Text('Start')",
-              "label: Text('Vehicles')": "label: Text('Pojazdy')",
-              "label: Text('Drivers')": "label: Text('Kierowcy')",
-              "label: Text('Issues')": "label: Text('Usterki')",
-              "label: Text('Repairs')": "label: Text('Naprawy')",
-              "label: Text('Garages')": "label: Text('Warsztaty')",
-              "label: Text('Company')": "label: Text('Firma')",
-              "label: 'Dashboard'": "label: 'Start'",
-              "label: 'Vehicles'": "label: 'Pojazdy'",
-              "label: 'Drivers'": "label: 'Kierowcy'",
-              "label: 'Issues'": "label: 'Usterki'",
-              "label: 'More'": "label: 'Więcej'",
-              "title: const Text('Repairs')": "title: const Text('Naprawy')",
-              "title: const Text('Garages')": "title: const Text('Warsztaty')",
-              "title: const Text('Company')": "title: const Text('Firma')",
-          }
-          for old, new in replacements.items():
-              s = s.replace(old, new)
-          p.write_text(s)
-
-          change(
-              "lib/dashboard/dashboard_screen.dart",
-              """  const DashboardScreen({
-                required this.company,
-                required this.refreshToken,
-                super.key,
-              });
-
-              final CompanyMembership company;
-              final int refreshToken;""",
-              """  const DashboardScreen({
-                required this.company,
-                required this.refreshToken,
-                required this.onOpenVehicles,
-                required this.onOpenIssues,
-                required this.onOpenRepairs,
-                super.key,
-              });
-
-              final CompanyMembership company;
-              final int refreshToken;
-              final VoidCallback onOpenVehicles;
-              final VoidCallback onOpenIssues;
-              final VoidCallback onOpenRepairs;"""
-          )
-
-          change(
-              "lib/dashboard/dashboard_screen.dart",
-              """              Text(widget.company.companyName),
-              const SizedBox(height: 16),""",
-              """              Text(
-                widget.company.companyName,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: widget.onOpenVehicles,
-                    icon: const Icon(Icons.local_shipping_outlined),
-                    label: const Text('Pojazdy'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: widget.onOpenIssues,
-                    icon: const Icon(Icons.report_problem_outlined),
-                    label: const Text('Zgłoś usterkę'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: widget.onOpenRepairs,
-                    icon: const Icon(Icons.build_outlined),
-                    label: const Text('Naprawy'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),"""
-          )
-
-          p = Path("lib/dashboard/dashboard_screen.dart")
-          s = p.read_text()
-          replacements = {
-              "Text('Dashboard'": "Text('Panel floty'",
-              "label: 'Vehicles'": "label: 'Pojazdy'",
-              "label: 'Unavailable'": "label: 'Niedostępne'",
-              "label: 'Open issues'": "label: 'Otwarte usterki'",
-              "label: 'Repair spend this month'": "label: 'Naprawy w tym miesiącu'",
-              "Text('Needs attention'": "Text('Wymaga uwagi'",
-              "Text('Nothing urgent right now.')": "Text('Brak pilnych spraw.')",
+          files = {
+            "lib/shell/fleet_shell.dart": {
+              "'Dashboard'": "'Start'",
+              "'Vehicles'": "'Pojazdy'",
+              "'Drivers'": "'Kierowcy'",
+              "'Issues'": "'Usterki'",
+              "'Repairs'": "'Naprawy'",
+              "'Garages'": "'Warsztaty'",
+              "'Company'": "'Firma'",
+              "'More'": "'Więcej'",
+              "'Refresh'": "'Odśwież'",
+              "'Sign out'": "'Wyloguj'",
+            },
+            "lib/dashboard/dashboard_screen.dart": {
+              "'Dashboard'": "'Panel floty'",
+              "'Vehicles'": "'Pojazdy'",
+              "'Unavailable'": "'Niedostępne'",
+              "'Open issues'": "'Otwarte usterki'",
+              "'Repair spend this month'": "'Koszt napraw w tym miesiącu'",
+              "'Needs attention'": "'Wymaga uwagi'",
+              "'Nothing urgent right now.'": "'Brak pilnych spraw.'",
               "'No driver assigned'": "'Brak przypisanego kierowcy'",
-              " OVERDUE ": " PO TERMINIE ",
-              " — \${v.inspectionType} due ": " — \${v.inspectionType} termin ",
+            },
+            "lib/auth/login_screen.dart": {
+              "'Create your account'": "'Utwórz konto'",
+              "'Sign in to your fleet workspace'": "'Zaloguj się do swojej floty'",
+              "'Password'": "'Hasło'",
+              "'Create account'": "'Utwórz konto'",
+              "'Sign in'": "'Zaloguj'",
+              "'Already have an account? Sign in'": "'Masz już konto? Zaloguj się'",
+              "'New to FleetPilot? Create an account'": "'Nie masz konta? Utwórz je'",
+            },
+            "lib/auth/create_company_screen.dart": {
+              "'Create your workspace'": "'Utwórz swoją flotę'",
+              "'Company name'": "'Nazwa firmy'",
+              "'Country code'": "'Kod kraju'",
+              "'Currency'": "'Waluta'",
+              "'Create workspace'": "'Utwórz flotę'",
+              "'Creating…'": "'Tworzenie…'",
+            },
           }
-          for old, new in replacements.items():
-              s = s.replace(old, new)
-          p.write_text(s)
 
-          p = Path("lib/auth/login_screen.dart")
-          s = p.read_text()
-          replacements = {
-              "Create your account": "Utwórz konto",
-              "Sign in to your fleet workspace": "Zaloguj się do swojej floty",
-              "labelText: 'Password'": "labelText: 'Hasło'",
-              "Enter a valid email": "Podaj poprawny adres e-mail",
-              "Use at least 8 characters": "Hasło musi mieć co najmniej 8 znaków",
-              "'Create account' : 'Sign in'": "'Utwórz konto' : 'Zaloguj'",
-              "Already have an account? Sign in": "Masz już konto? Zaloguj się",
-              "New to FleetPilot? Create an account": "Nie masz konta? Utwórz je",
-              "Account created. Check your email to confirm the account.": "Konto zostało utworzone.",
-          }
-          for old, new in replacements.items():
-              s = s.replace(old, new)
-          p.write_text(s)
-
-          p = Path("lib/auth/create_company_screen.dart")
-          s = p.read_text()
-          replacements = {
-              "Create your workspace": "Utwórz swoją flotę",
-              "This workspace keeps one company’s fleet data isolated from every other company.": "Dane tej floty będą oddzielone od danych innych firm.",
-              "Company name": "Nazwa firmy",
-              "Country code": "Kod kraju",
-              "Currency": "Waluta",
-              "Creating…": "Tworzenie…",
-              "Create workspace": "Utwórz flotę",
-          }
-          for old, new in replacements.items():
-              s = s.replace(old, new)
-          p.write_text(s)
-
-          p = Path("lib/core/widgets.dart")
-          s = p.read_text().replace("Try again", "Spróbuj ponownie")
-          p.write_text(s)
+          for file, replacements in files.items():
+              p = Path(file)
+              text = p.read_text()
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              p.write_text(text)
           PY
 
-      - name: Commit upgrade
+      - name: Save changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lib
-          git commit -m "Upgrade FleetPilot mobile UI" || exit 0
+          git commit -m "Upgrade FleetPilot UI" || exit 0
           git push
