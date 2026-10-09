@@ -87,14 +87,20 @@ class _CompanyScreenState extends State<CompanyScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(labelText: tr('email')),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   initialValue: role,
                   decoration: InputDecoration(labelText: tr('role')),
-                  items: const [
-                    DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                    DropdownMenuItem(value: 'manager', child: Text('Manager')),
-                    DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
+                  items: [
+                    DropdownMenuItem(value: 'admin', child: Text(tr('admin'))),
+                    DropdownMenuItem(
+                      value: 'manager',
+                      child: Text(tr('manager')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'viewer',
+                      child: Text(tr('viewer')),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -107,7 +113,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(tr('cancel')),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, {
@@ -145,15 +151,17 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(tr('invite_created'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('invite_created'))));
 
       setState(_reload);
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -171,14 +179,15 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Company added successfully.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('company_added'))));
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -215,7 +224,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
       children: [
         Text(tr('company'), style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
 
         Card(
           child: Padding(
@@ -227,7 +236,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
                   widget.company.companyName,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   '${tr('your_role')}: ${prettifyEnum(widget.company.role)}',
                 ),
@@ -237,7 +246,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
           ),
         ),
 
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
 
         Card(
           child: Padding(
@@ -245,7 +254,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
             child: Row(
               children: [
                 const Icon(Icons.language_rounded),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     tr('language'),
@@ -254,16 +263,14 @@ class _CompanyScreenState extends State<CompanyScreen> {
                 ),
                 DropdownButton<String>(
                   value: AppLocale.language.value,
-                  items: [
-                    DropdownMenuItem(
-                      value: 'pl',
-                      child: Text('🇵🇱 ${tr('polish')}'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'en',
-                      child: Text('🇬🇧 ${tr('english')}'),
-                    ),
-                  ],
+                  items: supportedLanguages
+                      .map(
+                        (code) => DropdownMenuItem<String>(
+                          value: code,
+                          child: Text(languageLabel(code)),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       _changeLanguage(value);
@@ -275,7 +282,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
           ),
         ),
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         Row(
           children: [
@@ -287,7 +294,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
                     tr('team'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(tr('team_description')),
                 ],
               ),
@@ -301,13 +308,13 @@ class _CompanyScreenState extends State<CompanyScreen> {
           ],
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         FutureBuilder<List<CompanyMember>>(
           future: _members,
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Card(
+              return Card(
                 child: Padding(
                   padding: EdgeInsets.all(30),
                   child: Center(child: CircularProgressIndicator()),
@@ -377,17 +384,17 @@ class _CompanyScreenState extends State<CompanyScreen> {
         ),
 
         if (_canAdmin && _invites != null) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Text(
             tr('pending_invites'),
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           FutureBuilder<List<CompanyInvite>>(
             future: _invites,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const SizedBox(
+                return SizedBox(
                   height: 40,
                   child: Center(child: CircularProgressIndicator()),
                 );
@@ -430,11 +437,11 @@ class _CompanyScreenState extends State<CompanyScreen> {
           ),
         ],
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         Text(tr('join_company'), style: Theme.of(context).textTheme.titleLarge),
 
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
 
         Card(
           child: Padding(
@@ -447,7 +454,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
                     decoration: InputDecoration(labelText: tr('invite_code')),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 FilledButton(
                   onPressed: _acceptCode,
                   child: Text(tr('accept_invite')),
@@ -457,7 +464,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
           ),
         ),
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         OutlinedButton.icon(
           onPressed: () => _repository.signOut(),

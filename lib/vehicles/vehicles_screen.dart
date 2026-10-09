@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/widgets.dart';
@@ -93,7 +95,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
           return ErrorState(
@@ -122,7 +124,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               ? FloatingActionButton.extended(
                   onPressed: () => _openForm(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add vehicle'),
+                  label: Text(tr('add_vehicle')),
                 )
               : null,
           body: RefreshIndicator(
@@ -132,10 +134,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  'Vehicles',
+                  tr('vehicles'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
@@ -144,8 +146,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       width: 360,
                       child: TextField(
                         controller: _search,
-                        decoration: const InputDecoration(
-                          labelText: 'Search vehicles',
+                        decoration: InputDecoration(
+                          labelText: tr('search_vehicles'),
                           prefixIcon: Icon(Icons.search),
                         ),
                       ),
@@ -154,11 +156,11 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       width: 220,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _statusFilter,
-                        decoration: const InputDecoration(labelText: 'Status'),
+                        decoration: InputDecoration(labelText: tr('status')),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All statuses'),
+                            child: Text(tr('all_statuses')),
                           ),
                           ...vehicleStatuses.map(
                             (s) => DropdownMenuItem<String?>(
@@ -173,14 +175,14 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (vehicles.isEmpty)
-                  const SizedBox(
+                  SizedBox(
                     height: 360,
                     child: EmptyState(
                       icon: Icons.local_shipping_outlined,
-                      title: 'No vehicles yet',
-                      message: 'Add the first vehicle when you are ready to start testing the fleet workspace.',
+                      title: tr('no_vehicles_yet'),
+                      message: tr('no_vehicles_message'),
                     ),
                   )
                 else
@@ -210,9 +212,9 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                   label: prettifyEnum(vehicles[i].status),
                                 ),
                                 if (widget.canManage) ...[
-                                  const SizedBox(width: 4),
+                                  SizedBox(width: 4),
                                   IconButton(
-                                    tooltip: 'Edit',
+                                    tooltip: tr('edit'),
                                     onPressed: () =>
                                         _openForm(vehicle: vehicles[i]),
                                     icon: const Icon(Icons.edit_outlined),
@@ -227,7 +229,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       ],
                     ),
                   ),
-                const SizedBox(height: 84),
+                SizedBox(height: 84),
               ],
             ),
           ),

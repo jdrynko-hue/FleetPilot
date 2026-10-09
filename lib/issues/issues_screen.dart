@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/widgets.dart';
@@ -66,7 +68,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done)
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         if (snapshot.hasError)
           return ErrorState(
             error: snapshot.error!,
@@ -86,7 +88,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
               ? FloatingActionButton.extended(
                   onPressed: () => _open(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add issue'),
+                  label: Text(tr('add_issue')),
                 )
               : null,
           body: RefreshIndicator(
@@ -96,10 +98,10 @@ class _IssuesScreenState extends State<IssuesScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  'Issues',
+                  tr('issues'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
@@ -108,11 +110,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       width: 220,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _status,
-                        decoration: const InputDecoration(labelText: 'Status'),
+                        decoration: InputDecoration(labelText: tr('status')),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All statuses'),
+                            child: Text(tr('all_statuses')),
                           ),
                           ...issueStatuses.map(
                             (s) => DropdownMenuItem<String?>(
@@ -128,13 +130,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       width: 220,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                        ),
+                        decoration: InputDecoration(labelText: tr('priority')),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All priorities'),
+                            child: Text(tr('all_priorities')),
                           ),
                           ...issuePriorities.map(
                             (s) => DropdownMenuItem<String?>(
@@ -148,15 +148,14 @@ class _IssuesScreenState extends State<IssuesScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (issues.isEmpty)
-                  const SizedBox(
+                  SizedBox(
                     height: 360,
                     child: EmptyState(
                       icon: Icons.report_problem_outlined,
-                      title: 'No issues',
-                      message:
-                          'Defects and operational issues will appear here.',
+                      title: tr('no_issues'),
+                      message: tr('no_issues_message'),
                     ),
                   )
                 else
@@ -186,7 +185,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       ],
                     ),
                   ),
-                const SizedBox(height: 84),
+                SizedBox(height: 84),
               ],
             ),
           ),

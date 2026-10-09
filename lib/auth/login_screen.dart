@@ -50,8 +50,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -89,25 +90,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             Expanded(
                               child: Text(
                                 'FleetPilot',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
                               ),
                             ),
                             PopupMenuButton<String>(
                               tooltip: tr('language'),
                               initialValue: _language,
                               onSelected: _setLanguage,
-                              itemBuilder: (_) => [
-                                PopupMenuItem(
-                                  value: 'pl',
-                                  child: Text('🇵🇱 ${tr('polish')}'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'en',
-                                  child: Text('🇬🇧 ${tr('english')}'),
-                                ),
-                              ],
+                              itemBuilder: (_) => supportedLanguages
+                                  .map(
+                                    (code) => PopupMenuItem<String>(
+                                      value: code,
+                                      child: Text(languageLabel(code)),
+                                    ),
+                                  )
+                                  .toList(),
                               icon: const Icon(Icons.language_rounded),
                             ),
                           ],

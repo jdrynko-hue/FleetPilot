@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
@@ -103,8 +105,9 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -114,7 +117,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.issue == null ? 'Add issue' : 'Edit issue'),
+        title: Text(widget.issue == null ? tr('add_issue') : tr('edit_issue')),
       ),
       body: Form(
         key: _formKey,
@@ -123,7 +126,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
           children: [
             DropdownButtonFormField<String>(
               initialValue: _vehicleId,
-              decoration: const InputDecoration(labelText: 'Vehicle *'),
+              decoration: InputDecoration(labelText: tr('vehicle') + ' *'),
               items: _vehicles
                   .map(
                     (v) => DropdownMenuItem(
@@ -135,28 +138,28 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
               onChanged: widget.issue != null
                   ? null
                   : (value) => setState(() => _vehicleId = value),
-              validator: (value) => value == null ? 'Select a vehicle' : null,
+              validator: (value) => value == null ? tr('select_vehicle') : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _title,
-              decoration: const InputDecoration(labelText: 'Issue title *'),
+              decoration: InputDecoration(labelText: tr('issue_title')),
               validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Title is required' : null,
+                  (value ?? '').trim().isEmpty ? tr('title_required') : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _description,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(labelText: tr('description')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _priority,
-                    decoration: const InputDecoration(labelText: 'Priority'),
+                    decoration: InputDecoration(labelText: tr('priority')),
                     items: issuePriorities
                         .map(
                           (s) => DropdownMenuItem(
@@ -169,11 +172,11 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
                         setState(() => _priority = value ?? 'medium'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _status,
-                    decoration: const InputDecoration(labelText: 'Status'),
+                    decoration: InputDecoration(labelText: tr('status')),
                     items: issueStatuses
                         .map(
                           (s) => DropdownMenuItem(
@@ -188,16 +191,14 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               initialValue: _driverId,
-              decoration: const InputDecoration(
-                labelText: 'Reported by driver',
-              ),
+              decoration: InputDecoration(labelText: tr('reported_by_driver')),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('Not specified'),
+                  child: Text(tr('not_specified')),
                 ),
                 ..._drivers.map(
                   (d) => DropdownMenuItem<String?>(
@@ -208,24 +209,22 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
               ],
               onChanged: (value) => setState(() => _driverId = value),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _mileage,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Mileage when reported',
-              ),
+              decoration: InputDecoration(labelText: tr('mileage_reported')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _notes,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Internal notes'),
+              decoration: InputDecoration(labelText: tr('internal_notes')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save issue'),
+              child: Text(_busy ? tr('saving') : tr('save_issue')),
             ),
           ],
         ),

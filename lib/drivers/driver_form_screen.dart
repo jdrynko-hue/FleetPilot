@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -68,8 +70,9 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -85,13 +88,15 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.driver == null ? 'Add driver' : 'Edit driver'),
+        title: Text(
+          widget.driver == null ? tr('add_driver') : tr('edit_driver'),
+        ),
         actions: [
           if (widget.driver != null)
             IconButton(
               onPressed: _archive,
               icon: const Icon(Icons.archive_outlined),
-              tooltip: 'Archive',
+              tooltip: tr('archive'),
             ),
         ],
       ),
@@ -102,33 +107,31 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
           children: [
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(labelText: 'Name *'),
+              decoration: InputDecoration(labelText: tr('name')),
               validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Name is required' : null,
+                  (value ?? '').trim().isEmpty ? tr('name_required') : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Phone'),
+              decoration: InputDecoration(labelText: tr('phone')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: tr('email')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _reference,
-              decoration: const InputDecoration(
-                labelText: 'Employee reference',
-              ),
+              decoration: InputDecoration(labelText: tr('employee_reference')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
+              decoration: InputDecoration(labelText: tr('status')),
               items: driverStatuses
                   .map(
                     (s) => DropdownMenuItem(
@@ -139,16 +142,16 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
                   .toList(),
               onChanged: (value) => setState(() => _status = value ?? 'active'),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _notes,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Notes'),
+              decoration: InputDecoration(labelText: tr('notes')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save driver'),
+              child: Text(_busy ? tr('saving') : tr('save_driver')),
             ),
           ],
         ),

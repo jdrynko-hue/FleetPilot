@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -63,7 +65,7 @@ class _GaragesScreenState extends State<GaragesScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done)
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         if (snapshot.hasError)
           return ErrorState(
             error: snapshot.error!,
@@ -76,7 +78,7 @@ class _GaragesScreenState extends State<GaragesScreen> {
               ? FloatingActionButton.extended(
                   onPressed: () => _open(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add garage'),
+                  label: Text(tr('add_garage')),
                 )
               : null,
           body: RefreshIndicator(
@@ -86,17 +88,17 @@ class _GaragesScreenState extends State<GaragesScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  'Garages',
+                  tr('garages'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (garages.isEmpty)
-                  const SizedBox(
+                  SizedBox(
                     height: 360,
                     child: EmptyState(
                       icon: Icons.garage_outlined,
-                      title: 'No garages yet',
-                      message: 'Add workshops and garages to connect them with repairs.',
+                      title: tr('no_garages_yet'),
+                      message: tr('no_garages_message'),
                     ),
                   )
                 else
@@ -128,7 +130,7 @@ class _GaragesScreenState extends State<GaragesScreen> {
                       ],
                     ),
                   ),
-                const SizedBox(height: 84),
+                SizedBox(height: 84),
               ],
             ),
           ),

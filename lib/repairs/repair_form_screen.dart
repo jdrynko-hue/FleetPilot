@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
@@ -144,8 +146,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -158,7 +161,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.repair == null ? 'Add repair' : 'Edit repair'),
+        title: Text(
+          widget.repair == null ? tr('add_repair') : tr('edit_repair'),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -167,7 +172,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
           children: [
             DropdownButtonFormField<String>(
               initialValue: _vehicleId,
-              decoration: const InputDecoration(labelText: 'Vehicle *'),
+              decoration: InputDecoration(labelText: tr('vehicle') + ' *'),
               items: _vehicles
                   .map(
                     (v) => DropdownMenuItem(
@@ -186,20 +191,18 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                           ))
                         _issueId = null;
                     }),
-              validator: (value) => value == null ? 'Select a vehicle' : null,
+              validator: (value) => value == null ? tr('select_vehicle') : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _description,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Repair description',
-              ),
+              decoration: InputDecoration(labelText: tr('repair_description')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
+              decoration: InputDecoration(labelText: tr('status')),
               items: repairStatuses
                   .map(
                     (s) => DropdownMenuItem(
@@ -211,14 +214,14 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
               onChanged: (value) =>
                   setState(() => _status = value ?? 'planned'),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               initialValue: _garageId,
-              decoration: const InputDecoration(labelText: 'Garage'),
+              decoration: InputDecoration(labelText: tr('garage')),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('Not assigned'),
+                  child: Text(tr('not_assigned')),
                 ),
                 ..._garages.map(
                   (g) => DropdownMenuItem<String?>(
@@ -229,16 +232,16 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
               ],
               onChanged: (value) => setState(() => _garageId = value),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               initialValue: vehicleIssues.any((i) => i.id == _issueId)
                   ? _issueId
                   : null,
-              decoration: const InputDecoration(labelText: 'Related issue'),
+              decoration: InputDecoration(labelText: tr('related_issue')),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('No linked issue'),
+                  child: Text(tr('no_linked_issue')),
                 ),
                 ...vehicleIssues.map(
                   (i) => DropdownMenuItem<String?>(
@@ -249,13 +252,13 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
               ],
               onChanged: (value) => setState(() => _issueId = value),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _mileage,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Mileage in'),
+              decoration: InputDecoration(labelText: tr('mileage_in')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -264,43 +267,43 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(labelText: 'Parts cost'),
+                    decoration: InputDecoration(labelText: tr('parts_cost')),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: _labour,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(labelText: 'Labour cost'),
+                    decoration: InputDecoration(labelText: tr('labour_cost')),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: _other,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(labelText: 'Other cost'),
+                    decoration: InputDecoration(labelText: tr('other_cost')),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Booked date',
+              label: tr('booked_date'),
               value: _bookedAt,
               onTap: () async {
                 final value = await _pick(_bookedAt);
                 if (value != null && mounted) setState(() => _bookedAt = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Started date',
+              label: tr('started_date'),
               value: _startedAt,
               onTap: () async {
                 final value = await _pick(_startedAt);
@@ -308,9 +311,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                   setState(() => _startedAt = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Expected completion',
+              label: tr('expected_completion'),
               value: _expectedAt,
               onTap: () async {
                 final value = await _pick(_expectedAt);
@@ -318,9 +321,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                   setState(() => _expectedAt = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Completed date',
+              label: tr('completed_date'),
               value: _completedAt,
               onTap: () async {
                 final value = await _pick(_completedAt);
@@ -328,21 +331,21 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                   setState(() => _completedAt = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _invoice,
-              decoration: const InputDecoration(labelText: 'Invoice reference'),
+              decoration: InputDecoration(labelText: tr('invoice_reference')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _notes,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Notes'),
+              decoration: InputDecoration(labelText: tr('notes')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save repair'),
+              child: Text(_busy ? tr('saving') : tr('save_repair')),
             ),
           ],
         ),

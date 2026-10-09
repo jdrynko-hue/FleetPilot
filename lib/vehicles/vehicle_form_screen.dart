@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
@@ -125,8 +127,9 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -137,18 +140,16 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Archive vehicle?'),
-        content: const Text(
-          'The vehicle will disappear from active lists but its historical data will be preserved.',
-        ),
+        title: Text(tr('archive_vehicle_q')),
+        content: Text(tr('archive_vehicle_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr('cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Archive'),
+            child: Text(tr('archive')),
           ),
         ],
       ),
@@ -163,13 +164,15 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.vehicle == null ? 'Add vehicle' : widget.vehicle!.registration,
+          widget.vehicle == null
+              ? tr('add_vehicle')
+              : widget.vehicle!.registration,
         ),
         actions: [
           if (widget.vehicle != null)
             IconButton(
               onPressed: _busy ? null : _archive,
-              tooltip: 'Archive',
+              tooltip: tr('archive'),
               icon: const Icon(Icons.archive_outlined),
             ),
         ],
@@ -182,59 +185,59 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
             TextFormField(
               controller: _registration,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(labelText: 'Registration *'),
+              decoration: InputDecoration(labelText: tr('registration')),
               validator: (value) => (value ?? '').trim().isEmpty
-                  ? 'Registration is required'
+                  ? tr('registration_required')
                   : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _make,
-                    decoration: const InputDecoration(labelText: 'Make'),
+                    decoration: InputDecoration(labelText: tr('make')),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
                     controller: _model,
-                    decoration: const InputDecoration(labelText: 'Model'),
+                    decoration: InputDecoration(labelText: tr('model')),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _year,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Year'),
+                    decoration: InputDecoration(labelText: tr('year')),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
                     controller: _mileage,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Mileage'),
+                    decoration: InputDecoration(labelText: tr('mileage')),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _vin,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(labelText: 'VIN'),
+              decoration: InputDecoration(labelText: 'VIN'),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
+              decoration: InputDecoration(labelText: tr('status')),
               items: vehicleStatuses
                   .map(
                     (s) => DropdownMenuItem(
@@ -246,14 +249,14 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
               onChanged: (value) =>
                   setState(() => _status = value ?? 'available'),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               initialValue: _driverId,
-              decoration: const InputDecoration(labelText: 'Assigned driver'),
+              decoration: InputDecoration(labelText: tr('assigned_driver')),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('No driver'),
+                  child: Text(tr('no_driver')),
                 ),
                 ..._drivers.map(
                   (d) => DropdownMenuItem<String?>(
@@ -264,17 +267,17 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
               ],
               onChanged: (value) => setState(() => _driverId = value),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _inspectionType,
-              decoration: const InputDecoration(
-                labelText: 'Inspection type',
+              decoration: InputDecoration(
+                labelText: tr('inspection_type'),
                 hintText: 'MOT',
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Inspection due',
+              label: tr('inspection_due'),
               value: _inspectionDue,
               onTap: () async {
                 final value = await _pickDate(_inspectionDue);
@@ -282,9 +285,9 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                   setState(() => _inspectionDue = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Service due date',
+              label: tr('service_due_date'),
               value: _serviceDue,
               onTap: () async {
                 final value = await _pickDate(_serviceDue);
@@ -292,17 +295,15 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                   setState(() => _serviceDue = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _serviceMileage,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Service due mileage',
-              ),
+              decoration: InputDecoration(labelText: tr('service_due_mileage')),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _DateField(
-              label: 'Insurance expiry',
+              label: tr('insurance_expiry'),
               value: _insuranceDue,
               onTap: () async {
                 final value = await _pickDate(_insuranceDue);
@@ -310,18 +311,18 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                   setState(() => _insuranceDue = value);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextFormField(
               controller: _notes,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Notes'),
+              decoration: InputDecoration(labelText: tr('notes')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save vehicle'),
+              child: Text(_busy ? tr('saving') : tr('save_vehicle')),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
           ],
         ),
       ),

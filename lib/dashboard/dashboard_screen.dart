@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -63,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
 
         if (snapshot.hasError) {
@@ -74,13 +76,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.error_outline, size: 48),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(snapshot.error.toString(), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: () => setState(_load),
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Spróbuj ponownie'),
+                    label: Text(tr('try_again')),
                   ),
                 ],
               ),
@@ -134,7 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _AttentionItem(
                 icon: Icons.event_busy_outlined,
                 title: '${vehicle.registration} — ${vehicle.inspectionType}',
-                subtitle: 'Termin: ${formatDate(due)}',
+                subtitle: '${tr('due_date')}: ${formatDate(due)}',
               ),
             );
           }
@@ -145,10 +147,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             attention.add(
               _AttentionItem(
                 icon: Icons.warning_amber_rounded,
-                title: '${issue.registration ?? 'Pojazd'} — ${issue.title}',
+                title:
+                    '${issue.registration ?? tr('vehicle')} — ${issue.title}',
                 subtitle: issue.priority == 'critical'
-                    ? 'Priorytet krytyczny'
-                    : 'Wysoki priorytet',
+                    ? tr('critical_priority')
+                    : tr('high_priority'),
               ),
             );
           }
@@ -183,9 +186,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Stan floty',
+                          SizedBox(height: 8),
+                          Text(
+                            tr('fleet_status'),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 27,
@@ -193,17 +196,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               letterSpacing: -0.6,
                             ),
                           ),
-                          const SizedBox(height: 5),
+                          SizedBox(height: 5),
                           Text(
                             data.vehicles.isEmpty
-                                ? 'Dodaj pierwszy pojazd, aby rozpocząć.'
-                                : '$operational z ${data.vehicles.length} pojazdów operacyjnych',
+                                ? tr('add_first_vehicle')
+                                : trf('fleet_operational', {
+                                    'operational': operational,
+                                    'total': data.vehicles.length,
+                                  }),
                             style: const TextStyle(color: Colors.white70),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Container(
                       width: 60,
                       height: 60,
@@ -221,7 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
 
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -235,19 +241,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         width: cardWidth,
                         icon: Icons.local_shipping_rounded,
                         value: data.vehicles.length.toString(),
-                        label: 'Pojazdy',
+                        label: tr('vehicles'),
                       ),
                       _MetricCard(
                         width: cardWidth,
                         icon: Icons.car_repair,
                         value: unavailable.toString(),
-                        label: 'Niedostępne',
+                        label: tr('unavailable'),
                       ),
                       _MetricCard(
                         width: cardWidth,
                         icon: Icons.warning_amber_rounded,
                         value: activeIssues.length.toString(),
-                        label: 'Usterki',
+                        label: tr('issues'),
                       ),
                       _MetricCard(
                         width: cardWidth,
@@ -256,7 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           monthSpend,
                           currency: widget.company.currency,
                         ),
-                        label: 'Naprawy / miesiąc',
+                        label: tr('repairs_month'),
                         smallValue: true,
                       ),
                     ],
@@ -264,13 +270,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
 
-              const SizedBox(height: 26),
+              SizedBox(height: 26),
 
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      'Wymaga uwagi',
+                      tr('requires_attention'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
@@ -295,7 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
 
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
               if (attention.isEmpty)
                 Card(
@@ -315,17 +321,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Color(0xFF16803C),
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        const Expanded(
+                        SizedBox(width: 14),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Wszystko pod kontrolą',
+                                tr('all_under_control'),
                                 style: TextStyle(fontWeight: FontWeight.w800),
                               ),
                               SizedBox(height: 4),
-                              Text('Brak pilnych spraw w tej chwili.'),
+                              Text(tr('no_urgent_items')),
                             ],
                           ),
                         ),
@@ -408,7 +414,7 @@ class _MetricCard extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Text(
                 value,
                 maxLines: 1,
@@ -419,7 +425,7 @@ class _MetricCard extends StatelessWidget {
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 3),
+              SizedBox(height: 3),
               Text(
                 label,
                 maxLines: 1,

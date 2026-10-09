@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../data/fleet_repository.dart';
 
 class CreateCompanyScreen extends StatefulWidget {
@@ -37,8 +39,9 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
       widget.onCreated();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -59,58 +62,56 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Utwórz swoją flotę',
+                      tr('create_your_fleet'),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'This workspace keeps one company’s fleet data isolated from every other company.',
-                    ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 8),
+                    Text(tr('workspace_message')),
+                    SizedBox(height: 24),
                     TextField(
                       controller: _name,
-                      decoration: const InputDecoration(
-                        labelText: 'Nazwa firmy',
+                      decoration: InputDecoration(
+                        labelText: tr('company_name'),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     TextField(
                       controller: _country,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Kod kraju',
+                      decoration: InputDecoration(
+                        labelText: tr('country_code'),
                         hintText: 'GB',
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       initialValue: _currency,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'GBP',
-                          child: Text('GBP — British pound'),
+                          child: Text(tr('currency_gbp')),
                         ),
                         DropdownMenuItem(
                           value: 'EUR',
-                          child: Text('EUR — Euro'),
+                          child: Text(tr('currency_eur')),
                         ),
                         DropdownMenuItem(
                           value: 'PLN',
-                          child: Text('PLN — Polish złoty'),
+                          child: Text(tr('currency_pln')),
                         ),
                         DropdownMenuItem(
                           value: 'USD',
-                          child: Text('USD — US dollar'),
+                          child: Text(tr('currency_usd')),
                         ),
                       ],
                       onChanged: (value) =>
                           setState(() => _currency = value ?? 'GBP'),
-                      decoration: const InputDecoration(labelText: 'Waluta'),
+                      decoration: InputDecoration(labelText: tr('currency')),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     FilledButton(
                       onPressed: _busy ? null : _create,
-                      child: Text(_busy ? 'Tworzenie…' : 'Utwórz flotę'),
+                      child: Text(_busy ? tr('creating') : tr('create_fleet')),
                     ),
                   ],
                 ),

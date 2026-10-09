@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/widgets.dart';
@@ -93,7 +95,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             actions: [
               if (widget.canManage)
                 IconButton(
-                  tooltip: 'Edit vehicle',
+                  tooltip: tr('edit_vehicle'),
                   onPressed: () async {
                     final changed = await Navigator.push<bool>(
                       context,
@@ -120,13 +122,16 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _InfoCard(label: 'Status', value: prettifyEnum(v.status)),
                     _InfoCard(
-                      label: 'Driver',
-                      value: v.currentDriverName ?? 'Unassigned',
+                      label: tr('status'),
+                      value: prettifyEnum(v.status),
                     ),
                     _InfoCard(
-                      label: 'Mileage',
+                      label: tr('driver'),
+                      value: v.currentDriverName ?? tr('unassigned'),
+                    ),
+                    _InfoCard(
+                      label: tr('mileage'),
                       value: '${formatMileage(v.mileage)} mi',
                     ),
                     _InfoCard(
@@ -134,33 +139,33 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       value: formatDate(v.inspectionDueDate),
                     ),
                     _InfoCard(
-                      label: 'Service',
+                      label: tr('service'),
                       value: v.serviceDueMileage != null
                           ? '${formatMileage(v.serviceDueMileage)} mi'
                           : formatDate(v.serviceDueDate),
                     ),
                     _InfoCard(
-                      label: 'Insurance',
+                      label: tr('insurance'),
                       value: formatDate(v.insuranceExpiryDate),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 Text(
                   '${v.make ?? ''} ${v.model ?? ''} ${v.year ?? ''}'.trim(),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 if ((v.vin ?? '').isNotEmpty) Text('VIN: ${v.vin}'),
                 if ((v.notes ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(v.notes!),
                 ],
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
                       child: Text(
-                        'Issues',
+                        tr('issues'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
@@ -179,15 +184,15 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           if (changed == true) await _refresh();
                         },
                         icon: const Icon(Icons.add),
-                        label: const Text('Add'),
+                        label: Text(tr('add')),
                       ),
                   ],
                 ),
                 Card(
                   child: data.issues.isEmpty
-                      ? const Padding(
+                      ? Padding(
                           padding: EdgeInsets.all(20),
-                          child: Text('No issues recorded.'),
+                          child: Text(tr('no_issues_recorded')),
                         )
                       : Column(
                           children: [
@@ -207,12 +212,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           ],
                         ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
                       child: Text(
-                        'Repairs',
+                        tr('repairs'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
@@ -231,25 +236,25 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           if (changed == true) await _refresh();
                         },
                         icon: const Icon(Icons.add),
-                        label: const Text('Add'),
+                        label: Text(tr('add')),
                       ),
                   ],
                 ),
                 Card(
                   child: data.repairs.isEmpty
-                      ? const Padding(
+                      ? Padding(
                           padding: EdgeInsets.all(20),
-                          child: Text('No repairs recorded.'),
+                          child: Text(tr('no_repairs_recorded')),
                         )
                       : Column(
                           children: [
                             for (var i = 0; i < data.repairs.length; i++) ...[
                               ListTile(
                                 title: Text(
-                                  data.repairs[i].description ?? 'Repair',
+                                  data.repairs[i].description ?? tr('repair'),
                                 ),
                                 subtitle: Text(
-                                  '${data.repairs[i].garageName ?? 'No garage'} • ${prettifyEnum(data.repairs[i].status)}',
+                                  '${data.repairs[i].garageName ?? tr('not_assigned')} • ${prettifyEnum(data.repairs[i].status)}',
                                 ),
                                 trailing: Text(
                                   formatMoney(
@@ -264,7 +269,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           ],
                         ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
               ],
             ),
           ),
@@ -301,7 +306,7 @@ class _InfoCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: Theme.of(context).textTheme.labelMedium),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(value, style: Theme.of(context).textTheme.titleMedium),
             ],
           ),

@@ -42,8 +42,7 @@ class _CompanyGateState extends State<CompanyGate> {
     try {
       final profile = await _repository.fetchUserProfile();
 
-      if (profile != null &&
-          (profile.locale == 'pl' || profile.locale == 'en')) {
+      if (profile != null && supportedLanguages.contains(profile.locale)) {
         AppLocale.language.value = profile.locale;
       }
     } catch (_) {}

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 
@@ -62,8 +64,9 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -79,7 +82,9 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.garage == null ? 'Add garage' : 'Edit garage'),
+        title: Text(
+          widget.garage == null ? tr('add_garage') : tr('edit_garage'),
+        ),
         actions: [
           if (widget.garage != null)
             IconButton(
@@ -95,32 +100,36 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
           children: [
             _field(
               'name',
-              'Garage name *',
+              tr('garage_name'),
               validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Name is required' : null,
+                  (value ?? '').trim().isEmpty ? tr('name_required') : null,
             ),
-            _field('contact_name', 'Contact name'),
-            _field('phone', 'Phone', keyboardType: TextInputType.phone),
-            _field('email', 'Email', keyboardType: TextInputType.emailAddress),
-            _field('address_line_1', 'Address line 1'),
-            _field('address_line_2', 'Address line 2'),
+            _field('contact_name', tr('contact_name')),
+            _field('phone', tr('phone'), keyboardType: TextInputType.phone),
+            _field(
+              'email',
+              tr('email'),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            _field('address_line_1', tr('address_line_1')),
+            _field('address_line_2', tr('address_line_2')),
             Row(
               children: [
-                Expanded(child: _field('city', 'City')),
-                const SizedBox(width: 12),
-                Expanded(child: _field('postcode', 'Postcode')),
+                Expanded(child: _field('city', tr('city'))),
+                SizedBox(width: 12),
+                Expanded(child: _field('postcode', tr('postcode'))),
               ],
             ),
-            _field('country', 'Country'),
+            _field('country', tr('country')),
             TextFormField(
               controller: c['notes'],
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Notes'),
+              decoration: InputDecoration(labelText: tr('notes')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save garage'),
+              child: Text(_busy ? tr('saving') : tr('save_garage')),
             ),
           ],
         ),

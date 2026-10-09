@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
+
 import '../core/constants.dart';
 import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
@@ -65,7 +67,7 @@ class _DriversScreenState extends State<DriversScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
           return ErrorState(
@@ -80,7 +82,7 @@ class _DriversScreenState extends State<DriversScreen> {
               ? FloatingActionButton.extended(
                   onPressed: () => _open(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add driver'),
+                  label: Text(tr('add_driver')),
                 )
               : null,
           body: RefreshIndicator(
@@ -90,17 +92,17 @@ class _DriversScreenState extends State<DriversScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  'Drivers',
+                  tr('drivers'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (drivers.isEmpty)
-                  const SizedBox(
+                  SizedBox(
                     height: 360,
                     child: EmptyState(
                       icon: Icons.people_outline,
-                      title: 'No drivers yet',
-                      message: 'Driver records will be available to assign to vehicles and future issue reports.',
+                      title: tr('no_drivers_yet'),
+                      message: tr('no_drivers_message'),
                     ),
                   )
                 else
@@ -138,7 +140,7 @@ class _DriversScreenState extends State<DriversScreen> {
                       ],
                     ),
                   ),
-                const SizedBox(height: 84),
+                SizedBox(height: 84),
               ],
             ),
           ),

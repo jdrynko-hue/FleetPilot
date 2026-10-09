@@ -199,24 +199,42 @@ class FleetRepository {
     final user = currentUser;
     if (user == null) return null;
 
-    final row = await _client
-        .from('user_profiles')
-        .select()
-        .eq('user_id', user.id)
-        .maybeSingle();
+    Map<String, dynamic>? row;
+    try {
+      final value = await _client
+          .from('user_profiles')
+          .select()
+          .eq('user_id', user.id)
+          .maybeSingle();
+      row = value;
+    } catch (_) {}
 
-    if (row == null) return null;
-    return UserProfile.fromJson(row);
+    final metadataLocale = user.userMetadata?['locale']?.toString();
+    final storedLocale = row?['locale']?.toString();
+
+    return UserProfile(
+      userId: user.id,
+      locale: (metadataLocale != null && metadataLocale.isNotEmpty)
+          ? metadataLocale
+          : (storedLocale ?? 'en'),
+      displayName: row?['display_name']?.toString(),
+    );
   }
 
   Future<void> updateUserLocale(String locale) async {
     final user = currentUser;
     if (user == null) return;
 
-    await _client.from('user_profiles').upsert({
-      'user_id': user.id,
-      'locale': locale,
-    });
+    await _client.auth.updateUser(UserAttributes(data: {'locale': locale}));
+
+    if (locale == 'pl' || locale == 'en') {
+      try {
+        await _client.from('user_profiles').upsert({
+          'user_id': user.id,
+          'locale': locale,
+        });
+      } catch (_) {}
+    }
   }
 
   Future<List<CompanyMember>> fetchCompanyMembers(String companyId) async {

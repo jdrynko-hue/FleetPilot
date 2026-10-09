@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'localization.dart';
+
 class EmptyState extends StatelessWidget {
-  const EmptyState({
+  EmptyState({
     required this.icon,
     required this.title,
     required this.message,
@@ -21,9 +23,9 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
           ],
         ),
@@ -47,17 +49,17 @@ class ErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.error_outline, size: 44),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               error.toString(),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
+              label: Text(tr('try_again')),
             ),
           ],
         ),
@@ -104,7 +106,7 @@ class MetricCard extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(child: Icon(icon)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
