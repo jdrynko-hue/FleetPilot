@@ -1,0 +1,395 @@
+name: Vehicle History Fixed
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/vehicle-history-fixed.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Add vehicle history
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          # ---------- MODEL ----------
+          path = Path("lib/data/models.dart")
+          s = path.read_text(encoding="utf-8")
+
+          if "class VehicleAssignment {" not in s:
+              pos = s.find("\nclass Driver {")
+              if pos == -1:
+                  raise SystemExit("Driver model not found")
+
+              model = r'''
+          class VehicleAssignment {
+            VehicleAssignment({
+              required this.id,
+              required this.companyId,
+              required this.vehicleId,
+              required this.driverId,
+              required this.driverName,
+              required this.startsAt,
+              this.endsAt,
+            });
+
+            final String id;
+            final String companyId;
+            final String vehicleId;
+            final String driverId;
+            final String driverName;
+            final DateTime startsAt;
+            final DateTime? endsAt;
+
+            factory VehicleAssignment.fromJson(Json json) {
+              final driver =
+                  (json['drivers'] as Map?)?.cast<String, dynamic>();
+
+              return VehicleAssignment(
+                id: json['id'].toString(),
+                companyId: json['company_id'].toString(),
+                vehicleId: json['vehicle_id'].toString(),
+                driverId: json['driver_id'].toString(),
+                driverName: driver?['name']?.toString() ?? '—',
+                startsAt: parseDate(json['starts_at']) ?? DateTime.now(),
+                endsAt: parseDate(json['ends_at']),
+              );
+            }
+          }
+
+          '''
+              s = s[:pos] + "\n" + model + s[pos:]
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------- REPOSITORY ----------
+          path = Path("lib/data/fleet_repository.dart")
+          s = path.read_text(encoding="utf-8")
+
+          if "fetchVehicleAssignments(" not in s:
+              pos = s.find("  Future<void> createVehicle(")
+              if pos == -1:
+                  raise SystemExit("Repository insertion point not found")
+
+              method = r'''
+            Future<List<VehicleAssignment>> fetchVehicleAssignments(
+              String companyId,
+              String vehicleId,
+            ) async {
+              final rows = await _client
+                  .from('vehicle_assignments')
+                  .select('*, drivers(name)')
+                  .eq('company_id', companyId)
+                  .eq('vehicle_id', vehicleId)
+                  .order('starts_at', ascending: false);
+
+              return (rows as List)
+                  .map(
+                    (row) => VehicleAssignment.fromJson(
+                      (row as Map).cast<String, dynamic>(),
+                    ),
+                  )
+                  .toList();
+            }
+
+          '''
+              s = s[:pos] + method + s[pos:]
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------- LOCALIZATION ----------
+          path = Path("lib/core/localization.dart")
+          s = path.read_text(encoding="utf-8")
+
+          translations = {
+              "pl": "Historia",
+              "en": "History",
+              "de": "Verlauf",
+              "sk": "História",
+              "cs": "Historie",
+              "hu": "Előzmények",
+              "ro": "Istoric",
+              "es": "Historial",
+              "fr": "Historique",
+              "it": "Cronologia",
+              "uk": "Історія",
+              "pt": "Histórico",
+          }
+
+          for code, value in translations.items():
+              start = s.find(f'"{code}": <String, String>{{')
+              if start == -1:
+                  raise SystemExit(f"Locale {code} not found")
+
+              next_line = s.find("\n", start) + 1
+              section_end = s.find("\n  },", next_line)
+
+              if section_end == -1:
+                  raise SystemExit(f"Locale end {code} not found")
+
+              section = s[next_line:section_end]
+
+              if '"history":' not in section:
+                  s = (
+                      s[:next_line]
+                      + f'    "history": "{value}",\n'
+                      + s[next_line:]
+                  )
+
+          path.write_text(s, encoding="utf-8")
+
+          # ---------- VEHICLE DETAIL ----------
+          path = Path("lib/vehicles/vehicle_detail_screen.dart")
+          s = path.read_text(encoding="utf-8")
+
+          # Fetch assignments
+          if "_repository.fetchVehicleAssignments(" not in s:
+              repair_pos = s.find("_repository.fetchRepairs(")
+              if repair_pos == -1:
+                  raise SystemExit("fetchRepairs not found")
+
+              list_end = s.find("    ]);", repair_pos)
+              if list_end == -1:
+                  raise SystemExit("Future.wait end not found")
+
+              insert = """      _repository.fetchVehicleAssignments(
+                widget.company.companyId,
+                widget.vehicleId,
+              ),
+          """
+
+              s = s[:list_end] + insert + s[list_end:]
+
+          # Add assignments to returned data
+          if "assignments: results[3]" not in s:
+              needle = "      repairs: results[2] as List<Repair>,"
+              pos = s.find(needle)
+
+              if pos == -1:
+                  raise SystemExit("Repairs result not found")
+
+              end = pos + len(needle)
+
+              s = (
+                  s[:end]
+                  + "\n      assignments: results[3] as List<VehicleAssignment>,"
+                  + s[end:]
+              )
+
+          # Create timeline
+          if "final timeline = <_TimelineEvent>[" not in s:
+              start = s.find("        final totalRepairCost =")
+              if start == -1:
+                  raise SystemExit("totalRepairCost not found")
+
+              end = s.find("        );", start)
+              if end == -1:
+                  raise SystemExit("totalRepairCost end not found")
+
+              end += len("        );")
+
+              timeline = r'''
+
+                  final timeline = <_TimelineEvent>[
+                    for (final assignment in data.assignments)
+                      _TimelineEvent(
+                        date: assignment.startsAt,
+                        icon: Icons.person_outline,
+                        title: '${tr('driver')}: ${assignment.driverName}',
+                        subtitle: assignment.endsAt == null
+                            ? tr('active')
+                            : '${formatDateTime(assignment.startsAt)} — ${formatDateTime(assignment.endsAt!)}',
+                      ),
+                    for (final issue in data.issues)
+                      _TimelineEvent(
+                        date: issue.reportedAt,
+                        icon: Icons.warning_amber_outlined,
+                        title: '${tr('issues')}: ${issue.title}',
+                        subtitle:
+                            '${tr(issue.priority)} • ${tr(issue.status)}',
+                      ),
+                    for (final repair in data.repairs)
+                      if ((repair.completedAt ??
+                              repair.startedAt ??
+                              repair.bookedAt) !=
+                          null)
+                        _TimelineEvent(
+                          date: repair.completedAt ??
+                              repair.startedAt ??
+                              repair.bookedAt!,
+                          icon: Icons.build_circle_outlined,
+                          title: repair.description ?? tr('repair'),
+                          subtitle:
+                              '${tr(repair.status)} • ${formatMoney(repair.totalCost, currency: widget.company.currency)}',
+                        ),
+                  ]..sort((a, b) => b.date.compareTo(a.date));
+          '''
+
+              s = s[:end] + timeline + s[end:]
+
+          # History UI
+          if "title: tr('history')" not in s:
+              pos = s.find(
+                  "                if ((vehicle.notes ?? '').trim().isNotEmpty) ...["
+              )
+
+              if pos == -1:
+                  raise SystemExit("Notes section not found")
+
+              ui = r'''
+                  if (timeline.isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    _SectionTitle(
+                      icon: Icons.history_rounded,
+                      title: tr('history'),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < timeline.length; i++) ...[
+                            _TimelineTile(event: timeline[i]),
+                            if (i != timeline.length - 1)
+                              const Divider(height: 1),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+          '''
+
+              s = s[:pos] + ui + s[pos:]
+
+          # Timeline classes
+          if "class _TimelineEvent {" not in s:
+              pos = s.find("class _VehicleDetailData {")
+
+              if pos == -1:
+                  raise SystemExit("VehicleDetailData not found")
+
+              classes = r'''
+          class _TimelineTile extends StatelessWidget {
+            const _TimelineTile({required this.event});
+
+            final _TimelineEvent event;
+
+            @override
+            Widget build(BuildContext context) {
+              return ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: CircleAvatar(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onPrimaryContainer,
+                  child: Icon(event.icon, size: 20),
+                ),
+                title: Text(
+                  event.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  '${formatDateTime(event.date)}\n${event.subtitle}',
+                ),
+                isThreeLine: true,
+              );
+            }
+          }
+
+          class _TimelineEvent {
+            const _TimelineEvent({
+              required this.date,
+              required this.icon,
+              required this.title,
+              required this.subtitle,
+            });
+
+            final DateTime date;
+            final IconData icon;
+            final String title;
+            final String subtitle;
+          }
+
+          '''
+
+              s = s[:pos] + classes + s[pos:]
+
+          # Extend detail data
+          if "final List<VehicleAssignment> assignments;" not in s:
+              constructor_pos = s.find("class _VehicleDetailData {")
+              if constructor_pos == -1:
+                  raise SystemExit("Detail data class not found")
+
+              repairs_required = s.find(
+                  "    required this.repairs,",
+                  constructor_pos,
+              )
+
+              if repairs_required == -1:
+                  raise SystemExit("Detail constructor repairs not found")
+
+              end = repairs_required + len("    required this.repairs,")
+
+              s = (
+                  s[:end]
+                  + "\n    required this.assignments,"
+                  + s[end:]
+              )
+
+              repairs_field = s.find(
+                  "  final List<Repair> repairs;",
+                  constructor_pos,
+              )
+
+              if repairs_field == -1:
+                  raise SystemExit("Detail repairs field not found")
+
+              end = repairs_field + len("  final List<Repair> repairs;")
+
+              s = (
+                  s[:end]
+                  + "\n  final List<VehicleAssignment> assignments;"
+                  + s[end:]
+              )
+
+          path.write_text(s, encoding="utf-8")
+          PY
+
+      - name: Test
+        run: |
+          flutter pub get
+          dart format lib
+          flutter analyze --no-fatal-infos
+
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib
+          git commit -m "Add vehicle history timeline"
+          git push
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh workflow run deploy.yml --ref main
