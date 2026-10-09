@@ -115,12 +115,12 @@ class _FleetShellState extends State<FleetShell> {
                   child: Center(child: Text(_membership.companyName)),
                 ),
               IconButton(
-                tooltip: 'Refresh',
+                tooltip: 'Odśwież',
                 onPressed: _refreshAll,
                 icon: const Icon(Icons.refresh),
               ),
               IconButton(
-                tooltip: 'Sign out',
+                tooltip: 'Wyloguj',
                 onPressed: () => _repository.signOut(),
                 icon: const Icon(Icons.logout),
               ),
@@ -134,13 +134,13 @@ class _FleetShellState extends State<FleetShell> {
                       onDestinationSelected: (value) => setState(() => _index = value),
                       labelType: NavigationRailLabelType.all,
                       destinations: const [
-                        NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), label: Text('Dashboard')),
-                        NavigationRailDestination(icon: Icon(Icons.local_shipping_outlined), label: Text('Vehicles')),
-                        NavigationRailDestination(icon: Icon(Icons.people_outline), label: Text('Drivers')),
-                        NavigationRailDestination(icon: Icon(Icons.report_problem_outlined), label: Text('Issues')),
-                        NavigationRailDestination(icon: Icon(Icons.build_outlined), label: Text('Repairs')),
-                        NavigationRailDestination(icon: Icon(Icons.garage_outlined), label: Text('Garages')),
-                        NavigationRailDestination(icon: Icon(Icons.business_outlined), label: Text('Company')),
+                        NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), label: Text('Start')),
+                        NavigationRailDestination(icon: Icon(Icons.local_shipping_outlined), label: Text('Pojazdy')),
+                        NavigationRailDestination(icon: Icon(Icons.people_outline), label: Text('Kierowcy')),
+                        NavigationRailDestination(icon: Icon(Icons.report_problem_outlined), label: Text('Usterki')),
+                        NavigationRailDestination(icon: Icon(Icons.build_outlined), label: Text('Naprawy')),
+                        NavigationRailDestination(icon: Icon(Icons.garage_outlined), label: Text('Warsztaty')),
+                        NavigationRailDestination(icon: Icon(Icons.business_outlined), label: Text('Firma')),
                       ],
                     ),
                     const VerticalDivider(width: 1),
@@ -160,11 +160,11 @@ class _FleetShellState extends State<FleetShell> {
                     }
                   },
                   destinations: const [
-                    NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-                    NavigationDestination(icon: Icon(Icons.local_shipping_outlined), label: 'Vehicles'),
-                    NavigationDestination(icon: Icon(Icons.people_outline), label: 'Drivers'),
-                    NavigationDestination(icon: Icon(Icons.report_problem_outlined), label: 'Issues'),
-                    NavigationDestination(icon: Icon(Icons.more_horiz), label: 'More'),
+                    NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Start'),
+                    NavigationDestination(icon: Icon(Icons.local_shipping_outlined), label: 'Pojazdy'),
+                    NavigationDestination(icon: Icon(Icons.people_outline), label: 'Kierowcy'),
+                    NavigationDestination(icon: Icon(Icons.report_problem_outlined), label: 'Usterki'),
+                    NavigationDestination(icon: Icon(Icons.more_horiz), label: 'Więcej'),
                   ],
                 ),
         );
@@ -182,7 +182,7 @@ class _FleetShellState extends State<FleetShell> {
           children: [
             ListTile(
               leading: const Icon(Icons.build_outlined),
-              title: const Text('Repairs'),
+              title: const Text('Naprawy'),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 4);
@@ -190,7 +190,7 @@ class _FleetShellState extends State<FleetShell> {
             ),
             ListTile(
               leading: const Icon(Icons.garage_outlined),
-              title: const Text('Garages'),
+              title: const Text('Warsztaty'),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 5);
@@ -198,7 +198,7 @@ class _FleetShellState extends State<FleetShell> {
             ),
             ListTile(
               leading: const Icon(Icons.business_outlined),
-              title: const Text('Company'),
+              title: const Text('Firma'),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 6);

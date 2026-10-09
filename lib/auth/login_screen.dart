@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _registerMode ? 'Create your account' : 'Sign in to your fleet workspace',
+                          _registerMode ? 'Utwórz konto' : 'Zaloguj się do swojej floty',
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         const SizedBox(height: 24),
@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _password,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
-                            labelText: 'Password',
+                            labelText: 'Hasło',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     width: 20,
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
-                                : Text(_registerMode ? 'Create account' : 'Sign in'),
+                                : Text(_registerMode ? 'Utwórz konto' : 'Zaloguj'),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -140,8 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               : () => setState(() => _registerMode = !_registerMode),
                           child: Text(
                             _registerMode
-                                ? 'Already have an account? Sign in'
-                                : 'New to FleetPilot? Create an account',
+                                ? 'Masz już konto? Zaloguj się'
+                                : 'Nie masz konta? Utwórz je',
                           ),
                         ),
                       ],

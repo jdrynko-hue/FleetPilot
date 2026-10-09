@@ -104,7 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .map((v) => _AttentionItem(
                     icon: Icons.car_repair_outlined,
                     title: '${v.registration} — ${prettifyEnum(v.status)}',
-                    subtitle: v.currentDriverName ?? 'No driver assigned',
+                    subtitle: v.currentDriverName ?? 'Brak przypisanego kierowcy',
                   )),
         ];
 
@@ -114,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
-              Text('Dashboard', style: Theme.of(context).textTheme.headlineMedium),
+              Text('Panel floty', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 4),
               Text(widget.company.companyName),
               const SizedBox(height: 16),
@@ -124,10 +124,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const gap = 12.0;
                   final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
                   final cards = [
-                    MetricCard(label: 'Vehicles', value: data.vehicles.length.toString(), icon: Icons.local_shipping_outlined),
-                    MetricCard(label: 'Unavailable', value: unavailable.toString(), icon: Icons.car_repair_outlined),
-                    MetricCard(label: 'Open issues', value: activeIssues.length.toString(), icon: Icons.report_problem_outlined),
-                    MetricCard(label: 'Repair spend this month', value: formatMoney(monthSpend, currency: widget.company.currency), icon: Icons.payments_outlined),
+                    MetricCard(label: 'Pojazdy', value: data.vehicles.length.toString(), icon: Icons.local_shipping_outlined),
+                    MetricCard(label: 'Niedostępne', value: unavailable.toString(), icon: Icons.car_repair_outlined),
+                    MetricCard(label: 'Otwarte usterki', value: activeIssues.length.toString(), icon: Icons.report_problem_outlined),
+                    MetricCard(label: 'Koszt napraw w tym miesiącu', value: formatMoney(monthSpend, currency: widget.company.currency), icon: Icons.payments_outlined),
                   ];
                   return Wrap(
                     spacing: gap,
@@ -137,13 +137,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              Text('Needs attention', style: Theme.of(context).textTheme.titleLarge),
+              Text('Wymaga uwagi', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               if (attention.isEmpty)
                 const Card(
                   child: Padding(
                     padding: EdgeInsets.all(20),
-                    child: Text('Nothing urgent right now.'),
+                    child: Text('Brak pilnych spraw.'),
                   ),
                 )
               else

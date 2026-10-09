@@ -57,19 +57,19 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Create your workspace', style: Theme.of(context).textTheme.headlineMedium),
+                    Text('Utwórz swoją flotę', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 8),
                     const Text('This workspace keeps one company’s fleet data isolated from every other company.'),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _name,
-                      decoration: const InputDecoration(labelText: 'Company name'),
+                      decoration: const InputDecoration(labelText: 'Nazwa firmy'),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _country,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(labelText: 'Country code', hintText: 'GB'),
+                      decoration: const InputDecoration(labelText: 'Kod kraju', hintText: 'GB'),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -81,12 +81,12 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                         DropdownMenuItem(value: 'USD', child: Text('USD — US dollar')),
                       ],
                       onChanged: (value) => setState(() => _currency = value ?? 'GBP'),
-                      decoration: const InputDecoration(labelText: 'Currency'),
+                      decoration: const InputDecoration(labelText: 'Waluta'),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _busy ? null : _create,
-                      child: Text(_busy ? 'Creating…' : 'Create workspace'),
+                      child: Text(_busy ? 'Tworzenie…' : 'Utwórz flotę'),
                     ),
                   ],
                 ),
