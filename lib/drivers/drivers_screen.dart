@@ -48,7 +48,10 @@ class _DriversScreenState extends State<DriversScreen> {
   Future<void> _open({Driver? driver}) async {
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => DriverFormScreen(company: widget.company, driver: driver)),
+      MaterialPageRoute(
+        builder: (_) =>
+            DriverFormScreen(company: widget.company, driver: driver),
+      ),
     );
     if (changed == true) {
       setState(_load);
@@ -65,7 +68,10 @@ class _DriversScreenState extends State<DriversScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return ErrorState(error: snapshot.error!, onRetry: () => setState(_load));
+          return ErrorState(
+            error: snapshot.error!,
+            onRetry: () => setState(_load),
+          );
         }
         final drivers = snapshot.data ?? [];
         return Scaffold(
@@ -83,7 +89,10 @@ class _DriversScreenState extends State<DriversScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Drivers', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Drivers',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 16),
                 if (drivers.isEmpty)
                   const SizedBox(
@@ -100,14 +109,29 @@ class _DriversScreenState extends State<DriversScreen> {
                       children: [
                         for (var i = 0; i < drivers.length; i++) ...[
                           ListTile(
-                            onTap: widget.canManage ? () => _open(driver: drivers[i]) : null,
-                            leading: CircleAvatar(child: Text(drivers[i].name.isEmpty ? '?' : drivers[i].name[0].toUpperCase())),
+                            onTap: widget.canManage
+                                ? () => _open(driver: drivers[i])
+                                : null,
+                            leading: CircleAvatar(
+                              child: Text(
+                                drivers[i].name.isEmpty
+                                    ? '?'
+                                    : drivers[i].name[0].toUpperCase(),
+                              ),
+                            ),
                             title: Text(drivers[i].name),
-                            subtitle: Text([
-                              if ((drivers[i].phone ?? '').isNotEmpty) drivers[i].phone!,
-                              if ((drivers[i].employeeReference ?? '').isNotEmpty) drivers[i].employeeReference!,
-                            ].join(' • ')),
-                            trailing: StatusPill(label: prettifyEnum(drivers[i].status)),
+                            subtitle: Text(
+                              [
+                                if ((drivers[i].phone ?? '').isNotEmpty)
+                                  drivers[i].phone!,
+                                if ((drivers[i].employeeReference ?? '')
+                                    .isNotEmpty)
+                                  drivers[i].employeeReference!,
+                              ].join(' • '),
+                            ),
+                            trailing: StatusPill(
+                              label: prettifyEnum(drivers[i].status),
+                            ),
                           ),
                           if (i != drivers.length - 1) const Divider(height: 1),
                         ],

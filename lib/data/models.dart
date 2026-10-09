@@ -26,6 +26,74 @@ class CompanyMembership {
   }
 }
 
+class UserProfile {
+  UserProfile({required this.userId, required this.locale, this.displayName});
+
+  final String userId;
+  final String locale;
+  final String? displayName;
+
+  factory UserProfile.fromJson(Json json) => UserProfile(
+    userId: json['user_id'].toString(),
+    locale: json['locale']?.toString() ?? 'en',
+    displayName: json['display_name']?.toString(),
+  );
+}
+
+class CompanyMember {
+  CompanyMember({
+    required this.userId,
+    required this.email,
+    required this.role,
+    required this.joinedAt,
+    this.displayName,
+  });
+
+  final String userId;
+  final String email;
+  final String? displayName;
+  final String role;
+  final DateTime joinedAt;
+
+  factory CompanyMember.fromJson(Json json) => CompanyMember(
+    userId: json['user_id'].toString(),
+    email: json['email']?.toString() ?? '',
+    displayName: json['display_name']?.toString(),
+    role: json['role']?.toString() ?? 'viewer',
+    joinedAt: parseDate(json['joined_at']) ?? DateTime.now(),
+  );
+}
+
+class CompanyInvite {
+  CompanyInvite({
+    required this.id,
+    required this.email,
+    required this.role,
+    required this.inviteCode,
+    required this.status,
+    required this.expiresAt,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String email;
+  final String role;
+  final String inviteCode;
+  final String status;
+  final DateTime expiresAt;
+  final DateTime createdAt;
+
+  factory CompanyInvite.fromJson(Json json) => CompanyInvite(
+    id: json['id'].toString(),
+    email: json['email']?.toString() ?? '',
+    role: json['role']?.toString() ?? 'manager',
+    inviteCode: json['invite_code'].toString(),
+    status: json['status']?.toString() ?? 'pending',
+    expiresAt: parseDate(json['expires_at']) ?? DateTime.now(),
+    createdAt: parseDate(json['created_at']) ?? DateTime.now(),
+  );
+}
+
 class Vehicle {
   Vehicle({
     required this.id,
@@ -118,17 +186,17 @@ class Driver {
   final bool isActive;
 
   factory Driver.fromJson(Json json) => Driver(
-        id: json['id'].toString(),
-        companyId: json['company_id'].toString(),
-        userId: json['user_id']?.toString(),
-        name: json['name']?.toString() ?? '',
-        phone: json['phone']?.toString(),
-        email: json['email']?.toString(),
-        employeeReference: json['employee_reference']?.toString(),
-        status: json['status']?.toString() ?? 'active',
-        notes: json['notes']?.toString(),
-        isActive: json['is_active'] as bool? ?? true,
-      );
+    id: json['id'].toString(),
+    companyId: json['company_id'].toString(),
+    userId: json['user_id']?.toString(),
+    name: json['name']?.toString() ?? '',
+    phone: json['phone']?.toString(),
+    email: json['email']?.toString(),
+    employeeReference: json['employee_reference']?.toString(),
+    status: json['status']?.toString() ?? 'active',
+    notes: json['notes']?.toString(),
+    isActive: json['is_active'] as bool? ?? true,
+  );
 }
 
 class Garage {
@@ -163,20 +231,20 @@ class Garage {
   final bool isActive;
 
   factory Garage.fromJson(Json json) => Garage(
-        id: json['id'].toString(),
-        companyId: json['company_id'].toString(),
-        name: json['name']?.toString() ?? '',
-        contactName: json['contact_name']?.toString(),
-        phone: json['phone']?.toString(),
-        email: json['email']?.toString(),
-        addressLine1: json['address_line_1']?.toString(),
-        addressLine2: json['address_line_2']?.toString(),
-        city: json['city']?.toString(),
-        postcode: json['postcode']?.toString(),
-        country: json['country']?.toString(),
-        notes: json['notes']?.toString(),
-        isActive: json['is_active'] as bool? ?? true,
-      );
+    id: json['id'].toString(),
+    companyId: json['company_id'].toString(),
+    name: json['name']?.toString() ?? '',
+    contactName: json['contact_name']?.toString(),
+    phone: json['phone']?.toString(),
+    email: json['email']?.toString(),
+    addressLine1: json['address_line_1']?.toString(),
+    addressLine2: json['address_line_2']?.toString(),
+    city: json['city']?.toString(),
+    postcode: json['postcode']?.toString(),
+    country: json['country']?.toString(),
+    notes: json['notes']?.toString(),
+    isActive: json['is_active'] as bool? ?? true,
+  );
 }
 
 class FleetIssue {

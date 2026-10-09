@@ -61,10 +61,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   Future<void> _openForm({Vehicle? vehicle}) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => VehicleFormScreen(
-          company: widget.company,
-          vehicle: vehicle,
-        ),
+        builder: (_) =>
+            VehicleFormScreen(company: widget.company, vehicle: vehicle),
       ),
     );
     if (changed == true) {
@@ -98,18 +96,23 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return ErrorState(error: snapshot.error!, onRetry: () => setState(_load));
+          return ErrorState(
+            error: snapshot.error!,
+            onRetry: () => setState(_load),
+          );
         }
 
         final query = _search.text.trim().toLowerCase();
         final all = snapshot.data ?? [];
         final vehicles = all.where((v) {
-          final matchesSearch = query.isEmpty ||
+          final matchesSearch =
+              query.isEmpty ||
               v.registration.toLowerCase().contains(query) ||
               (v.make ?? '').toLowerCase().contains(query) ||
               (v.model ?? '').toLowerCase().contains(query) ||
               (v.currentDriverName ?? '').toLowerCase().contains(query);
-          final matchesStatus = _statusFilter == null || v.status == _statusFilter;
+          final matchesStatus =
+              _statusFilter == null || v.status == _statusFilter;
           return matchesSearch && matchesStatus;
         }).toList();
 
@@ -128,7 +131,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Vehicles', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Vehicles',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
@@ -150,12 +156,19 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                         initialValue: _statusFilter,
                         decoration: const InputDecoration(labelText: 'Status'),
                         items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('All statuses')),
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All statuses'),
+                          ),
                           ...vehicleStatuses.map(
-                            (s) => DropdownMenuItem<String?>(value: s, child: Text(prettifyEnum(s))),
+                            (s) => DropdownMenuItem<String?>(
+                              value: s,
+                              child: Text(prettifyEnum(s)),
+                            ),
                           ),
                         ],
-                        onChanged: (value) => setState(() => _statusFilter = value),
+                        onChanged: (value) =>
+                            setState(() => _statusFilter = value),
                       ),
                     ),
                   ],
@@ -177,31 +190,39 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                         for (var i = 0; i < vehicles.length; i++) ...[
                           ListTile(
                             onTap: () => _openDetail(vehicles[i]),
-                            leading: const CircleAvatar(child: Icon(Icons.local_shipping_outlined)),
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.local_shipping_outlined),
+                            ),
                             title: Text(vehicles[i].registration),
                             subtitle: Text(
                               [
-                                '${vehicles[i].make ?? ''} ${vehicles[i].model ?? ''}'.trim(),
-                                if (vehicles[i].currentDriverName != null) vehicles[i].currentDriverName!,
+                                '${vehicles[i].make ?? ''} ${vehicles[i].model ?? ''}'
+                                    .trim(),
+                                if (vehicles[i].currentDriverName != null)
+                                  vehicles[i].currentDriverName!,
                                 '${formatMileage(vehicles[i].mileage)} mi',
                               ].where((e) => e.isNotEmpty).join(' • '),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                StatusPill(label: prettifyEnum(vehicles[i].status)),
+                                StatusPill(
+                                  label: prettifyEnum(vehicles[i].status),
+                                ),
                                 if (widget.canManage) ...[
                                   const SizedBox(width: 4),
                                   IconButton(
                                     tooltip: 'Edit',
-                                    onPressed: () => _openForm(vehicle: vehicles[i]),
+                                    onPressed: () =>
+                                        _openForm(vehicle: vehicles[i]),
                                     icon: const Icon(Icons.edit_outlined),
                                   ),
                                 ],
                               ],
                             ),
                           ),
-                          if (i != vehicles.length - 1) const Divider(height: 1),
+                          if (i != vehicles.length - 1)
+                            const Divider(height: 1),
                         ],
                       ],
                     ),

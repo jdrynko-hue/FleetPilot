@@ -53,7 +53,9 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
       'name': _name.text.trim(),
       'phone': _phone.text.trim().isEmpty ? null : _phone.text.trim(),
       'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
-      'employee_reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+      'employee_reference': _reference.text.trim().isEmpty
+          ? null
+          : _reference.text.trim(),
       'status': _status,
       'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
     };
@@ -65,7 +67,9 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -84,7 +88,11 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
         title: Text(widget.driver == null ? 'Add driver' : 'Edit driver'),
         actions: [
           if (widget.driver != null)
-            IconButton(onPressed: _archive, icon: const Icon(Icons.archive_outlined), tooltip: 'Archive'),
+            IconButton(
+              onPressed: _archive,
+              icon: const Icon(Icons.archive_outlined),
+              tooltip: 'Archive',
+            ),
         ],
       ),
       body: Form(
@@ -95,25 +103,53 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
             TextFormField(
               controller: _name,
               decoration: const InputDecoration(labelText: 'Name *'),
-              validator: (value) => (value ?? '').trim().isEmpty ? 'Name is required' : null,
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Name is required' : null,
             ),
             const SizedBox(height: 12),
-            TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+            TextFormField(
+              controller: _phone,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Phone'),
+            ),
             const SizedBox(height: 12),
-            TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
             const SizedBox(height: 12),
-            TextFormField(controller: _reference, decoration: const InputDecoration(labelText: 'Employee reference')),
+            TextFormField(
+              controller: _reference,
+              decoration: const InputDecoration(
+                labelText: 'Employee reference',
+              ),
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
               decoration: const InputDecoration(labelText: 'Status'),
-              items: driverStatuses.map((s) => DropdownMenuItem(value: s, child: Text(prettifyEnum(s)))).toList(),
+              items: driverStatuses
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(prettifyEnum(s)),
+                    ),
+                  )
+                  .toList(),
               onChanged: (value) => setState(() => _status = value ?? 'active'),
             ),
             const SizedBox(height: 12),
-            TextFormField(controller: _notes, maxLines: 4, decoration: const InputDecoration(labelText: 'Notes')),
+            TextFormField(
+              controller: _notes,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Notes'),
+            ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Saving…' : 'Save driver')),
+            FilledButton(
+              onPressed: _busy ? null : _save,
+              child: Text(_busy ? 'Saving…' : 'Save driver'),
+            ),
           ],
         ),
       ),

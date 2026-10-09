@@ -36,7 +36,9 @@ class _GaragesScreenState extends State<GaragesScreen> {
   @override
   void didUpdateWidget(covariant GaragesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken || oldWidget.company.companyId != widget.company.companyId) _load();
+    if (oldWidget.refreshToken != widget.refreshToken ||
+        oldWidget.company.companyId != widget.company.companyId)
+      _load();
   }
 
   void _load() => _future = _repository.fetchGarages(widget.company.companyId);
@@ -44,7 +46,10 @@ class _GaragesScreenState extends State<GaragesScreen> {
   Future<void> _open({Garage? garage}) async {
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => GarageFormScreen(company: widget.company, garage: garage)),
+      MaterialPageRoute(
+        builder: (_) =>
+            GarageFormScreen(company: widget.company, garage: garage),
+      ),
     );
     if (changed == true) {
       setState(_load);
@@ -57,13 +62,22 @@ class _GaragesScreenState extends State<GaragesScreen> {
     return FutureBuilder<List<Garage>>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return ErrorState(error: snapshot.error!, onRetry: () => setState(_load));
+        if (snapshot.connectionState != ConnectionState.done)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return ErrorState(
+            error: snapshot.error!,
+            onRetry: () => setState(_load),
+          );
         final garages = snapshot.data ?? [];
         return Scaffold(
           backgroundColor: Colors.transparent,
           floatingActionButton: widget.canManage
-              ? FloatingActionButton.extended(onPressed: () => _open(), icon: const Icon(Icons.add), label: const Text('Add garage'))
+              ? FloatingActionButton.extended(
+                  onPressed: () => _open(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add garage'),
+                )
               : null,
           body: RefreshIndicator(
             onRefresh: () async => setState(_load),
@@ -71,24 +85,43 @@ class _GaragesScreenState extends State<GaragesScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Garages', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Garages',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 16),
                 if (garages.isEmpty)
-                  const SizedBox(height: 360, child: EmptyState(icon: Icons.garage_outlined, title: 'No garages yet', message: 'Add workshops and garages to connect them with repairs.'))
+                  const SizedBox(
+                    height: 360,
+                    child: EmptyState(
+                      icon: Icons.garage_outlined,
+                      title: 'No garages yet',
+                      message: 'Add workshops and garages to connect them with repairs.',
+                    ),
+                  )
                 else
                   Card(
                     child: Column(
                       children: [
                         for (var i = 0; i < garages.length; i++) ...[
                           ListTile(
-                            onTap: widget.canManage ? () => _open(garage: garages[i]) : null,
-                            leading: const CircleAvatar(child: Icon(Icons.garage_outlined)),
+                            onTap: widget.canManage
+                                ? () => _open(garage: garages[i])
+                                : null,
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.garage_outlined),
+                            ),
                             title: Text(garages[i].name),
-                            subtitle: Text([
-                              if ((garages[i].contactName ?? '').isNotEmpty) garages[i].contactName!,
-                              if ((garages[i].phone ?? '').isNotEmpty) garages[i].phone!,
-                              if ((garages[i].city ?? '').isNotEmpty) garages[i].city!,
-                            ].join(' • ')),
+                            subtitle: Text(
+                              [
+                                if ((garages[i].contactName ?? '').isNotEmpty)
+                                  garages[i].contactName!,
+                                if ((garages[i].phone ?? '').isNotEmpty)
+                                  garages[i].phone!,
+                                if ((garages[i].city ?? '').isNotEmpty)
+                                  garages[i].city!,
+                              ].join(' • '),
+                            ),
                           ),
                           if (i != garages.length - 1) const Divider(height: 1),
                         ],

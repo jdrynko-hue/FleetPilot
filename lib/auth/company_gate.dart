@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import '../shell/fleet_shell.dart';
@@ -14,6 +15,7 @@ class CompanyGate extends StatefulWidget {
 
 class _CompanyGateState extends State<CompanyGate> {
   final _repository = FleetRepository();
+
   late Future<List<CompanyMembership>> _future;
 
   @override
@@ -23,7 +25,30 @@ class _CompanyGateState extends State<CompanyGate> {
   }
 
   void _reload() {
-    _future = _repository.fetchMemberships();
+    _future = _bootstrap();
+  }
+
+  Future<List<CompanyMembership>> _bootstrap() async {
+    final invite = Uri.base.queryParameters['invite'];
+
+    if (invite != null && invite.isNotEmpty) {
+      try {
+        await _repository.acceptCompanyInvite(invite);
+      } catch (_) {
+        // Invitation may already have been accepted.
+      }
+    }
+
+    try {
+      final profile = await _repository.fetchUserProfile();
+
+      if (profile != null &&
+          (profile.locale == 'pl' || profile.locale == 'en')) {
+        AppLocale.language.value = profile.locale;
+      }
+    } catch (_) {}
+
+    return _repository.fetchMemberships();
   }
 
   @override
@@ -32,8 +57,11 @@ class _CompanyGateState extends State<CompanyGate> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
+
         if (snapshot.hasError) {
           return Scaffold(
             body: Center(
@@ -42,11 +70,14 @@ class _CompanyGateState extends State<CompanyGate> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: () => setState(_reload),
-                      child: const Text('Try again'),
+                      child: Text(tr('try_again')),
                     ),
                   ],
                 ),
@@ -56,6 +87,7 @@ class _CompanyGateState extends State<CompanyGate> {
         }
 
         final memberships = snapshot.data ?? [];
+
         if (memberships.isEmpty) {
           return CreateCompanyScreen(onCreated: () => setState(_reload));
         }

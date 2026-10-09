@@ -48,7 +48,9 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
     setState(() => _busy = true);
     final values = <String, dynamic>{'company_id': widget.company.companyId};
     for (final entry in c.entries) {
-      values[entry.key] = entry.value.text.trim().isEmpty ? null : entry.value.text.trim();
+      values[entry.key] = entry.value.text.trim().isEmpty
+          ? null
+          : entry.value.text.trim();
     }
     values['name'] = c['name']!.text.trim();
     try {
@@ -59,7 +61,9 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -76,34 +80,68 @@ class _GarageFormScreenState extends State<GarageFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.garage == null ? 'Add garage' : 'Edit garage'),
-        actions: [if (widget.garage != null) IconButton(onPressed: _archive, icon: const Icon(Icons.archive_outlined))],
+        actions: [
+          if (widget.garage != null)
+            IconButton(
+              onPressed: _archive,
+              icon: const Icon(Icons.archive_outlined),
+            ),
+        ],
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _field('name', 'Garage name *', validator: (value) => (value ?? '').trim().isEmpty ? 'Name is required' : null),
+            _field(
+              'name',
+              'Garage name *',
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Name is required' : null,
+            ),
             _field('contact_name', 'Contact name'),
             _field('phone', 'Phone', keyboardType: TextInputType.phone),
             _field('email', 'Email', keyboardType: TextInputType.emailAddress),
             _field('address_line_1', 'Address line 1'),
             _field('address_line_2', 'Address line 2'),
-            Row(children: [Expanded(child: _field('city', 'City')), const SizedBox(width: 12), Expanded(child: _field('postcode', 'Postcode'))]),
+            Row(
+              children: [
+                Expanded(child: _field('city', 'City')),
+                const SizedBox(width: 12),
+                Expanded(child: _field('postcode', 'Postcode')),
+              ],
+            ),
             _field('country', 'Country'),
-            TextFormField(controller: c['notes'], maxLines: 4, decoration: const InputDecoration(labelText: 'Notes')),
+            TextFormField(
+              controller: c['notes'],
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Notes'),
+            ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Saving…' : 'Save garage')),
+            FilledButton(
+              onPressed: _busy ? null : _save,
+              child: Text(_busy ? 'Saving…' : 'Save garage'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _field(String key, String label, {TextInputType? keyboardType, String? Function(String?)? validator}) {
+  Widget _field(
+    String key,
+    String label, {
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(controller: c[key], keyboardType: keyboardType, validator: validator, decoration: InputDecoration(labelText: label)),
+      child: TextFormField(
+        controller: c[key],
+        keyboardType: keyboardType,
+        validator: validator,
+        decoration: InputDecoration(labelText: label),
+      ),
     );
   }
 }

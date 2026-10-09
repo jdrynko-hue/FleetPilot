@@ -15,12 +15,10 @@ class DashboardScreen extends StatefulWidget {
   final int refreshToken;
 
   @override
-  State<DashboardScreen> createState() =>
-      _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState
-    extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {
   final _repository = FleetRepository();
 
   late Future<_DashboardData> _future;
@@ -32,15 +30,11 @@ class _DashboardScreenState
   }
 
   @override
-  void didUpdateWidget(
-    covariant DashboardScreen oldWidget,
-  ) {
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.refreshToken !=
-            widget.refreshToken ||
-        oldWidget.company.companyId !=
-            widget.company.companyId) {
+    if (oldWidget.refreshToken != widget.refreshToken ||
+        oldWidget.company.companyId != widget.company.companyId) {
       _load();
     }
   }
@@ -51,15 +45,9 @@ class _DashboardScreenState
 
   Future<_DashboardData> _fetch() async {
     final results = await Future.wait([
-      _repository.fetchVehicles(
-        widget.company.companyId,
-      ),
-      _repository.fetchIssues(
-        widget.company.companyId,
-      ),
-      _repository.fetchRepairs(
-        widget.company.companyId,
-      ),
+      _repository.fetchVehicles(widget.company.companyId),
+      _repository.fetchIssues(widget.company.companyId),
+      _repository.fetchRepairs(widget.company.companyId),
     ]);
 
     return _DashboardData(
@@ -74,11 +62,8 @@ class _DashboardScreenState
     return FutureBuilder<_DashboardData>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState !=
-            ConnectionState.done) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (snapshot.hasError) {
@@ -88,25 +73,14 @@ class _DashboardScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                  ),
+                  const Icon(Icons.error_outline, size: 48),
                   const SizedBox(height: 12),
-                  Text(
-                    snapshot.error.toString(),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text(snapshot.error.toString(), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: () =>
-                        setState(_load),
-                    icon: const Icon(
-                      Icons.refresh,
-                    ),
-                    label: const Text(
-                      'Spróbuj ponownie',
-                    ),
+                    onPressed: () => setState(_load),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Spróbuj ponownie'),
                   ),
                 ],
               ),
@@ -118,9 +92,7 @@ class _DashboardScreenState
 
         final activeIssues = data.issues
             .where(
-              (issue) =>
-                  issue.status != 'closed' &&
-                  issue.status != 'resolved',
+              (issue) => issue.status != 'closed' && issue.status != 'resolved',
             )
             .toList();
 
@@ -128,8 +100,7 @@ class _DashboardScreenState
             .where(
               (vehicle) =>
                   vehicle.status == 'workshop' ||
-                  vehicle.status ==
-                      'maintenance' ||
+                  vehicle.status == 'maintenance' ||
                   vehicle.status == 'off_road',
             )
             .length;
@@ -137,74 +108,47 @@ class _DashboardScreenState
         final operational = data.vehicles
             .where(
               (vehicle) =>
-                  vehicle.status == 'available' ||
-                  vehicle.status == 'in_use',
+                  vehicle.status == 'available' || vehicle.status == 'in_use',
             )
             .length;
 
         final now = DateTime.now();
 
-        final monthStart = DateTime(
-          now.year,
-          now.month,
-          1,
-        );
+        final monthStart = DateTime(now.year, now.month, 1);
 
         final monthSpend = data.repairs
             .where((repair) {
-              final date =
-                  repair.completedAt ??
-                  repair.bookedAt;
+              final date = repair.completedAt ?? repair.bookedAt;
 
-              return date != null &&
-                  !date.isBefore(monthStart);
+              return date != null && !date.isBefore(monthStart);
             })
-            .fold<double>(
-              0,
-              (sum, repair) =>
-                  sum + repair.totalCost,
-            );
+            .fold<double>(0, (sum, repair) => sum + repair.totalCost);
 
         final attention = <_AttentionItem>[];
 
         for (final vehicle in data.vehicles) {
-          final due =
-              vehicle.inspectionDueDate;
+          final due = vehicle.inspectionDueDate;
 
-          if (due != null &&
-              due.isBefore(
-                now.add(
-                  const Duration(days: 30),
-                ),
-              )) {
+          if (due != null && due.isBefore(now.add(const Duration(days: 30)))) {
             attention.add(
               _AttentionItem(
-                icon:
-                    Icons.event_busy_outlined,
-                title:
-                    '${vehicle.registration} — ${vehicle.inspectionType}',
-                subtitle:
-                    'Termin: ${formatDate(due)}',
+                icon: Icons.event_busy_outlined,
+                title: '${vehicle.registration} — ${vehicle.inspectionType}',
+                subtitle: 'Termin: ${formatDate(due)}',
               ),
             );
           }
         }
 
         for (final issue in activeIssues) {
-          if (issue.priority == 'high' ||
-              issue.priority ==
-                  'critical') {
+          if (issue.priority == 'high' || issue.priority == 'critical') {
             attention.add(
               _AttentionItem(
-                icon:
-                    Icons.warning_amber_rounded,
-                title:
-                    '${issue.registration ?? 'Pojazd'} — ${issue.title}',
-                subtitle:
-                    issue.priority ==
-                            'critical'
-                        ? 'Priorytet krytyczny'
-                        : 'Wysoki priorytet',
+                icon: Icons.warning_amber_rounded,
+                title: '${issue.registration ?? 'Pojazd'} — ${issue.title}',
+                subtitle: issue.priority == 'critical'
+                    ? 'Priorytet krytyczny'
+                    : 'Wysoki priorytet',
               ),
             );
           }
@@ -215,42 +159,28 @@ class _DashboardScreenState
             setState(_load);
           },
           child: ListView(
-            physics:
-                const AlwaysScrollableScrollPhysics(),
-            padding:
-                const EdgeInsets.fromLTRB(
-              16,
-              18,
-              16,
-              30,
-            ),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 30),
             children: [
               Container(
-                padding:
-                    const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color:
-                      const Color(0xFF102A43),
-                  borderRadius:
-                      BorderRadius.circular(24),
+                  color: const Color(0xFF102A43),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             widget.company.companyName,
                             maxLines: 1,
-                            overflow:
-                                TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color:
-                                  Colors.white70,
-                              fontWeight:
-                                  FontWeight.w600,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -259,10 +189,8 @@ class _DashboardScreenState
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 27,
-                              fontWeight:
-                                  FontWeight.w900,
-                              letterSpacing:
-                                  -0.6,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.6,
                             ),
                           ),
                           const SizedBox(height: 5),
@@ -270,11 +198,7 @@ class _DashboardScreenState
                             data.vehicles.isEmpty
                                 ? 'Dodaj pierwszy pojazd, aby rozpocząć.'
                                 : '$operational z ${data.vehicles.length} pojazdów operacyjnych',
-                            style:
-                                const TextStyle(
-                              color:
-                                  Colors.white70,
-                            ),
+                            style: const TextStyle(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -284,16 +208,11 @@ class _DashboardScreenState
                       width: 60,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.white
-                            .withOpacity(0.12),
-                        borderRadius:
-                            BorderRadius.circular(
-                          18,
-                        ),
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: const Icon(
-                        Icons
-                            .local_shipping_rounded,
+                        Icons.local_shipping_rounded,
                         color: Colors.white,
                         size: 31,
                       ),
@@ -305,12 +224,8 @@ class _DashboardScreenState
               const SizedBox(height: 18),
 
               LayoutBuilder(
-                builder:
-                    (context, constraints) {
-                  final cardWidth =
-                      (constraints.maxWidth -
-                              12) /
-                          2;
+                builder: (context, constraints) {
+                  final cardWidth = (constraints.maxWidth - 12) / 2;
 
                   return Wrap(
                     spacing: 12,
@@ -318,42 +233,30 @@ class _DashboardScreenState
                     children: [
                       _MetricCard(
                         width: cardWidth,
-                        icon: Icons
-                            .local_shipping_rounded,
-                        value: data
-                            .vehicles.length
-                            .toString(),
+                        icon: Icons.local_shipping_rounded,
+                        value: data.vehicles.length.toString(),
                         label: 'Pojazdy',
                       ),
                       _MetricCard(
                         width: cardWidth,
-                        icon:
-                            Icons.car_repair,
-                        value: unavailable
-                            .toString(),
-                        label:
-                            'Niedostępne',
+                        icon: Icons.car_repair,
+                        value: unavailable.toString(),
+                        label: 'Niedostępne',
                       ),
                       _MetricCard(
                         width: cardWidth,
-                        icon: Icons
-                            .warning_amber_rounded,
-                        value: activeIssues
-                            .length
-                            .toString(),
+                        icon: Icons.warning_amber_rounded,
+                        value: activeIssues.length.toString(),
                         label: 'Usterki',
                       ),
                       _MetricCard(
                         width: cardWidth,
-                        icon:
-                            Icons.payments_outlined,
+                        icon: Icons.payments_outlined,
                         value: formatMoney(
                           monthSpend,
-                          currency: widget
-                              .company.currency,
+                          currency: widget.company.currency,
                         ),
-                        label:
-                            'Naprawy / miesiąc',
+                        label: 'Naprawy / miesiąc',
                         smallValue: true,
                       ),
                     ],
@@ -368,40 +271,24 @@ class _DashboardScreenState
                   Expanded(
                     child: Text(
                       'Wymaga uwagi',
-                      style:
-                          Theme.of(context)
-                              .textTheme
-                              .titleLarge,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   if (attention.isNotEmpty)
                     Container(
-                      padding:
-                          const EdgeInsets
-                              .symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 5,
                       ),
-                      decoration:
-                          BoxDecoration(
-                        color:
-                            const Color(
-                          0xFFFDE8E8,
-                        ),
-                        borderRadius:
-                            BorderRadius.circular(
-                          30,
-                        ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE8E8),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                       child: Text(
-                        attention.length
-                            .toString(),
-                        style:
-                            const TextStyle(
-                          color:
-                              Color(0xFFB42318),
-                          fontWeight:
-                              FontWeight.w800,
+                        attention.length.toString(),
+                        style: const TextStyle(
+                          color: Color(0xFFB42318),
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
@@ -413,60 +300,32 @@ class _DashboardScreenState
               if (attention.isEmpty)
                 Card(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.all(
-                      18,
-                    ),
+                    padding: const EdgeInsets.all(18),
                     child: Row(
                       children: [
                         Container(
                           width: 46,
                           height: 46,
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                const Color(
-                              0xFFE9F8EF,
-                            ),
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              14,
-                            ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE9F8EF),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: const Icon(
-                            Icons
-                                .check_circle_outline,
-                            color:
-                                Color(
-                              0xFF16803C,
-                            ),
+                            Icons.check_circle_outline,
+                            color: Color(0xFF16803C),
                           ),
                         ),
-                        const SizedBox(
-                          width: 14,
-                        ),
+                        const SizedBox(width: 14),
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Wszystko pod kontrolą',
-                                style:
-                                    TextStyle(
-                                  fontWeight:
-                                      FontWeight
-                                          .w800,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w800),
                               ),
-                              SizedBox(
-                                height: 4,
-                              ),
-                              Text(
-                                'Brak pilnych spraw w tej chwili.',
-                              ),
+                              SizedBox(height: 4),
+                              Text('Brak pilnych spraw w tej chwili.'),
                             ],
                           ),
                         ),
@@ -478,57 +337,27 @@ class _DashboardScreenState
                 Card(
                   child: Column(
                     children: [
-                      for (var i = 0;
-                          i <
-                                  attention
-                                      .length &&
-                              i < 6;
-                          i++) ...[
+                      for (var i = 0; i < attention.length && i < 6; i++) ...[
                         ListTile(
-                          contentPadding:
-                              const EdgeInsets
-                                  .symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 5,
                           ),
-                          leading:
-                              CircleAvatar(
-                            backgroundColor:
-                                const Color(
-                              0xFFFDE8E8,
-                            ),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFFDE8E8),
                             child: Icon(
-                              attention[i]
-                                  .icon,
-                              color:
-                                  const Color(
-                                0xFFB42318,
-                              ),
+                              attention[i].icon,
+                              color: const Color(0xFFB42318),
                             ),
                           ),
                           title: Text(
-                            attention[i]
-                                .title,
-                            style:
-                                const TextStyle(
-                              fontWeight:
-                                  FontWeight
-                                      .w700,
-                            ),
+                            attention[i].title,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          subtitle: Text(
-                            attention[i]
-                                .subtitle,
-                          ),
+                          subtitle: Text(attention[i].subtitle),
                         ),
-                        if (i <
-                                attention
-                                        .length -
-                                    1 &&
-                            i < 5)
-                          const Divider(
-                            height: 1,
-                          ),
+                        if (i < attention.length - 1 && i < 5)
+                          const Divider(height: 1),
                       ],
                     ],
                   ),
@@ -562,43 +391,31 @@ class _MetricCard extends StatelessWidget {
       width: width,
       child: Card(
         child: Padding(
-          padding:
-              const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 39,
                 height: 39,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
-                  ),
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
                   size: 21,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onPrimaryContainer,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
               const SizedBox(height: 14),
               Text(
                 value,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize:
-                      smallValue ? 20 : 28,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontSize: smallValue ? 20 : 28,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -606,11 +423,8 @@ class _MetricCard extends StatelessWidget {
               Text(
                 label,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),

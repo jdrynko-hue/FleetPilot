@@ -27,12 +27,8 @@ ThemeData buildFleetPilotTheme() {
         fontWeight: FontWeight.w800,
         letterSpacing: -0.5,
       ),
-      titleLarge: TextStyle(
-        fontWeight: FontWeight.w800,
-      ),
-      titleMedium: TextStyle(
-        fontWeight: FontWeight.w700,
-      ),
+      titleLarge: TextStyle(fontWeight: FontWeight.w800),
+      titleMedium: TextStyle(fontWeight: FontWeight.w700),
     ),
 
     cardTheme: CardThemeData(
@@ -41,23 +37,17 @@ ThemeData buildFleetPilotTheme() {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(
-          color: Color(0xFFE3E9F0),
-        ),
+        side: const BorderSide(color: Color(0xFFE3E9F0)),
       ),
     ),
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFD8E0E8),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFD8E0E8)),
       ),
     ),
 

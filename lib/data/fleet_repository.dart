@@ -4,7 +4,7 @@ import 'models.dart';
 
 class FleetRepository {
   FleetRepository([SupabaseClient? client])
-      : _client = client ?? Supabase.instance.client;
+    : _client = client ?? Supabase.instance.client;
 
   final SupabaseClient _client;
 
@@ -16,8 +16,16 @@ class FleetRepository {
     await _client.auth.signInWithPassword(email: email, password: password);
   }
 
-  Future<bool> signUp({required String email, required String password}) async {
-    final response = await _client.auth.signUp(email: email, password: password);
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    String locale = 'en',
+  }) async {
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'locale': locale},
+    );
     return response.session != null;
   }
 
@@ -34,7 +42,10 @@ class FleetRepository {
         .order('created_at');
 
     return (rows as List)
-        .map((row) => CompanyMembership.fromJson((row as Map).cast<String, dynamic>()))
+        .map(
+          (row) =>
+              CompanyMembership.fromJson((row as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 
@@ -45,11 +56,7 @@ class FleetRepository {
   }) async {
     final result = await _client.rpc(
       'create_company_for_current_user',
-      params: {
-        '_name': name,
-        '_country': country,
-        '_currency': currency,
-      },
+      params: {'_name': name, '_country': country, '_currency': currency},
     );
     return result.toString();
   }
@@ -85,10 +92,13 @@ class FleetRepository {
   }
 
   Future<void> archiveVehicle(String id) async {
-    await _client.from('vehicles').update({
-      'is_active': false,
-      'archived_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', id);
+    await _client
+        .from('vehicles')
+        .update({
+          'is_active': false,
+          'archived_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', id);
   }
 
   Future<List<Driver>> fetchDrivers(String companyId) async {
@@ -139,7 +149,10 @@ class FleetRepository {
     await _client.from('garages').update({'is_active': false}).eq('id', id);
   }
 
-  Future<List<FleetIssue>> fetchIssues(String companyId, {String? vehicleId}) async {
+  Future<List<FleetIssue>> fetchIssues(
+    String companyId, {
+    String? vehicleId,
+  }) async {
     var query = _client
         .from('issues')
         .select('*, vehicles!inner(registration)')
@@ -159,7 +172,10 @@ class FleetRepository {
     await _client.from('issues').update(values).eq('id', id);
   }
 
-  Future<List<Repair>> fetchRepairs(String companyId, {String? vehicleId}) async {
+  Future<List<Repair>> fetchRepairs(
+    String companyId, {
+    String? vehicleId,
+  }) async {
     var query = _client
         .from('repairs')
         .select('*, vehicles!inner(registration), garages(name)')
@@ -177,5 +193,100 @@ class FleetRepository {
 
   Future<void> updateRepair(String id, Json values) async {
     await _client.from('repairs').update(values).eq('id', id);
+  }
+
+  Future<UserProfile?> fetchUserProfile() async {
+    final user = currentUser;
+    if (user == null) return null;
+
+    final row = await _client
+        .from('user_profiles')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return UserProfile.fromJson(row);
+  }
+
+  Future<void> updateUserLocale(String locale) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    await _client.from('user_profiles').upsert({
+      'user_id': user.id,
+      'locale': locale,
+    });
+  }
+
+  Future<List<CompanyMember>> fetchCompanyMembers(String companyId) async {
+    final rows = await _client.rpc(
+      'list_company_members',
+      params: {'_company_id': companyId},
+    );
+
+    return (rows as List)
+        .map(
+          (row) => CompanyMember.fromJson((row as Map).cast<String, dynamic>()),
+        )
+        .toList();
+  }
+
+  Future<List<CompanyInvite>> fetchCompanyInvites(String companyId) async {
+    final rows = await _client.rpc(
+      'list_company_invites',
+      params: {'_company_id': companyId},
+    );
+
+    return (rows as List)
+        .map(
+          (row) => CompanyInvite.fromJson((row as Map).cast<String, dynamic>()),
+        )
+        .toList();
+  }
+
+  Future<String> createCompanyInvite({
+    required String companyId,
+    required String email,
+    required String role,
+  }) async {
+    final code = await _client.rpc(
+      'create_company_invite',
+      params: {'_company_id': companyId, '_email': email, '_role': role},
+    );
+
+    return code.toString();
+  }
+
+  Future<void> acceptCompanyInvite(String code) async {
+    await _client.rpc('accept_company_invite', params: {'_invite_code': code});
+  }
+
+  Future<void> updateCompanyMemberRole({
+    required String companyId,
+    required String userId,
+    required String role,
+  }) async {
+    await _client.rpc(
+      'update_company_member_role',
+      params: {'_company_id': companyId, '_user_id': userId, '_role': role},
+    );
+  }
+
+  Future<void> removeCompanyMember({
+    required String companyId,
+    required String userId,
+  }) async {
+    await _client.rpc(
+      'remove_company_member',
+      params: {'_company_id': companyId, '_user_id': userId},
+    );
+  }
+
+  Future<void> revokeCompanyInvite(String inviteId) async {
+    await _client.rpc(
+      'revoke_company_invite',
+      params: {'_invite_id': inviteId},
+    );
   }
 }

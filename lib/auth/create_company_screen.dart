@@ -37,7 +37,8 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
       widget.onCreated();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -57,30 +58,53 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Utwórz swoją flotę', style: Theme.of(context).textTheme.headlineMedium),
+                    Text(
+                      'Utwórz swoją flotę',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
                     const SizedBox(height: 8),
-                    const Text('This workspace keeps one company’s fleet data isolated from every other company.'),
+                    const Text(
+                      'This workspace keeps one company’s fleet data isolated from every other company.',
+                    ),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _name,
-                      decoration: const InputDecoration(labelText: 'Nazwa firmy'),
+                      decoration: const InputDecoration(
+                        labelText: 'Nazwa firmy',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _country,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(labelText: 'Kod kraju', hintText: 'GB'),
+                      decoration: const InputDecoration(
+                        labelText: 'Kod kraju',
+                        hintText: 'GB',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       initialValue: _currency,
                       items: const [
-                        DropdownMenuItem(value: 'GBP', child: Text('GBP — British pound')),
-                        DropdownMenuItem(value: 'EUR', child: Text('EUR — Euro')),
-                        DropdownMenuItem(value: 'PLN', child: Text('PLN — Polish złoty')),
-                        DropdownMenuItem(value: 'USD', child: Text('USD — US dollar')),
+                        DropdownMenuItem(
+                          value: 'GBP',
+                          child: Text('GBP — British pound'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'EUR',
+                          child: Text('EUR — Euro'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PLN',
+                          child: Text('PLN — Polish złoty'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'USD',
+                          child: Text('USD — US dollar'),
+                        ),
                       ],
-                      onChanged: (value) => setState(() => _currency = value ?? 'GBP'),
+                      onChanged: (value) =>
+                          setState(() => _currency = value ?? 'GBP'),
                       decoration: const InputDecoration(labelText: 'Waluta'),
                     ),
                     const SizedBox(height: 24),

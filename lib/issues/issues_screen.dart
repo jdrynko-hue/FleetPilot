@@ -40,7 +40,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
   @override
   void didUpdateWidget(covariant IssuesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken || oldWidget.company.companyId != widget.company.companyId) _load();
+    if (oldWidget.refreshToken != widget.refreshToken ||
+        oldWidget.company.companyId != widget.company.companyId)
+      _load();
   }
 
   void _load() => _future = _repository.fetchIssues(widget.company.companyId);
@@ -48,7 +50,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
   Future<void> _open({FleetIssue? issue}) async {
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => IssueFormScreen(company: widget.company, issue: issue)),
+      MaterialPageRoute(
+        builder: (_) => IssueFormScreen(company: widget.company, issue: issue),
+      ),
     );
     if (changed == true) {
       setState(_load);
@@ -61,14 +65,29 @@ class _IssuesScreenState extends State<IssuesScreen> {
     return FutureBuilder<List<FleetIssue>>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return ErrorState(error: snapshot.error!, onRetry: () => setState(_load));
+        if (snapshot.connectionState != ConnectionState.done)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return ErrorState(
+            error: snapshot.error!,
+            onRetry: () => setState(_load),
+          );
         final all = snapshot.data ?? [];
-        final issues = all.where((i) => (_status == null || i.status == _status) && (_priority == null || i.priority == _priority)).toList();
+        final issues = all
+            .where(
+              (i) =>
+                  (_status == null || i.status == _status) &&
+                  (_priority == null || i.priority == _priority),
+            )
+            .toList();
         return Scaffold(
           backgroundColor: Colors.transparent,
           floatingActionButton: widget.canManage
-              ? FloatingActionButton.extended(onPressed: () => _open(), icon: const Icon(Icons.add), label: const Text('Add issue'))
+              ? FloatingActionButton.extended(
+                  onPressed: () => _open(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add issue'),
+                )
               : null,
           body: RefreshIndicator(
             onRefresh: () async => setState(_load),
@@ -76,7 +95,10 @@ class _IssuesScreenState extends State<IssuesScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Issues', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Issues',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
@@ -88,8 +110,16 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         initialValue: _status,
                         decoration: const InputDecoration(labelText: 'Status'),
                         items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('All statuses')),
-                          ...issueStatuses.map((s) => DropdownMenuItem<String?>(value: s, child: Text(prettifyEnum(s)))),
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All statuses'),
+                          ),
+                          ...issueStatuses.map(
+                            (s) => DropdownMenuItem<String?>(
+                              value: s,
+                              child: Text(prettifyEnum(s)),
+                            ),
+                          ),
                         ],
                         onChanged: (value) => setState(() => _status = value),
                       ),
@@ -98,10 +128,20 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       width: 220,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _priority,
-                        decoration: const InputDecoration(labelText: 'Priority'),
+                        decoration: const InputDecoration(
+                          labelText: 'Priority',
+                        ),
                         items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('All priorities')),
-                          ...issuePriorities.map((s) => DropdownMenuItem<String?>(value: s, child: Text(prettifyEnum(s)))),
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All priorities'),
+                          ),
+                          ...issuePriorities.map(
+                            (s) => DropdownMenuItem<String?>(
+                              value: s,
+                              child: Text(prettifyEnum(s)),
+                            ),
+                          ),
                         ],
                         onChanged: (value) => setState(() => _priority = value),
                       ),
@@ -110,18 +150,36 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (issues.isEmpty)
-                  const SizedBox(height: 360, child: EmptyState(icon: Icons.report_problem_outlined, title: 'No issues', message: 'Defects and operational issues will appear here.'))
+                  const SizedBox(
+                    height: 360,
+                    child: EmptyState(
+                      icon: Icons.report_problem_outlined,
+                      title: 'No issues',
+                      message:
+                          'Defects and operational issues will appear here.',
+                    ),
+                  )
                 else
                   Card(
                     child: Column(
                       children: [
                         for (var i = 0; i < issues.length; i++) ...[
                           ListTile(
-                            onTap: widget.canManage ? () => _open(issue: issues[i]) : null,
-                            leading: const CircleAvatar(child: Icon(Icons.report_problem_outlined)),
-                            title: Text('${issues[i].registration ?? 'Vehicle'} — ${issues[i].title}'),
-                            subtitle: Text('${prettifyEnum(issues[i].priority)} • ${formatDateTime(issues[i].reportedAt)}'),
-                            trailing: StatusPill(label: prettifyEnum(issues[i].status)),
+                            onTap: widget.canManage
+                                ? () => _open(issue: issues[i])
+                                : null,
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.report_problem_outlined),
+                            ),
+                            title: Text(
+                              '${issues[i].registration ?? 'Vehicle'} — ${issues[i].title}',
+                            ),
+                            subtitle: Text(
+                              '${prettifyEnum(issues[i].priority)} • ${formatDateTime(issues[i].reportedAt)}',
+                            ),
+                            trailing: StatusPill(
+                              label: prettifyEnum(issues[i].status),
+                            ),
                           ),
                           if (i != issues.length - 1) const Divider(height: 1),
                         ],

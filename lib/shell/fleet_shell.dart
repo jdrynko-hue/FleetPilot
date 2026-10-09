@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../company/company_screen.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -22,26 +23,53 @@ class FleetShell extends StatefulWidget {
 
 class _FleetShellState extends State<FleetShell> {
   final _repository = FleetRepository();
-  int _index = 0;
+
+  late List<CompanyMembership> _memberships;
   late CompanyMembership _membership;
+
+  int _index = 0;
   int _refreshToken = 0;
 
   @override
   void initState() {
     super.initState();
-    _membership = widget.memberships.first;
+
+    _memberships = List.from(widget.memberships);
+
+    _membership = _memberships.first;
   }
 
-  void _refreshAll() => setState(() => _refreshToken++);
+  void _refreshAll() {
+    setState(() => _refreshToken++);
+  }
+
+  Future<void> _reloadMemberships() async {
+    final memberships = await _repository.fetchMemberships();
+
+    if (memberships.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      final currentId = _membership.companyId;
+
+      _memberships = memberships;
+
+      _membership = memberships.firstWhere(
+        (m) => m.companyId == currentId,
+        orElse: () => memberships.first,
+      );
+
+      _refreshToken++;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final canManage = canManageForRole(_membership.role);
+
     final pages = [
-      DashboardScreen(
-        company: _membership,
-        refreshToken: _refreshToken,
-      ),
+      DashboardScreen(company: _membership, refreshToken: _refreshToken),
       VehiclesScreen(
         company: _membership,
         canManage: canManage,
@@ -72,25 +100,32 @@ class _FleetShellState extends State<FleetShell> {
         refreshToken: _refreshToken,
         onDataChanged: _refreshAll,
       ),
-      CompanyScreen(company: _membership),
+      CompanyScreen(
+        company: _membership,
+        onMembershipChanged: _reloadMemberships,
+      ),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
+
         final body = IndexedStack(index: _index, children: pages);
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('FleetPilot'),
             actions: [
-              if (widget.memberships.length > 1)
+              if (_memberships.length > 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
+                      dropdownColor: const Color(0xFF102A43),
+                      style: const TextStyle(color: Colors.white),
+                      iconEnabledColor: Colors.white,
                       value: _membership.companyId,
-                      items: widget.memberships
+                      items: _memberships
                           .map(
                             (m) => DropdownMenuItem(
                               value: m.companyId,
@@ -99,9 +134,15 @@ class _FleetShellState extends State<FleetShell> {
                           )
                           .toList(),
                       onChanged: (id) {
-                        if (id == null) return;
+                        if (id == null) {
+                          return;
+                        }
+
                         setState(() {
-                          _membership = widget.memberships.firstWhere((m) => m.companyId == id);
+                          _membership = _memberships.firstWhere(
+                            (m) => m.companyId == id,
+                          );
+
                           _index = 0;
                           _refreshToken++;
                         });
@@ -111,16 +152,16 @@ class _FleetShellState extends State<FleetShell> {
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Center(child: Text(_membership.companyName)),
                 ),
               IconButton(
-                tooltip: 'Odśwież',
+                tooltip: tr('refresh'),
                 onPressed: _refreshAll,
                 icon: const Icon(Icons.refresh),
               ),
               IconButton(
-                tooltip: 'Wyloguj',
+                tooltip: tr('sign_out'),
                 onPressed: () => _repository.signOut(),
                 icon: const Icon(Icons.logout),
               ),
@@ -131,16 +172,38 @@ class _FleetShellState extends State<FleetShell> {
                   children: [
                     NavigationRail(
                       selectedIndex: _index,
-                      onDestinationSelected: (value) => setState(() => _index = value),
+                      onDestinationSelected: (value) =>
+                          setState(() => _index = value),
                       labelType: NavigationRailLabelType.all,
-                      destinations: const [
-                        NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), label: Text('Start')),
-                        NavigationRailDestination(icon: Icon(Icons.local_shipping_outlined), label: Text('Pojazdy')),
-                        NavigationRailDestination(icon: Icon(Icons.people_outline), label: Text('Kierowcy')),
-                        NavigationRailDestination(icon: Icon(Icons.report_problem_outlined), label: Text('Usterki')),
-                        NavigationRailDestination(icon: Icon(Icons.build_outlined), label: Text('Naprawy')),
-                        NavigationRailDestination(icon: Icon(Icons.garage_outlined), label: Text('Warsztaty')),
-                        NavigationRailDestination(icon: Icon(Icons.business_outlined), label: Text('Firma')),
+                      destinations: [
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.dashboard_outlined),
+                          label: Text(tr('dashboard')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.local_shipping_outlined),
+                          label: Text(tr('vehicles')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.people_outline),
+                          label: Text(tr('drivers')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.report_problem_outlined),
+                          label: Text(tr('issues')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.build_outlined),
+                          label: Text(tr('repairs')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.garage_outlined),
+                          label: Text(tr('garages')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.business_outlined),
+                          label: Text(tr('company')),
+                        ),
                       ],
                     ),
                     const VerticalDivider(width: 1),
@@ -159,12 +222,27 @@ class _FleetShellState extends State<FleetShell> {
                       _showMoreSheet(context);
                     }
                   },
-                  destinations: const [
-                    NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Start'),
-                    NavigationDestination(icon: Icon(Icons.local_shipping_outlined), label: 'Pojazdy'),
-                    NavigationDestination(icon: Icon(Icons.people_outline), label: 'Kierowcy'),
-                    NavigationDestination(icon: Icon(Icons.report_problem_outlined), label: 'Usterki'),
-                    NavigationDestination(icon: Icon(Icons.more_horiz), label: 'Więcej'),
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.dashboard_outlined),
+                      label: tr('dashboard'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.local_shipping_outlined),
+                      label: tr('vehicles'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.people_outline),
+                      label: tr('drivers'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.report_problem_outlined),
+                      label: tr('issues'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.more_horiz),
+                      label: tr('more'),
+                    ),
                   ],
                 ),
         );
@@ -182,7 +260,7 @@ class _FleetShellState extends State<FleetShell> {
           children: [
             ListTile(
               leading: const Icon(Icons.build_outlined),
-              title: const Text('Naprawy'),
+              title: Text(tr('repairs')),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 4);
@@ -190,7 +268,7 @@ class _FleetShellState extends State<FleetShell> {
             ),
             ListTile(
               leading: const Icon(Icons.garage_outlined),
-              title: const Text('Warsztaty'),
+              title: Text(tr('garages')),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 5);
@@ -198,7 +276,8 @@ class _FleetShellState extends State<FleetShell> {
             ),
             ListTile(
               leading: const Icon(Icons.business_outlined),
-              title: const Text('Firma'),
+              title: Text(tr('company')),
+              subtitle: Text('${tr('team')} • ${tr('settings')}'),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _index = 6);
