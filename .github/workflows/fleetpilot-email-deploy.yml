@@ -1,0 +1,140 @@
+name: Deploy FleetPilot Email Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fleetpilot-email-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_email_test:
+    name: Deploy test email function to Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: wqhymmtiawfwjikdaujo
+    steps:
+      - name: Checkout FleetPilot
+        uses: actions/checkout@v4
+
+      - name: Check deploy token is configured
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo 'SUPABASE_ACCESS_TOKEN GitHub secret is missing.' >&2
+            exit 1
+          fi
+
+      - name: Create isolated test email Edge Function
+        shell: bash
+        run: |
+          mkdir -p supabase/functions/fleetpilot-email-test
+          cat > supabase/functions/fleetpilot-email-test/index.ts <<'TYPESCRIPT'
+          // FleetPilot: single-recipient, authenticated Resend smoke test.
+          // No sending credentials or recipient email addresses are stored in source.
+          const corsHeaders = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+          };
+
+          const json = (body: Record<string, unknown>, status = 200): Response =>
+            new Response(JSON.stringify(body), {
+              status,
+              headers: {
+                "Content-Type": "application/json; charset=utf-8",
+                "Cache-Control": "no-store",
+                ...corsHeaders,
+              },
+            });
+
+          Deno.serve(async (request: Request): Promise<Response> => {
+            if (request.method === "OPTIONS") {
+              return new Response(null, { status: 204, headers: corsHeaders });
+            }
+            if (request.method !== "POST") {
+              return json({ success: false, error: "POST required" }, 405);
+            }
+
+            const resendApiKey = Deno.env.get("RESEND_API_KEY");
+            const recipientEmail = Deno.env.get("RESEND_TEST_EMAIL")?.trim();
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+            if (!resendApiKey || !recipientEmail || !supabaseUrl || !supabaseAnonKey) {
+              return json({ success: false, error: "Server configuration incomplete" }, 503);
+            }
+
+            const authorization = request.headers.get("Authorization") ?? "";
+            if (!/^Bearer \S+$/.test(authorization)) {
+              return json({ success: false, error: "Authentication required" }, 401);
+            }
+
+            // Check the *live authenticated user* with Supabase Auth,
+            // rather than trusting unverified JWT payload or request body fields.
+            let email: string | undefined;
+            try {
+              const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                method: "GET",
+                headers: {
+                  Authorization: authorization,
+                  apikey: supabaseAnonKey,
+                },
+              });
+              if (!userResponse.ok) {
+                return json({ success: false, error: "Authentication failed" }, 401);
+              }
+              const user = await userResponse.json();
+              email = typeof user.email === "string" ? user.email.trim() : undefined;
+            } catch {
+              return json({ success: false, error: "Authentication unavailable" }, 503);
+            }
+
+            if (!email || email.toLowerCase() !== recipientEmail.toLowerCase()) {
+              return json({ success: false, error: "Not authorized for email test" }, 403);
+            }
+
+            try {
+              const sent = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${resendApiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "FleetPilot <onboarding@resend.dev>",
+                  to: [recipientEmail],
+                  subject: "FleetPilot - pierwszy test e-mail",
+                  html: "<h2>FleetPilot</h2><p>Test wysyłania wiadomości przez Resend zakończony pomyślnie.</p>",
+                }),
+              });
+
+              if (!sent.ok) {
+                // Do not reveal provider responses or credential details to callers.
+                console.error("Resend test delivery rejected, status", sent.status);
+                return json({ success: false, error: "Email provider rejected request" }, 502);
+              }
+
+              const payload = await sent.json();
+              return json({ success: true, message: "Test email accepted by Resend", id: payload.id ?? null });
+            } catch {
+              return json({ success: false, error: "Email provider unavailable" }, 502);
+            }
+          });
+          TYPESCRIPT
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy protected Edge Function
+        shell: bash
+        run: |
+          supabase functions deploy fleetpilot-email-test \
+            --project-ref "$SUPABASE_PROJECT_REF" --use-api
