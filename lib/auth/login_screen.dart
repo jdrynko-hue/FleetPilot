@@ -101,13 +101,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Row(
                           children: [
-                            const CircleAvatar(
-                              child: Icon(Icons.local_shipping_rounded),
-                            ),
+                            ClipRRect(
+                               borderRadius: BorderRadius.circular(12),
+                               child: Image.asset(
+                                 'assets/branding/flotaryx_mark.png',
+                                 width: 44,
+                                 height: 44,
+                               ),
+                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'FleetPilot',
+                                'Flotaryx',
                                 style: Theme.of(
                                   context,
                                 ).textTheme.headlineMedium,

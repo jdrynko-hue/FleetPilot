@@ -41,7 +41,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Test wysyłki e-mail",
     "email_smoke_button": "Wyślij testowego e-maila",
     "email_smoke_description":
-        "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do FleetPilot na ten sam adres.",
+        "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do Flotaryx na ten sam adres.",
     "email_smoke_sending": "Wysyłanie...",
     "email_smoke_accepted":
         "Resend przyjął wiadomość. Sprawdź skrzynkę oraz Spam.",
@@ -360,7 +360,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Email delivery test",
     "email_smoke_button": "Send test email",
     "email_smoke_description":
-        "The message goes only to the Resend test address. Sign in to FleetPilot with that same email.",
+        "The message goes only to the Resend test address. Sign in to Flotaryx with that same email.",
     "email_smoke_sending": "Sending...",
     "email_smoke_accepted":
         "Resend accepted the message. Check your inbox and spam folder.",
@@ -528,7 +528,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Sign in to your fleet",
     "password": "Password",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Available",
@@ -680,7 +680,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "E-Mail-Versandtest",
     "email_smoke_button": "Test-E-Mail senden",
     "email_smoke_description":
-        "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei FleetPilot an.",
+        "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei Flotaryx an.",
     "email_smoke_sending": "Wird gesendet...",
     "email_smoke_accepted":
         "Resend hat die Nachricht angenommen. Prüfe Posteingang und Spam.",
@@ -843,7 +843,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Bei Ihrer Flotte anmelden",
     "password": "Passwort",
     "have_account": "Bereits ein Konto? Anmelden",
-    "no_account": "Neu bei FleetPilot? Konto erstellen",
+    "no_account": "Neu bei Flotaryx? Konto erstellen",
     "invalid_email": "Gültige E-Mail-Adresse eingeben",
     "short_password": "Mindestens 8 Zeichen verwenden",
     "available": "Verfügbar",
@@ -1157,7 +1157,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Prihláste sa do svojej flotily",
     "password": "Heslo",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Dostupné",
@@ -1470,7 +1470,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Přihlaste se ke své flotile",
     "password": "Heslo",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Dostupné",
@@ -1785,7 +1785,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Jelentkezzen be flottájába",
     "password": "Jelszó",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Elérhető",
@@ -1937,7 +1937,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Test trimitere e-mail",
     "email_smoke_button": "Trimite e-mail de test",
     "email_smoke_description":
-        "Mesajul merge doar la adresa de test Resend. Autentifică-te în FleetPilot cu aceeași adresă.",
+        "Mesajul merge doar la adresa de test Resend. Autentifică-te în Flotaryx cu aceeași adresă.",
     "email_smoke_sending": "Se trimite...",
     "email_smoke_accepted":
         "Resend a acceptat mesajul. Verifică Inbox și Spam.",
@@ -2099,7 +2099,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Autentifică-te în flota ta",
     "password": "Parolă",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Disponibil",
@@ -2251,7 +2251,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Prueba de envío de correo",
     "email_smoke_button": "Enviar correo de prueba",
     "email_smoke_description":
-        "El mensaje solo llegará al correo de prueba de Resend. Accede a FleetPilot con esa misma dirección.",
+        "El mensaje solo llegará al correo de prueba de Resend. Accede a Flotaryx con esa misma dirección.",
     "email_smoke_sending": "Enviando...",
     "email_smoke_accepted":
         "Resend aceptó el mensaje. Revisa la bandeja de entrada y el spam.",
@@ -2412,7 +2412,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Accede a tu flota",
     "password": "Contraseña",
     "have_account": "¿Ya tienes cuenta? Inicia sesión",
-    "no_account": "¿Nuevo en FleetPilot? Crea una cuenta",
+    "no_account": "¿Nuevo en Flotaryx? Crea una cuenta",
     "invalid_email": "Introduce un correo válido",
     "short_password": "Usa al menos 8 caracteres",
     "available": "Disponible",
@@ -2565,7 +2565,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Test d’envoi d’e-mail",
     "email_smoke_button": "Envoyer un e-mail test",
     "email_smoke_description":
-        "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à FleetPilot avec cette adresse.",
+        "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à Flotaryx avec cette adresse.",
     "email_smoke_sending": "Envoi en cours...",
     "email_smoke_accepted":
         "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
@@ -2726,7 +2726,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Connectez-vous à votre flotte",
     "password": "Mot de passe",
     "have_account": "Vous avez déjà un compte ? Connectez-vous",
-    "no_account": "Nouveau sur FleetPilot ? Créez un compte",
+    "no_account": "Nouveau sur Flotaryx ? Créez un compte",
     "invalid_email": "Saisissez une adresse e-mail valide",
     "short_password": "Utilisez au moins 8 caractères",
     "available": "Disponible",
@@ -2878,7 +2878,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Test invio email",
     "email_smoke_button": "Invia email di prova",
     "email_smoke_description":
-        "Il messaggio va solo all’indirizzo di prova Resend. Accedi a FleetPilot con la stessa email.",
+        "Il messaggio va solo all’indirizzo di prova Resend. Accedi a Flotaryx con la stessa email.",
     "email_smoke_sending": "Invio in corso...",
     "email_smoke_accepted":
         "Resend ha accettato il messaggio. Controlla la posta e lo spam.",
@@ -3038,7 +3038,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Accedi alla tua flotta",
     "password": "Password",
     "have_account": "Hai già un account? Accedi",
-    "no_account": "Nuovo su FleetPilot? Crea un account",
+    "no_account": "Nuovo su Flotaryx? Crea un account",
     "invalid_email": "Inserisci un'e-mail valida",
     "short_password": "Usa almeno 8 caratteri",
     "available": "Disponibile",
@@ -3190,7 +3190,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Тест надсилання листа",
     "email_smoke_button": "Надіслати тестовий лист",
     "email_smoke_description":
-        "Лист надійде лише на тестову адресу Resend. Увійдіть до FleetPilot з тією самою поштою.",
+        "Лист надійде лише на тестову адресу Resend. Увійдіть до Flotaryx з тією самою поштою.",
     "email_smoke_sending": "Надсилання...",
     "email_smoke_accepted": "Resend прийняв лист. Перевірте вхідні та спам.",
     "email_smoke_failed":
@@ -3352,7 +3352,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Увійдіть до свого автопарку",
     "password": "Пароль",
     "have_account": "Already have an account? Sign in",
-    "no_account": "New to FleetPilot? Create an account",
+    "no_account": "New to Flotaryx? Create an account",
     "invalid_email": "Enter a valid email address",
     "short_password": "Use at least 8 characters",
     "available": "Доступний",
@@ -3504,7 +3504,7 @@ final Map<String, Map<String, String>> _translations = {
     "email_smoke_title": "Teste de envio de e-mail",
     "email_smoke_button": "Enviar e-mail de teste",
     "email_smoke_description":
-        "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no FleetPilot com esse e-mail.",
+        "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no Flotaryx com esse e-mail.",
     "email_smoke_sending": "A enviar...",
     "email_smoke_accepted":
         "A Resend aceitou a mensagem. Verifica a caixa de entrada e spam.",
@@ -3666,7 +3666,7 @@ final Map<String, Map<String, String>> _translations = {
     "sign_in_subtitle": "Entre na sua frota",
     "password": "Palavra-passe",
     "have_account": "Já tem conta? Inicie sessão",
-    "no_account": "Novo no FleetPilot? Crie uma conta",
+    "no_account": "Novo no Flotaryx? Crie uma conta",
     "invalid_email": "Introduza um e-mail válido",
     "short_password": "Utilize pelo menos 8 caracteres",
     "available": "Disponível",

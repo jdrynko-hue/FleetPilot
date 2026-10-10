@@ -1,181 +1,36 @@
-# FleetPilot v0.1
+# Flotaryx — Smarter Fleet Management
 
-FleetPilot is a future-ready, multi-company fleet management MVP built with **Flutter + Supabase**.
+Flotaryx is a multi-company, multilingual fleet management web application built with Flutter and Supabase. It supports vehicle and driver records, daily walkaround checks, issues and defects, repairs and their costs, garages, documents, notifications and CSV exports, with different access for managers and drivers.
 
-The current release is designed to prove the product with a real fleet before adding heavier features such as driver self-service, photo uploads, automated reminders, billing and AI.
+## Open the application
 
-## What already works
+- Temporary working URL: https://jdrynko-hue.github.io/FleetPilot/
+- Product website: https://jdrynko-hue.github.io/FleetPilot/start/
+- Installation guide: https://jdrynko-hue.github.io/FleetPilot/install/
+- Purchased product domain: `flotaryx.com` (requires DNS and GitHub Pages custom-domain setup before use)
 
-- Email/password registration and login
-- Create a company workspace after first login
-- Multi-company membership model
-- Roles: Owner / Admin / Manager / Viewer
-- Row Level Security (RLS) separating company data
-- Dashboard with fleet status, open issues, inspection alerts and repair spend
-- Vehicles
-  - registration, make, model, year, VIN
-  - mileage and operational status
-  - current driver
-  - MOT/inspection due date
-  - service due date/mileage
-  - insurance expiry
-  - notes and archiving
-- Drivers
-- Garages / workshops
-- Issues / defects with priority and status
-- Repairs with garage, linked issue, dates, mileage and cost breakdown
-- Vehicle detail screen with issue and repair history
-- Automatic driver-assignment history in the database
-- Responsive navigation for phone and desktop/web
+The web app can be added to the home screen on supported iPhone and Android devices. It is **not** a native App Store or Google Play release.
 
-## Architecture
+## Brand and application identity
 
-```text
-Flutter client
-   |
-   |-- Supabase Auth
-   |-- Supabase Data API
-   |
-Supabase PostgreSQL
-   |
-   |-- companies
-   |-- company_members
-   |-- drivers
-   |-- vehicles
-   |-- vehicle_assignments
-   |-- garages
-   |-- issues
-   |-- repairs
-   |
-   `-- RLS policies
-```
+Customer-facing text, web page names, the app icon and website are branded Flotaryx. Technical identifiers such as the GitHub repository path, Flutter package name, Supabase project identifiers and database/RPC names remain stable to avoid breaking existing integrations. Do **not** rename them during a cosmetic branding change.
 
-Every operational row belongs to a `company_id`. RLS checks the authenticated user's membership before exposing data.
+## Operational boundaries
 
-## 1. Prepare Supabase
+- Requires an internet connection.
+- No live GPS tracking, telemetry, dispatching, taxi dispatch or tachograph compliance.
+- Specialized integrations may be considered in future development; no launch date is guaranteed.
+- Email reminders currently have a test-only implementation and require production sender verification, scheduling and re-deployment before general customer use.
+- Billing and payment collection are not yet integrated; confirm production readiness before selling subscriptions.
 
-If the Supabase project contains **no real FleetPilot data yet**, open:
+## Deployment
 
-**Supabase → SQL Editor → New query**
+The GitHub Pages workflow is `.github/workflows/deploy.yml`. It currently builds for the repository path `/FleetPilot/`. The purchased custom domain must be configured first; after DNS and HTTPS are confirmed, change the Flutter web build base href and PWA `start_url`/`id`/`scope` to `/`, then add the new origin to the Supabase Auth redirect allowlist.
 
-Paste the entire contents of:
+## Supabase data
 
-`supabase/migrations/001_fleetpilot.sql`
+The current hosted Supabase project contains development/test records. This rebranding does not drop tables, delete records or run migrations. Testing data may be cleared separately after confirming no live accounts are affected. The existing `supabase/migrations/001_fleetpilot.sql` is a destructive development reset — **do not run it on production data**.
 
-Then press **Run**.
+## Launch checklist
 
-> The v0.1 migration is a development reset and drops/recreates the FleetPilot tables. Do not run it after production data exists.
-
-## 2. Get the Supabase client details
-
-In the Supabase dashboard open the project's **Connect** panel and copy:
-
-- Project URL
-- Publishable key (`sb_publishable_...`)
-
-Never place a secret/service-role key in this Flutter app.
-
-## 3. Create local config
-
-Copy:
-
-`config.example.json`
-
-to:
-
-`config.json`
-
-Then fill in your own values:
-
-```json
-{
-  "SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
-  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_REPLACE_ME"
-}
-```
-
-`config.json` is ignored by git.
-
-## 4. Generate Flutter platform folders
-
-This source package intentionally does not freeze Android/iOS/web scaffold files to one machine-specific Flutter template.
-
-After installing Flutter, run inside the project folder:
-
-```bash
-./tool/bootstrap.sh
-```
-
-Or run the equivalent commands manually:
-
-```bash
-flutter create --platforms=android,ios,web --project-name fleetpilot .
-flutter pub get
-```
-
-The project targets Dart 3.9+ and the current Flutter stable generation.
-
-## 5. Run FleetPilot on the web
-
-```bash
-flutter run -d chrome --dart-define-from-file=config.json
-```
-
-Or on a connected device/simulator:
-
-```bash
-flutter devices
-flutter run -d DEVICE_ID --dart-define-from-file=config.json
-```
-
-## 6. First login
-
-1. Open FleetPilot.
-2. Choose **Create an account**.
-3. Register with email/password.
-4. If Supabase email confirmation is enabled, confirm the email first.
-5. Sign in.
-6. Create the first company workspace.
-7. You become that company's `owner` automatically.
-
-No vehicle, driver or garage seed data is inserted by the project.
-
-## Roles
-
-| Role | Read fleet | Create/edit fleet | Company administration |
-|---|---:|---:|---:|
-| Owner | Yes | Yes | Yes |
-| Admin | Yes | Yes | Yes |
-| Manager | Yes | Yes | No |
-| Viewer | Yes | No | No |
-
-The UI already respects the main read/write split. RLS is the real security boundary.
-
-## Important security rule
-
-The Flutter app uses only the Supabase **publishable key**. This key is meant for client applications. Data protection comes from authentication + Row Level Security.
-
-Never ship any of these in Flutter:
-
-- `service_role`
-- `sb_secret_...`
-- database password
-
-## Development notes
-
-The code intentionally keeps dependencies light. The app currently uses only `supabase_flutter` in addition to Flutter itself. That reduces early maintenance and makes the MVP easier to understand.
-
-Before selling FleetPilot to external customers, add at minimum:
-
-- automated tests against a staging Supabase project
-- audit log for privileged actions
-- invitation flow for team members
-- password reset/deep-link configuration
-- attachment/photo storage rules
-- notification jobs
-- privacy policy / terms
-- backup and recovery process
-- error monitoring
-- production migration workflow (no destructive reset scripts)
-
-See `ROADMAP.md` for the planned path toward v1.0.
+Before onboarding paying customers, validate password recovery and invitation links on the custom domain, data access controls, production email delivery, billing, privacy policy, terms, support address, backup/restore and a complete acceptance test with separate companies and user roles.

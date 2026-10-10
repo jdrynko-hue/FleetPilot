@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot - Fleet Management",
-  "short_name": "FleetPilot",
-  "description": "Driver inspections, fleet maintenance and manager control in one place.",
+  "name": "Flotaryx – Smarter Fleet Management",
+  "short_name": "Flotaryx",
+  "description": "Manage vehicles, drivers, inspections, defects, repairs and costs across your fleet.",
   "id": "/FleetPilot/",
   "start_url": "/FleetPilot/",
   "scope": "/FleetPilot/",

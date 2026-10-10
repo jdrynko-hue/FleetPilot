@@ -1,5 +1,5 @@
 name: fleetpilot
-description: Multi-company fleet management SaaS MVP built with Flutter and Supabase.
+description: Flotaryx - multilingual fleet management for every vehicle.
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -21,3 +21,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/flotaryx_mark.png

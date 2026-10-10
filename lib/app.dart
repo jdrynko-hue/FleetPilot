@@ -15,7 +15,7 @@ class FleetPilotApp extends StatelessWidget {
       builder: (context, language, _) {
         return MaterialApp(
           key: ValueKey(language),
-          title: 'FleetPilot',
+          title: 'Flotaryx',
           debugShowCheckedModeBanner: false,
           theme: buildFleetPilotTheme(),
           home: AppConfig.isConfigured
@@ -33,7 +33,7 @@ class _MissingConfigurationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: Text('FleetPilot configuration is missing.')),
+      body: Center(child: Text('Flotaryx configuration is missing.')),
     );
   }
 }

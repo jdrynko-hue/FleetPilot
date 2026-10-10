@@ -1,4 +1,4 @@
-// FleetPilot: daily email test worker. No bulk sending before domain verification.
+// Flotaryx: daily email test worker. No bulk sending before domain verification.
 // Hosted on Supabase Edge Functions with verify_jwt=false because cron supplies
 // a high-entropy private challenge; the challenge is checked against Postgres.
 
@@ -29,7 +29,7 @@ async function rpc(name: string, params: Record<string, unknown> = {}): Promise<
     body: JSON.stringify(params),
   });
   if (!result.ok) {
-    console.error(`FleetPilot RPC ${name} failed with HTTP ${result.status}`);
+    console.error(`Flotaryx RPC ${name} failed with HTTP ${result.status}`);
     throw new Error(`Database operation ${name} failed`);
   }
   return await result.json();
@@ -91,16 +91,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!Array.isArray(list)) throw new Error("Unexpected queue response");
     let sent = 0, failed = 0;
     for (const item of list as Notification[]) {
-      const subject = `FleetPilot: ${item.vehicle_registration} — service reminder`;
+      const subject = `Flotaryx: ${item.vehicle_registration} — service reminder`;
       const target = item.deadline_date
         ? `Due date: ${item.deadline_date}`
         : `Mileage target: ${item.deadline_mileage ?? "unknown"} mi`;
       // Text-only content avoids HTML injection from user-supplied registration.
       const body = {
-        from: "FleetPilot <onboarding@resend.dev>",
+        from: "Flotaryx <onboarding@resend.dev>",
         to: [ownEmail],
         subject,
-        text: `FleetPilot vehicle reminder\nVehicle: ${item.vehicle_registration}\nType: ${item.notification_kind}\n${target}\nReminder stage: ${item.reminder_stage}\n\nOpen FleetPilot to review and update the vehicle.`,
+        text: `Flotaryx vehicle reminder\nVehicle: ${item.vehicle_registration}\nType: ${item.notification_kind}\n${target}\nReminder stage: ${item.reminder_stage}\n\nOpen Flotaryx to review and update the vehicle.`,
       };
       let delivered = false, reason = "provider error";
       try {
@@ -129,7 +129,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
     return reply(200, { ok: true, notifications_generated: created, processed: list.length, sent, failed });
   } catch (error) {
-    console.error("FleetPilot reminder worker failure", String(error).slice(0, 160));
+    console.error("Flotaryx reminder worker failure", String(error).slice(0, 160));
     return reply(500, { error: "Reminder process failed" });
   }
 });

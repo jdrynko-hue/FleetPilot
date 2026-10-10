@@ -126,7 +126,14 @@ class _FleetShellState extends State<FleetShell> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('FleetPilot'),
+            title: Row(
+               mainAxisSize: MainAxisSize.min,
+               children: [
+                 Image.asset('assets/branding/flotaryx_mark.png', width: 32, height: 32),
+                 const SizedBox(width: 10),
+                 const Text('Flotaryx'),
+               ],
+             ),
             actions: [
               if (_memberships.length > 1)
                 Padding(

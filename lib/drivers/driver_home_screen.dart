@@ -363,7 +363,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text('${widget.company.companyName} — Driver'),
+      title: Row(
+        children: [
+          Image.asset('assets/branding/flotaryx_mark.png', width: 31, height: 31),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Flotaryx · ${widget.company.companyName}',
+                overflow: TextOverflow.ellipsis, maxLines: 1),
+          ),
+        ],
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -425,8 +434,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Text(
                       _phrase(
-                        'Ask your manager to link your FleetPilot account to your driver record. The email addresses must match.',
-                        'Poproś managera o powiązanie konta FleetPilot z kartą kierowcy. Adresy e-mail muszą się zgadzać.',
+                        'Ask your manager to link your Flotaryx account to your driver record. The email addresses must match.',
+                        'Poproś managera o powiązanie konta Flotaryx z kartą kierowcy. Adresy e-mail muszą się zgadzać.',
                       ),
                     ),
                   ),
