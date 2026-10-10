@@ -24,6 +24,7 @@ class FleetRepository {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: 'https://jdrynko-hue.github.io/FleetPilot/',
       data: {'locale': locale},
     );
     return response.session != null;
