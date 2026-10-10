@@ -36,6 +36,15 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
+    "email_smoke_title": "Test wysyłki e-mail",
+    "email_smoke_button": "Wyślij testowego e-maila",
+    "email_smoke_description":
+        "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do FleetPilot na ten sam adres.",
+    "email_smoke_sending": "Wysyłanie...",
+    "email_smoke_accepted":
+        "Resend przyjął wiadomość. Sprawdź skrzynkę oraz Spam.",
+    "email_smoke_failed":
+        "Nie udało się wysłać. Sprawdź, czy e-mail logowania jest zgodny z RESEND_TEST_EMAIL, oraz logi Edge Function.",
     "notifications": "Powiadomienia",
     "notification_sign_in": "Zaloguj się ponownie.",
     "notification_error": "Błąd powiadomień",
@@ -344,6 +353,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
+    "email_smoke_title": "Email delivery test",
+    "email_smoke_button": "Send test email",
+    "email_smoke_description":
+        "The message goes only to the Resend test address. Sign in to FleetPilot with that same email.",
+    "email_smoke_sending": "Sending...",
+    "email_smoke_accepted":
+        "Resend accepted the message. Check your inbox and spam folder.",
+    "email_smoke_failed":
+        "Sending failed. Ensure your login email matches RESEND_TEST_EMAIL and check the Edge Function logs.",
     "notifications": "Notifications",
     "notification_sign_in": "Please sign in again.",
     "notification_error": "Notification error",
@@ -653,6 +671,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
+    "email_smoke_title": "E-Mail-Versandtest",
+    "email_smoke_button": "Test-E-Mail senden",
+    "email_smoke_description":
+        "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei FleetPilot an.",
+    "email_smoke_sending": "Wird gesendet...",
+    "email_smoke_accepted":
+        "Resend hat die Nachricht angenommen. Prüfe Posteingang und Spam.",
+    "email_smoke_failed":
+        "Senden fehlgeschlagen. Prüfe, ob die Anmeldeadresse mit RESEND_TEST_EMAIL übereinstimmt, und die Funktionsprotokolle.",
     "notifications": "Benachrichtigungen",
     "notification_sign_in": "Bitte erneut anmelden.",
     "notification_error": "Benachrichtigungsfehler",
@@ -958,6 +985,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
+    "email_smoke_title": "Test odosielania e-mailu",
+    "email_smoke_button": "Odoslať testovací e-mail",
+    "email_smoke_description":
+        "Správa sa odošle iba na testovaciu adresu Resend. Prihlás sa s rovnakým e-mailom.",
+    "email_smoke_sending": "Odosielanie...",
+    "email_smoke_accepted":
+        "Resend prijal správu. Skontroluj doručenú poštu a spam.",
+    "email_smoke_failed":
+        "Odoslanie zlyhalo. Over zhodu prihlasovacieho e-mailu s RESEND_TEST_EMAIL a protokoly funkcie.",
     "notifications": "Upozornenia",
     "notification_sign_in": "Prihláste sa znova.",
     "notification_error": "Chyba upozornení",
@@ -1260,6 +1296,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
+    "email_smoke_title": "Test odesílání e-mailu",
+    "email_smoke_button": "Odeslat testovací e-mail",
+    "email_smoke_description":
+        "Zpráva odejde pouze na testovací adresu Resend. Přihlas se stejným e-mailem.",
+    "email_smoke_sending": "Odesílání...",
+    "email_smoke_accepted":
+        "Resend zprávu přijal. Zkontroluj doručenou poštu a spam.",
+    "email_smoke_failed":
+        "Odeslání selhalo. Ověř shodu přihlašovacího e-mailu s RESEND_TEST_EMAIL a protokoly funkce.",
     "notifications": "Oznámení",
     "notification_sign_in": "Přihlaste se znovu.",
     "notification_error": "Chyba oznámení",
@@ -1562,6 +1607,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
+    "email_smoke_title": "E-mail-küldés tesztje",
+    "email_smoke_button": "Teszt e-mail küldése",
+    "email_smoke_description":
+        "Az üzenet csak a Resend tesztcímére megy. Ugyanazzal az e-mail-címmel jelentkezz be.",
+    "email_smoke_sending": "Küldés...",
+    "email_smoke_accepted":
+        "A Resend elfogadta az üzenetet. Ellenőrizd a bejövő és spam mappát.",
+    "email_smoke_failed":
+        "A küldés sikertelen. Ellenőrizd a belépési e-mail és a RESEND_TEST_EMAIL egyezését, valamint a függvénynaplókat.",
     "notifications": "Értesítések",
     "notification_sign_in": "Jelentkezz be újra.",
     "notification_error": "Értesítési hiba",
@@ -1866,6 +1920,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
+    "email_smoke_title": "Test trimitere e-mail",
+    "email_smoke_button": "Trimite e-mail de test",
+    "email_smoke_description":
+        "Mesajul merge doar la adresa de test Resend. Autentifică-te în FleetPilot cu aceeași adresă.",
+    "email_smoke_sending": "Se trimite...",
+    "email_smoke_accepted":
+        "Resend a acceptat mesajul. Verifică Inbox și Spam.",
+    "email_smoke_failed":
+        "Trimiterea a eșuat. Verifică dacă e-mailul de conectare coincide cu RESEND_TEST_EMAIL și jurnalele funcției.",
     "notifications": "Notificări",
     "notification_sign_in": "Autentifică-te din nou.",
     "notification_error": "Eroare notificări",
@@ -2169,6 +2232,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
+    "email_smoke_title": "Prueba de envío de correo",
+    "email_smoke_button": "Enviar correo de prueba",
+    "email_smoke_description":
+        "El mensaje solo llegará al correo de prueba de Resend. Accede a FleetPilot con esa misma dirección.",
+    "email_smoke_sending": "Enviando...",
+    "email_smoke_accepted":
+        "Resend aceptó el mensaje. Revisa la bandeja de entrada y el spam.",
+    "email_smoke_failed":
+        "Error al enviar. Comprueba que tu correo de inicio de sesión coincida con RESEND_TEST_EMAIL y los registros de la función.",
     "notifications": "Notificaciones",
     "notification_sign_in": "Inicia sesión otra vez.",
     "notification_error": "Error de notificaciones",
@@ -2472,6 +2544,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
+    "email_smoke_title": "Test d’envoi d’e-mail",
+    "email_smoke_button": "Envoyer un e-mail test",
+    "email_smoke_description":
+        "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à FleetPilot avec cette adresse.",
+    "email_smoke_sending": "Envoi en cours...",
+    "email_smoke_accepted":
+        "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
+    "email_smoke_failed":
+        "Échec de l’envoi. Vérifiez que votre adresse de connexion correspond à RESEND_TEST_EMAIL et consultez les journaux de la fonction.",
     "notifications": "Notifications",
     "notification_sign_in": "Veuillez vous reconnecter.",
     "notification_error": "Erreur de notification",
@@ -2774,6 +2855,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
+    "email_smoke_title": "Test invio email",
+    "email_smoke_button": "Invia email di prova",
+    "email_smoke_description":
+        "Il messaggio va solo all’indirizzo di prova Resend. Accedi a FleetPilot con la stessa email.",
+    "email_smoke_sending": "Invio in corso...",
+    "email_smoke_accepted":
+        "Resend ha accettato il messaggio. Controlla la posta e lo spam.",
+    "email_smoke_failed":
+        "Invio non riuscito. Controlla che l’email di accesso corrisponda a RESEND_TEST_EMAIL e i log della funzione.",
     "notifications": "Notifiche",
     "notification_sign_in": "Accedi di nuovo.",
     "notification_error": "Errore notifiche",
@@ -3075,6 +3165,14 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
+    "email_smoke_title": "Тест надсилання листа",
+    "email_smoke_button": "Надіслати тестовий лист",
+    "email_smoke_description":
+        "Лист надійде лише на тестову адресу Resend. Увійдіть до FleetPilot з тією самою поштою.",
+    "email_smoke_sending": "Надсилання...",
+    "email_smoke_accepted": "Resend прийняв лист. Перевірте вхідні та спам.",
+    "email_smoke_failed":
+        "Не вдалося надіслати. Перевірте збіг пошти входу з RESEND_TEST_EMAIL та журнали функції.",
     "notifications": "Сповіщення",
     "notification_sign_in": "Увійдіть знову.",
     "notification_error": "Помилка сповіщень",
@@ -3379,6 +3477,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
+    "email_smoke_title": "Teste de envio de e-mail",
+    "email_smoke_button": "Enviar e-mail de teste",
+    "email_smoke_description":
+        "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no FleetPilot com esse e-mail.",
+    "email_smoke_sending": "A enviar...",
+    "email_smoke_accepted":
+        "A Resend aceitou a mensagem. Verifica a caixa de entrada e spam.",
+    "email_smoke_failed":
+        "Falha no envio. Confirma que o e-mail de acesso corresponde a RESEND_TEST_EMAIL e consulta os registos da função.",
     "notifications": "Notificações",
     "notification_sign_in": "Inicie sessão novamente.",
     "notification_error": "Erro de notificações",

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants.dart';
 import '../core/formatters.dart';
@@ -63,6 +64,42 @@ class _CompanyScreenState extends State<CompanyScreen> {
       _invites = _repository.fetchCompanyInvites(widget.company.companyId);
     } else {
       _invites = null;
+    }
+  }
+
+  bool _emailTestSending = false;
+  bool _emailTestAccepted = false;
+  String? _emailTestMessage;
+
+  Future<void> _sendTestEmail() async {
+    if (_emailTestSending || _emailTestAccepted) return;
+    setState(() {
+      _emailTestSending = true;
+      _emailTestMessage = null;
+    });
+    try {
+      final client = Supabase.instance.client;
+      if (client.auth.currentSession == null) {
+        throw StateError('Sign in first');
+      }
+      final response = await client.functions.invoke(
+        'fleetpilot-email-test',
+        body: <String, dynamic>{},
+      );
+      final result = response.data;
+      if (result is! Map || result['success'] != true) {
+        throw StateError('Resend has not accepted the message');
+      }
+      if (!mounted) return;
+      setState(() {
+        _emailTestAccepted = true;
+        _emailTestMessage = tr('email_smoke_accepted');
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _emailTestMessage = tr('email_smoke_failed'));
+    } finally {
+      if (mounted) setState(() => _emailTestSending = false);
     }
   }
 
@@ -367,6 +404,56 @@ class _CompanyScreenState extends State<CompanyScreen> {
             ),
           ),
         ),
+
+        if (_canAdmin) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.mark_email_unread_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          tr('email_smoke_title'),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(tr('email_smoke_description')),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: _emailTestSending || _emailTestAccepted
+                        ? null
+                        : _sendTestEmail,
+                    icon: _emailTestSending
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: Text(
+                      _emailTestSending
+                          ? tr('email_smoke_sending')
+                          : tr('email_smoke_button'),
+                    ),
+                  ),
+                  if (_emailTestMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_emailTestMessage!),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
 
         SizedBox(height: 24),
 
