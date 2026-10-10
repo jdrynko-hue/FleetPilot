@@ -24,7 +24,7 @@ class FleetRepository {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
-      emailRedirectTo: 'https://flotaryx.com/',
+      emailRedirectTo: 'https://flotaryx.com/app/',
       data: {'locale': locale},
     );
     return response.session != null;
