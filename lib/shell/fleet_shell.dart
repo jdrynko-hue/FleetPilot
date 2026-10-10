@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../company/company_screen.dart';
+import '../company/manager_control_panel.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -166,6 +167,22 @@ class _FleetShellState extends State<FleetShell> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Center(child: Text(_membership.companyName)),
                 ),
+              if (canManage)
+                IconButton(
+                  tooltip: AppLocale.language.value == 'pl'
+                      ? 'Panel managera'
+                      : 'Manager control panel',
+                  icon: const Icon(Icons.admin_panel_settings_outlined),
+                  onPressed: () async {
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ManagerControlPanel(company: _membership),
+                      ),
+                    );
+                    if (mounted) _refreshAll();
+                  },
+                ),
               IconButton(
                 tooltip: tr('notifications'),
                 icon: const Icon(Icons.notifications_outlined),
@@ -282,6 +299,24 @@ class _FleetShellState extends State<FleetShell> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (canManageForRole(_membership.role))
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: Text(
+                  AppLocale.language.value == 'pl'
+                      ? 'Panel managera'
+                      : 'Manager control panel',
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await Navigator.of(this.context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => ManagerControlPanel(company: _membership),
+                    ),
+                  );
+                  if (mounted) _refreshAll();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.build_outlined),
               title: Text(tr('repairs')),
