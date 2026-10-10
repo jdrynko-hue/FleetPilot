@@ -1,0 +1,141 @@
+name: FleetPilot Manager Control Panel - Installer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/manager-control-panel.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  install-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install manager control panel
+        shell: bash
+        run: |
+          cat <<'FLEETPILOT_MANAGER' | base64 --decode | gzip --decompress > /tmp/fleetpilot_manager_panel_install.py
+          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
+          FLEETPILOT_MANAGER
+          python3 /tmp/fleetpilot_manager_panel_install.py
+
+      - name: Analyze, test and build Flutter Web
+        shell: bash
+        run: |
+          flutter pub get
+          dart format lib/company/manager_control_panel.dart lib/shell/fleet_shell.dart
+          flutter analyze --no-fatal-infos
+          flutter test
+          flutter create --platforms=web --project-name fleetpilot .
+          flutter build web --release --base-href "/FleetPilot/"
+
+      - name: Commit manager panel after successful verification
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/company/manager_control_panel.dart lib/shell/fleet_shell.dart
+          if git diff --cached --quiet; then
+            echo 'Manager panel is already installed'
+          else
+            git commit -m 'Add manager control panel with safe van assignments and repair shortcuts'
+            git push
+          fi
+
+      - name: Deploy latest FleetPilot site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run deploy.yml --ref main
