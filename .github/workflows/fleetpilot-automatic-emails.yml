@@ -1,0 +1,261 @@
+name: FleetPilot Automatic Reminder Emails (Test)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fleetpilot-automatic-emails.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reminders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: wqhymmtiawfwjikdaujo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Add daily worker and email opt-in
+        run: |
+          mkdir -p supabase/functions/fleetpilot-daily-reminders
+          cat > supabase/functions/fleetpilot-daily-reminders/index.ts <<'FLEETPILOT_TS'
+          // FleetPilot: daily email test worker. No bulk sending before domain verification.
+          // Hosted on Supabase Edge Functions with verify_jwt=false because cron supplies
+          // a high-entropy private challenge; the challenge is checked against Postgres.
+
+          const reply = (code: number, body: Record<string, unknown>) =>
+            new Response(JSON.stringify(body), {
+              status: code,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+            });
+
+          const base = Deno.env.get("SUPABASE_URL");
+          const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+          const serviceKey = legacy ?? (() => {
+            try {
+              return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}")["default"];
+            } catch { return undefined; }
+          })();
+
+          async function rpc(name: string, params: Record<string, unknown> = {}): Promise<unknown> {
+            if (!base || !serviceKey) throw new Error("Missing internal configuration");
+            const result = await fetch(`${base}/rest/v1/rpc/${name}`, {
+              method: "POST",
+              headers: {
+                apikey: serviceKey,
+                Authorization: `Bearer ${serviceKey}`,
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
+              body: JSON.stringify(params),
+            });
+            if (!result.ok) {
+              console.error(`FleetPilot RPC ${name} failed with HTTP ${result.status}`);
+              throw new Error(`Database operation ${name} failed`);
+            }
+            return await result.json();
+          }
+
+          async function checkSecret(provided: string | null): Promise<boolean> {
+            if (!base || !serviceKey || !provided || provided.length > 128) return false;
+            const answer = await fetch(
+              `${base}/rest/v1/fleetpilot_scheduler_config?select=secret&id=eq.1`,
+              {
+                headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+              },
+            );
+            if (!answer.ok) return false;
+            const rows = await answer.json();
+            const expected = rows?.[0]?.secret;
+            if (typeof expected !== "string") return false;
+            const encoder = new TextEncoder();
+            const [left, right] = await Promise.all([
+              crypto.subtle.digest("SHA-256", encoder.encode(provided)),
+              crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+            ]);
+            let difference = 0;
+            const a = new Uint8Array(left), b = new Uint8Array(right);
+            for (let i = 0; i < a.length; i++) difference |= a[i] ^ b[i];
+            return difference === 0;
+          }
+
+          type Notification = {
+            notification_id: string;
+            recipient_email: string;
+            notification_kind: string;
+            vehicle_registration: string;
+            deadline_date: string | null;
+            deadline_mileage: number | null;
+            reminder_stage: number;
+          };
+
+          Deno.serve(async (req: Request): Promise<Response> => {
+            if (req.method !== "POST") return reply(405, { error: "POST required" });
+            try {
+              if (!(await checkSecret(req.headers.get("x-fleetpilot-cron-key")))) {
+                return reply(401, { error: "Unauthorized" });
+              }
+            } catch {
+              return reply(503, { error: "Authentication unavailable" });
+            }
+
+            const resendKey = Deno.env.get("RESEND_API_KEY");
+            const ownEmail = Deno.env.get("RESEND_TEST_EMAIL")?.trim();
+            if (!resendKey || !ownEmail) return reply(503, { error: "Email is not configured" });
+
+            try {
+              const created = await rpc("fleetpilot_generate_notifications");
+              const list = await rpc("fleetpilot_claim_test_email_alerts", {
+                _test_email: ownEmail,
+                _batch_size: 10,
+              });
+              if (!Array.isArray(list)) throw new Error("Unexpected queue response");
+              let sent = 0, failed = 0;
+              for (const item of list as Notification[]) {
+                const subject = `FleetPilot: ${item.vehicle_registration} — service reminder`;
+                const target = item.deadline_date
+                  ? `Due date: ${item.deadline_date}`
+                  : `Mileage target: ${item.deadline_mileage ?? "unknown"} mi`;
+                // Text-only content avoids HTML injection from user-supplied registration.
+                const body = {
+                  from: "FleetPilot <onboarding@resend.dev>",
+                  to: [ownEmail],
+                  subject,
+                  text: `FleetPilot vehicle reminder\nVehicle: ${item.vehicle_registration}\nType: ${item.notification_kind}\n${target}\nReminder stage: ${item.reminder_stage}\n\nOpen FleetPilot to review and update the vehicle.`,
+                };
+                let delivered = false, reason = "provider error";
+                try {
+                  const send = await fetch("https://api.resend.com/emails", {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${resendKey}`,
+                      "Content-Type": "application/json",
+                      "Idempotency-Key": `fleetpilot-notification-${item.notification_id}`,
+                    },
+                    body: JSON.stringify(body),
+                  });
+                  delivered = send.ok;
+                  if (!send.ok) reason = `HTTP ${send.status}`;
+                } catch {
+                  reason = "network error";
+                }
+                await rpc("fleetpilot_complete_email_alert", {
+                  _notification_id: item.notification_id,
+                  _delivered: delivered,
+                  _error: delivered ? null : reason,
+                });
+                if (delivered) sent++; else failed++;
+                // Deliberate throttle for Resend API limits.
+                await new Promise((resolve) => setTimeout(resolve, 600));
+              }
+              return reply(200, { ok: true, notifications_generated: created, processed: list.length, sent, failed });
+            } catch (error) {
+              console.error("FleetPilot reminder worker failure", String(error).slice(0, 160));
+              return reply(500, { error: "Reminder process failed" });
+            }
+          });
+          FLEETPILOT_TS
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('lib/notifications/notifications_screen.dart')
+          data = source.read_text(encoding='utf-8')
+          old = """                      ListTile(
+                        leading: const Icon(Icons.mail_outline),
+                        title: Text(tr('notification_email')),
+                        subtitle: Text(tr('notification_email_soon')),
+                        trailing: const Icon(Icons.lock_outline),
+                      ),"""
+          new = """                      setting('email_enabled', tr('notification_email')),"""
+          assert data.count(old) == 1, 'Email setting anchor was changed'
+          data = data.replace(old, new, 1)
+          # Avoid the outdated text saying the scheduled processor isn't configured.
+          old = """                Text(
+                  tr('notification_schedule_pending'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),"""
+          new = """                Text(
+                  tr('notification_test_email_only'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),"""
+          assert data.count(old) == 1, 'Schedule note anchor was changed'
+          source.write_text(data.replace(old, new, 1), encoding='utf-8')
+          labels = {
+            'pl': 'Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.',
+            'en': 'Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.',
+            'de': 'Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.',
+            'sk': 'Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.',
+            'cs': 'Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.',
+            'hu': 'Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.',
+            'ro': 'Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.',
+            'es': 'Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.',
+            'fr': 'Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.',
+            'it': "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
+            'uk': 'Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.',
+            'pt': 'Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.',
+          }
+          import json
+          path = Path('lib/core/localization.dart')
+          data = path.read_text(encoding='utf-8')
+          for language, translation in labels.items():
+            anchor = '  "' + language + '": <String, String>{' + chr(10)
+            assert data.count(anchor) == 1, 'Missing localization anchor: ' + language
+            data = data.replace(anchor, anchor + '    "notification_test_email_only": ' + json.dumps(translation, ensure_ascii=False) + ',' + chr(10), 1)
+          path.write_text(data, encoding='utf-8')
+          print('Worker and email toggle prepared for 12 languages')
+          PY
+      - name: Verify Flutter and TypeScript source
+        run: |
+          flutter pub get
+          dart format lib/notifications/notifications_screen.dart lib/core/localization.dart
+          flutter analyze --no-fatal-infos
+          flutter test
+          python3 - <<'PY'
+          from pathlib import Path
+          script = Path('supabase/functions/fleetpilot-daily-reminders/index.ts').read_text()
+          assert 'RESEND_API_KEY' in script and 'RESEND_TEST_EMAIL' in script
+          assert 'Idempotency-Key' in script and 'checkSecret' in script
+          print('Worker guards verified')
+          PY
+      - name: Deploy protected daily worker to Supabase
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo 'Missing SUPABASE_ACCESS_TOKEN'; exit 1; }
+          status=$(curl --silent --show-error --output /tmp/fleetpilot-email-response.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --url "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions/deploy?slug=fleetpilot-daily-reminders" \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            --form 'metadata={"entrypoint_path":"index.ts","name":"fleetpilot-daily-reminders","verify_jwt":false}' \
+            --form 'file=@supabase/functions/fleetpilot-daily-reminders/index.ts;filename=index.ts')
+          echo "Deployment HTTP status: $status"
+          if [ "$status" != "201" ]; then
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('/tmp/fleetpilot-email-response.json').read_text())
+          print(str(result.get('message',result.get('error','Deployment failure')))[:300])
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('/tmp/fleetpilot-email-response.json').read_text())
+          assert result.get('slug') == 'fleetpilot-daily-reminders'
+          assert result.get('verify_jwt') is False
+          print('Private-cron-authorized Edge Function deployed')
+          PY
+      - name: Commit verified implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/fleetpilot-daily-reminders/index.ts lib/notifications/notifications_screen.dart lib/core/localization.dart
+          git commit -m 'Add test-only scheduled FleetPilot email worker and opt-in'
+          git push
