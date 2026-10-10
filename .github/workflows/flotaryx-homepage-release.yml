@@ -1,0 +1,173 @@
+name: Flotaryx - Website Homepage and App Portal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/flotaryx-homepage-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: flotaryx-homepage-release
+  cancel-in-progress: false
+
+jobs:
+  publish-homepage-and-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Prepare Flutter web platform
+        run: flutter create --platforms=web --project-name fleetpilot .
+
+      - name: Put product website on domain root and app at /app/
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          web = Path('web')
+          index = web / 'index.html'
+          portal = web / 'app' / 'index.html'
+          landing = web / 'start' / 'index.html'
+          install_path = web / 'install' / 'index.html'
+          manifest_path = web / 'manifest.json'
+          code_path = Path('lib/data/fleet_repository.dart')
+
+          old_root = index.read_text(encoding='utf-8')
+          # Reuse the original Flutter bootstrap document, including its PWA metadata.
+          flutter_index = portal.read_text(encoding='utf-8') if portal.exists() else old_root
+          assert 'flutter_bootstrap.js' in flutter_index, 'Cannot locate original Flutter web entry point'
+          flutter_index = flutter_index.replace('<base href="$FLUTTER_BASE_HREF">', '<base href="/">')
+          assert '<base href="/">' in flutter_index, 'Flutter app needs root-hosted assets'
+          assert '<script src="flutter_bootstrap.js" async></script>' in flutter_index
+          portal.parent.mkdir(parents=True, exist_ok=True)
+          portal.write_text(flutter_index, encoding='utf-8')
+
+          product = landing.read_text(encoding='utf-8')
+          if '<meta http-equiv="refresh"' in product:
+              raise RuntimeError('Expected actual multilingual product website under web/start/')
+          assert 'id="site-language"' in product, 'Expected multilingual product website'
+          assert 'href="../"' in product or 'href="/app/"' in product, 'Cannot find portal links'
+          product = product.replace('href="../"', 'href="/app/"')
+          product = product.replace('href="../install/"', 'href="/install/"')
+          landing.write_text(product, encoding='utf-8')
+
+          # Keep the existing website intact; replace only relative paths that change
+          # when the same HTML page moves from /start/ to /.
+          homepage = product.replace('href="../favicon.png"', 'href="/favicon.png"')
+          homepage = homepage.replace('src="../icons/', 'src="/icons/')
+          homepage = homepage.replace('https://flotaryx.com/start/', 'https://flotaryx.com/')
+          assert homepage.count('href="/app/"') >= 3, 'Login buttons must point at /app/'
+          assert 'href="/install/"' in homepage, 'Mobile installation link is missing'
+          assert '<head>' in homepage
+          if '<base href="$FLUTTER_BASE_HREF">' not in homepage:
+              homepage = homepage.replace('<head>', '<head>\n<base href="$FLUTTER_BASE_HREF">', 1)
+          canonical = '<link rel="canonical" href="https://flotaryx.com/">'
+          if canonical not in homepage:
+              homepage = homepage.replace('<head>', '<head>\n' + canonical, 1)
+          if canonical not in product:
+              product = product.replace('<head>', '<head>\n' + canonical, 1)
+              landing.write_text(product, encoding='utf-8')
+          index.write_text(homepage, encoding='utf-8')
+
+          install = install_path.read_text(encoding='utf-8')
+          install = install.replace('href="../start/"', 'href="/"')
+          install = install.replace('href="../"', 'href="/app/"')
+          assert install.count('href="/app/"') >= 2
+          install_path.write_text(install, encoding='utf-8')
+
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          assert manifest['short_name'] == 'Flotaryx'
+          manifest.update({'id': '/app/', 'start_url': '/app/', 'scope': '/app/'})
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          code = code_path.read_text(encoding='utf-8')
+          assert "emailRedirectTo: 'https://flotaryx.com/'" in code or "emailRedirectTo: 'https://flotaryx.com/app/'" in code
+          code = code.replace("emailRedirectTo: 'https://flotaryx.com/'", "emailRedirectTo: 'https://flotaryx.com/app/'")
+          code_path.write_text(code, encoding='utf-8')
+
+          assert (web / 'CNAME').read_text(encoding='ascii').strip() == 'flotaryx.com'
+
+          # flutter create can produce an unrelated, untracked example widget test.
+          generated_test = Path('test/widget_test.dart')
+          if generated_test.is_file():
+              tracked = subprocess.run(['git', 'ls-files', '--error-unmatch', str(generated_test)],
+                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+              if not tracked and 'MyApp' in generated_test.read_text(encoding='utf-8'):
+                  generated_test.unlink()
+                  print('Removed autogenerated unrelated example test')
+          print('Homepage /, portal /app/, install /install/, 12-language product website ready')
+          PY
+
+      - name: Analyze application and run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Build and verify new production site
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build web --release --base-href "/" \
+            --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p = Path('build/web')
+          root = (p / 'index.html').read_text(encoding='utf-8')
+          assert 'Flotaryx — Fleet Management for Cars, Vans, Trucks and Taxis' in root
+          assert 'id="site-language"' in root
+          assert '<base href="/">' in root
+          assert 'href="/app/"' in root
+          app = (p / 'app' / 'index.html').read_text(encoding='utf-8')
+          assert '<base href="/">' in app
+          assert 'flutter_bootstrap.js' in app
+          assert (p / 'flutter_bootstrap.js').exists()
+          assert (p / 'main.dart.js').exists()
+          assert (p / 'start' / 'index.html').exists()
+          assert (p / 'install' / 'index.html').exists()
+          assert (p / 'icons' / 'Icon-192.png').exists()
+          assert (p / 'CNAME').read_text(encoding='ascii').strip() == 'flotaryx.com'
+          m = json.loads((p / 'manifest.json').read_text(encoding='utf-8'))
+          assert m['id'] == m['scope'] == m['start_url'] == '/app/'
+          print('Production website, portal, assets and PWA verified')
+          PY
+
+      - name: Commit new homepage and application URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/index.html web/app/index.html web/start/index.html web/install/index.html web/manifest.json lib/data/fleet_repository.dart
+          if git diff --cached --quiet; then
+            echo 'Website homepage and /app/ are already in source control.'
+          else
+            git commit -m 'Put Flotaryx website at domain root and portal under app'
+            git push origin HEAD:main
+          fi
+
+      - name: Deploy site through current GitHub Pages workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo 'Production deployment requested for https://flotaryx.com/'
