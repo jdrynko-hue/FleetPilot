@@ -1,0 +1,162 @@
+name: FleetPilot Email Deploy - Direct API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fleetpilot-email-deploy-direct.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_email_test:
+    name: Deploy protected Resend test via Supabase API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: wqhymmtiawfwjikdaujo
+    steps:
+      - name: Checkout FleetPilot
+        uses: actions/checkout@v4
+
+      - name: Check GitHub secret
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo 'Missing GitHub secret SUPABASE_ACCESS_TOKEN' >&2
+            exit 1
+          fi
+
+      - name: Prepare secure single-recipient test function
+        shell: bash
+        run: |
+          mkdir -p supabase/functions/fleetpilot-email-test
+          cat > supabase/functions/fleetpilot-email-test/index.ts <<'TYPESCRIPT'
+          // FleetPilot smoke test: only an authenticated user matching the configured
+          // Resend account email can send to that same configured email address.
+          // Secrets are read only at runtime, not stored in this workflow.
+          const corsHeaders = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+          };
+
+          function json(body: Record<string, unknown>, status = 200): Response {
+            return new Response(JSON.stringify(body), {
+              status,
+              headers: {
+                "Content-Type": "application/json; charset=utf-8",
+                "Cache-Control": "no-store",
+                ...corsHeaders,
+              },
+            });
+          }
+
+          Deno.serve(async (request: Request): Promise<Response> => {
+            if (request.method === "OPTIONS") {
+              return new Response(null, { status: 204, headers: corsHeaders });
+            }
+            if (request.method !== "POST") {
+              return json({ success: false, error: "POST required" }, 405);
+            }
+
+            const resendKey = Deno.env.get("RESEND_API_KEY");
+            const recipient = Deno.env.get("RESEND_TEST_EMAIL")?.trim();
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+            if (!resendKey || !recipient || !supabaseUrl || !supabaseAnonKey) {
+              return json({ success: false, error: "Email configuration incomplete" }, 503);
+            }
+
+            const authorization = request.headers.get("Authorization") ?? "";
+            if (!/^Bearer \S+$/.test(authorization)) {
+              return json({ success: false, error: "Sign-in required" }, 401);
+            }
+
+            let authenticatedEmail: string | undefined;
+            try {
+              const authResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                headers: {
+                  Authorization: authorization,
+                  apikey: supabaseAnonKey,
+                },
+              });
+              if (!authResponse.ok) {
+                return json({ success: false, error: "Authentication failed" }, 401);
+              }
+              const user = await authResponse.json();
+              authenticatedEmail = typeof user.email === "string" ? user.email.trim() : undefined;
+            } catch {
+              return json({ success: false, error: "Authentication unavailable" }, 503);
+            }
+
+            if (!authenticatedEmail || authenticatedEmail.toLowerCase() !== recipient.toLowerCase()) {
+              return json({ success: false, error: "Email test not authorized" }, 403);
+            }
+
+            try {
+              const response = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${resendKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "FleetPilot <onboarding@resend.dev>",
+                  to: [recipient],
+                  subject: "FleetPilot — test e-mail",
+                  html: "<h2>FleetPilot</h2><p>Test wysyłania e-maili z FleetPilot.</p>",
+                }),
+              });
+              if (!response.ok) {
+                console.error("Resend declined test, status", response.status);
+                return json({ success: false, error: "Email provider declined request" }, 502);
+              }
+              const result = await response.json();
+              return json({ success: true, message: "Email accepted by Resend", id: result.id ?? null });
+            } catch {
+              return json({ success: false, error: "Email provider unavailable" }, 502);
+            }
+          });
+          TYPESCRIPT
+
+      - name: Deploy directly using Supabase Management API
+        shell: bash
+        run: |
+          # Use the official deploy endpoint directly: avoids the CLI's
+          # preliminary functions-list call, which returned 403 with scoped tokens.
+          status=$(curl --silent --show-error --output deploy-result.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --url "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions/deploy?slug=fleetpilot-email-test" \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            --form 'metadata={"entrypoint_path":"index.ts","name":"fleetpilot-email-test","verify_jwt":true}' \
+            --form 'file=@supabase/functions/fleetpilot-email-test/index.ts;filename=index.ts')
+
+          echo "Supabase Edge Function deployment HTTP status: $status"
+          if [ "$status" != "201" ]; then
+            echo 'Deployment rejected. Supabase response (no credentials):' >&2
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              value = json.loads(Path('deploy-result.json').read_text())
+              print(str(value.get('message', value.get('error', 'Unknown deployment error')))[:400])
+          except Exception:
+              print('Unable to decode Supabase response')
+          PY
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('deploy-result.json').read_text())
+          assert data.get('slug') == 'fleetpilot-email-test', 'Unexpected function name returned'
+          assert data.get('verify_jwt') is True, 'Server reports JWT verification disabled'
+          print('Successfully deployed:', data['slug'])
+          print('JWT verification:', data['verify_jwt'])
+          PY
