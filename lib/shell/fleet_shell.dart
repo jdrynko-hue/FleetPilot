@@ -9,6 +9,7 @@ import '../data/models.dart';
 import '../drivers/drivers_screen.dart';
 import '../garages/garages_screen.dart';
 import '../issues/issues_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../repairs/repairs_screen.dart';
 import '../reports/reports_screen.dart';
 import '../vehicles/vehicles_screen.dart';
@@ -157,6 +158,15 @@ class _FleetShellState extends State<FleetShell> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Center(child: Text(_membership.companyName)),
                 ),
+              IconButton(
+                tooltip: tr('notifications'),
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => NotificationsScreen(company: _membership),
+                  ),
+                ),
+              ),
               IconButton(
                 tooltip: tr('refresh'),
                 onPressed: _refreshAll,
