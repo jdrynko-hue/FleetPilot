@@ -36,11 +36,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_registerMode) {
-        await _repository.signUp(
+        final signedIn = await _repository.signUp(
           email: _email.text.trim(),
           password: _password.text,
           locale: _language,
         );
+                if (!signedIn && mounted) {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Check your email'),
+              content: Text(
+                'We sent a confirmation link to ${_email.text.trim()}. Check your spam folder too.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          if (mounted) setState(() => _registerMode = false);
+        }
       } else {
         await _repository.signIn(
           email: _email.text.trim(),
