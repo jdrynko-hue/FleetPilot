@@ -1,0 +1,148 @@
+name: Flotaryx - Verified Brand Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/flotaryx-brand-release-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flotaryx-brand-release-fix
+  cancel-in-progress: false
+
+jobs:
+  brand-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate web platform
+        run: flutter create --platforms=web --project-name fleetpilot .
+
+      - name: Apply corrected complete Flotaryx branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import gzip
+          import re
+          import subprocess
+          from pathlib import Path
+
+          original=Path('.github/workflows/flotaryx-brand-release.yml').read_text(encoding='utf-8')
+          def embedded(marker, end_marker):
+              assert original.count(marker)==1, f'Missing or repeated marker: {marker}'
+              raw=original.split(marker,1)[1].split(end_marker,1)[0]
+              return base64.b64decode(''.join(raw.split()),validate=True)
+
+          script_marker="cat <<'FLOTARYX_SCRIPT' | base64 --decode | gzip --decompress > /tmp/flotaryx_brand.py"
+          archive_marker="cat <<'FLOTARYX_ICONS' | base64 --decode > /tmp/flotaryx_assets.tar.gz"
+          script=gzip.decompress(embedded(script_marker,'FLOTARYX_SCRIPT')).decode('utf-8')
+          archive=embedded(archive_marker,'FLOTARYX_ICONS')
+          Path('/tmp/flotaryx_assets.tar.gz').write_bytes(archive)
+          subprocess.run(['tar','-tzf','/tmp/flotaryx_assets.tar.gz'],check=True,
+              stdout=subprocess.DEVNULL)
+          subprocess.run(['tar','-xzf','/tmp/flotaryx_assets.tar.gz'],check=True)
+
+          # The original script used a whitespace-sensitive match for Flutter's
+          # initial truck icon. Normalize only that exact widget temporarily so
+          # the original release script can replace it with the Flotaryx logo.
+          login=Path('lib/auth/login_screen.dart')
+          current=login.read_text(encoding='utf-8')
+          pattern=r'const CircleAvatar\(\s*\n[ \t]*child: Icon\(Icons\.local_shipping_rounded\),\s*\n[ \t]*\),'
+          canonical='const CircleAvatar(\n                               child: Icon(Icons.local_shipping_rounded),\n                             ),'
+          normalized,count=re.subn(pattern,lambda _:canonical,current,count=1)
+          assert count==1, 'The original login truck-icon widget has changed; refusing an unsafe edit'
+          login.write_text(normalized,encoding='utf-8')
+
+          subprocess.run(['python3','-c',script],check=True)
+
+          # All visible assets and translated copy must be present.
+          import json
+          from html.parser import HTMLParser
+          manifest=json.loads(Path('web/manifest.json').read_text(encoding='utf-8'))
+          assert manifest.get('short_name')=='Flotaryx'
+          for path in ['web/favicon.png','web/icons/Icon-192.png',
+                       'web/icons/Icon-512.png','web/icons/Icon-maskable-192.png',
+                       'web/icons/Icon-maskable-512.png',
+                       'assets/branding/flotaryx_mark.png',
+                       'assets/branding/flotaryx_icon.svg']:
+              assert Path(path).is_file(), path
+          class Translations(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.n=0; self.languages=set()
+              def handle_starttag(self,tag,attrs):
+                  a=dict(attrs)
+                  if 'data-en' in a:
+                      self.n+=1
+                      self.languages.update(k[5:] for k in a if k.startswith('data-') and len(k)==7)
+          page=Path('web/start/index.html').read_text(encoding='utf-8')
+          auditor=Translations(); auditor.feed(page)
+          assert auditor.n>=90, f'Too few translated website elements: {auditor.n}'
+          assert set('pl en de sk cs hu ro es fr it uk pt'.split())<=auditor.languages
+          assert 'Flotaryx' in page and 'FleetPilot' not in page
+          assert 'Flotaryx' in Path('web/install/index.html').read_text(encoding='utf-8')
+          assert 'Flotaryx' in Path('lib/auth/login_screen.dart').read_text(encoding='utf-8')
+          # Remove only an untracked Flutter-generated demo test, never project tests.
+          demo=Path('test/widget_test.dart')
+          if demo.exists():
+              tracked=subprocess.run(['git','ls-files','--error-unmatch',str(demo)],
+                      stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
+              if not tracked and 'MyApp' in demo.read_text(encoding='utf-8'):
+                  demo.unlink()
+          print('Flotaryx branding, icons and 12 languages verified successfully.')
+          PY
+
+      - name: Analyze code and run application tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Build release PWA and multilingual website
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build web --release --base-href "/FleetPilot/" \
+            --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
+          test -f build/web/index.html
+          test -f build/web/start/index.html
+          test -f build/web/install/index.html
+          test -f build/web/icons/Icon-512.png
+          test -f build/web/assets/assets/branding/flotaryx_mark.png
+          grep -q Flotaryx build/web/index.html
+          grep -q Flotaryx build/web/start/index.html
+
+      - name: Commit verified Flotaryx application and branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md pubspec.yaml lib/app.dart lib/auth/login_screen.dart \
+            lib/shell/fleet_shell.dart lib/drivers/driver_home_screen.dart \
+            lib/core/localization.dart web/index.html web/manifest.json \
+            web/start/index.html web/install/index.html web/favicon.png \
+            web/icons/Icon-192.png web/icons/Icon-512.png \
+            web/icons/Icon-maskable-192.png web/icons/Icon-maskable-512.png \
+            assets/branding/flotaryx_mark.png assets/branding/flotaryx_icon.svg \
+            supabase/functions/fleetpilot-daily-reminders/index.ts
+          if git diff --cached --quiet; then
+            echo 'Flotaryx already published; no changes required.'
+          else
+            git commit -m 'Publish verified Flotaryx complete branding and PWA'
+            git push origin HEAD:main
+          fi
+          echo 'The existing GitHub Pages workflow redeploys automatically on push.'
