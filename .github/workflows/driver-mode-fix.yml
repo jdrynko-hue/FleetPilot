@@ -1,0 +1,82 @@
+name: FleetPilot Driver Mode - Repair and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/driver-mode-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  install-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Reuse existing Driver Mode installation (no new uploads of source files)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+          import subprocess
+
+          source = Path('.github/workflows/driver-mode-ui.yml').read_text(encoding='utf-8')
+          start_marker = "cat <<'ENCODED' | base64 --decode | gzip --decompress > /tmp/fleetpilot-driver-mode.py"
+          end_marker = 'ENCODED'
+          if source.count(start_marker) != 1:
+              raise SystemExit('Could not locate the original driver installer')
+          payload = source.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          script = gzip.decompress(base64.b64decode(''.join(payload.split()))).decode('utf-8')
+          subprocess.run(['python3', '-c', script], check=True)
+          # Older localization files already contain these keys; the first
+          # installer duplicated them. Keep the original translations.
+          translations_path = Path('lib/core/localization.dart')
+          translations = translations_path.read_text(encoding='utf-8')
+          for locale, value in (('pl', 'Kierowca'), ('en', 'Driver')):
+              added = f'  "{locale}": <String, String>{{\n    "driver": "{value}",\n'
+              original = f'  "{locale}": <String, String>{{\n'
+              if translations.count(added) != 1:
+                  raise SystemExit(f'Expected inserted translation not found: {locale}')
+              translations = translations.replace(added, original, 1)
+          translations_path.write_text(translations, encoding='utf-8')
+          print('Driver Mode source files installed and duplicate keys removed')
+          PY
+
+      - name: Check Dart formatting, build and tests
+        shell: bash
+        run: |
+          flutter pub get
+          dart format lib/drivers/driver_home_screen.dart lib/company/vehicle_change_requests_screen.dart lib/shell/fleet_shell.dart lib/core/constants.dart lib/company/company_screen.dart lib/core/localization.dart
+          flutter analyze --no-fatal-infos
+          flutter test
+          flutter build web --release --base-href "/FleetPilot/"
+
+      - name: Commit tested Driver Mode UI
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/drivers/driver_home_screen.dart lib/company/vehicle_change_requests_screen.dart lib/shell/fleet_shell.dart lib/core/constants.dart lib/company/company_screen.dart lib/core/localization.dart
+          if git diff --cached --quiet; then
+            echo 'Driver Mode already installed'
+          else
+            git commit -m 'Enable Driver Mode and manager-approved vehicle changes'
+            git push
+          fi
+
+      - name: Publish updated FleetPilot web app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run deploy.yml --ref main
