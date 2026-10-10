@@ -36,6 +36,8 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
+    "notification_test_email_only":
+        "Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.",
     "email_smoke_title": "Test wysyłki e-mail",
     "email_smoke_button": "Wyślij testowego e-maila",
     "email_smoke_description":
@@ -353,6 +355,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
+    "notification_test_email_only":
+        "Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.",
     "email_smoke_title": "Email delivery test",
     "email_smoke_button": "Send test email",
     "email_smoke_description":
@@ -671,6 +675,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
+    "notification_test_email_only":
+        "Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.",
     "email_smoke_title": "E-Mail-Versandtest",
     "email_smoke_button": "Test-E-Mail senden",
     "email_smoke_description":
@@ -985,6 +991,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
+    "notification_test_email_only":
+        "Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.",
     "email_smoke_title": "Test odosielania e-mailu",
     "email_smoke_button": "Odoslať testovací e-mail",
     "email_smoke_description":
@@ -1296,6 +1304,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
+    "notification_test_email_only":
+        "Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.",
     "email_smoke_title": "Test odesílání e-mailu",
     "email_smoke_button": "Odeslat testovací e-mail",
     "email_smoke_description":
@@ -1607,6 +1617,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
+    "notification_test_email_only":
+        "Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.",
     "email_smoke_title": "E-mail-küldés tesztje",
     "email_smoke_button": "Teszt e-mail küldése",
     "email_smoke_description":
@@ -1920,6 +1932,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
+    "notification_test_email_only":
+        "Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.",
     "email_smoke_title": "Test trimitere e-mail",
     "email_smoke_button": "Trimite e-mail de test",
     "email_smoke_description":
@@ -2232,6 +2246,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
+    "notification_test_email_only":
+        "Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.",
     "email_smoke_title": "Prueba de envío de correo",
     "email_smoke_button": "Enviar correo de prueba",
     "email_smoke_description":
@@ -2544,6 +2560,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
+    "notification_test_email_only":
+        "Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.",
     "email_smoke_title": "Test d’envoi d’e-mail",
     "email_smoke_button": "Envoyer un e-mail test",
     "email_smoke_description":
@@ -2855,6 +2873,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
+    "notification_test_email_only":
+        "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
     "email_smoke_title": "Test invio email",
     "email_smoke_button": "Invia email di prova",
     "email_smoke_description":
@@ -3165,6 +3185,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
+    "notification_test_email_only":
+        "Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.",
     "email_smoke_title": "Тест надсилання листа",
     "email_smoke_button": "Надіслати тестовий лист",
     "email_smoke_description":
@@ -3477,6 +3499,8 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
+    "notification_test_email_only":
+        "Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.",
     "email_smoke_title": "Teste de envio de e-mail",
     "email_smoke_button": "Enviar e-mail de teste",
     "email_smoke_description":

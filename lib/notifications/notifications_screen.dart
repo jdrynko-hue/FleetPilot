@@ -205,7 +205,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               .toList();
 
           Widget setting(String key, String label) {
-            final enabled = data.preferences[key] as bool? ?? true;
+            final enabled =
+                data.preferences[key] as bool? ?? (key != 'email_enabled');
             return SwitchListTile.adaptive(
               title: Text(label),
               value: enabled,
@@ -310,18 +311,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                       setting('service_enabled', tr('notification_service')),
                       const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.mail_outline),
-                        title: Text(tr('notification_email')),
-                        subtitle: Text(tr('notification_email_soon')),
-                        trailing: const Icon(Icons.lock_outline),
-                      ),
+                      setting('email_enabled', tr('notification_email')),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  tr('notification_schedule_pending'),
+                  tr('notification_test_email_only'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
