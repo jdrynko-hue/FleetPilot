@@ -1,0 +1,127 @@
+name: Flotaryx - Activate Custom Domain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/flotaryx-domain-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: flotaryx-domain-activation
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Prepare Flutter web scaffolding
+        run: flutter create --platforms=web --project-name fleetpilot .
+
+      - name: Configure Flotaryx for domain root and email redirects
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          domain = 'https://flotaryx.com/'
+          deploy = Path('.github/workflows/deploy.yml')
+          text = deploy.read_text(encoding='utf-8')
+          old = '--base-href "/FleetPilot/"'
+          new = '--base-href "/"'
+          assert text.count(old) == 1 or text.count(new) == 1, 'Unexpected Flutter deployment configuration'
+          text = text.replace(old, new)
+          text = text.replace('name: Deploy FleetPilot', 'name: Deploy Flotaryx')
+          deploy.write_text(text, encoding='utf-8')
+
+          manifest_path = Path('web/manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          assert manifest['short_name'] == 'Flotaryx', 'Flotaryx branding is not installed yet'
+          manifest.update({'id': '/', 'start_url': '/', 'scope': '/'})
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          repository = Path('lib/data/fleet_repository.dart')
+          code = repository.read_text(encoding='utf-8')
+          old_url = 'https://jdrynko-hue.github.io/FleetPilot/'
+          assert old_url in code or domain in code, 'Cannot find email confirmation redirect'
+          code = code.replace(old_url, domain)
+          repository.write_text(code, encoding='utf-8')
+
+          landing_path = Path('web/start/index.html')
+          landing = landing_path.read_text(encoding='utf-8')
+          landing = landing.replace('https://jdrynko-hue.github.io/FleetPilot/start/', 'https://flotaryx.com/start/')
+          assert 'https://flotaryx.com/start/' in landing
+          landing_path.write_text(landing, encoding='utf-8')
+
+          print('Production app origin:', domain)
+          print('Web base path: /')
+          print('PWA scope and start URL: /')
+          print('Confirmation email redirect:', domain)
+          PY
+
+      - name: Run Flutter analysis and app tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Build production Flotaryx PWA at domain root
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build web --release --base-href "/" \
+            --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          built = Path('build/web')
+          index = (built / 'index.html').read_text(encoding='utf-8')
+          assert '<base href="/">' in index, 'Flutter was not built for the domain root'
+          assert 'Flotaryx' in index
+          manifest = json.loads((built / 'manifest.json').read_text(encoding='utf-8'))
+          assert manifest['id'] == manifest['start_url'] == manifest['scope'] == '/'
+          assert (built / 'main.dart.js').is_file()
+          assert (built / 'flutter_bootstrap.js').is_file()
+          assert (built / 'start/index.html').is_file()
+          assert (built / 'install/index.html').is_file()
+          assert (built / 'icons/Icon-512.png').is_file()
+          print('Build verified: Flotaryx serves portal at / and product page at /start/.')
+          PY
+
+      - name: Commit verified domain migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/deploy.yml lib/data/fleet_repository.dart web/manifest.json web/start/index.html
+          if git diff --cached --quiet; then
+            echo 'Flotaryx custom domain paths already configured.'
+          else
+            git commit -m 'Configure Flotaryx PWA and signup for flotaryx.com root domain'
+            git push origin HEAD:main
+          fi
+
+      - name: Publish new root-path app with GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo 'Triggered current GitHub Pages deployment with root-path build.'
