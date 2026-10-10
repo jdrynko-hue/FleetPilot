@@ -7,6 +7,7 @@ import '../dashboard/dashboard_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import '../drivers/drivers_screen.dart';
+import '../drivers/driver_home_screen.dart';
 import '../garages/garages_screen.dart';
 import '../issues/issues_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -68,6 +69,13 @@ class _FleetShellState extends State<FleetShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_membership.role == 'driver') {
+      return DriverHomeScreen(
+        key: ValueKey(_membership.companyId),
+        company: _membership,
+      );
+    }
+
     final canManage = canManageForRole(_membership.role);
 
     final pages = [

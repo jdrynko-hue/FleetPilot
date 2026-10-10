@@ -30,7 +30,7 @@ const repairStatuses = <String>[
   'cancelled',
 ];
 
-const companyRoles = <String>['owner', 'admin', 'manager', 'viewer'];
+const companyRoles = <String>['owner', 'admin', 'manager', 'viewer', 'driver'];
 
 bool canManageForRole(String role) =>
     role == 'owner' || role == 'admin' || role == 'manager';
@@ -64,6 +64,7 @@ String prettifyEnum(String value) {
     'admin',
     'manager',
     'viewer',
+    'driver',
   };
 
   if (translatable.contains(value)) {

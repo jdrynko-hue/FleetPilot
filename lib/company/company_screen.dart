@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
+import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 
@@ -142,6 +143,10 @@ class _CompanyScreenState extends State<CompanyScreen> {
                       value: 'viewer',
                       child: Text(tr('viewer')),
                     ),
+                    DropdownMenuItem(
+                      value: 'driver',
+                      child: Text(tr('driver')),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -242,6 +247,105 @@ class _CompanyScreenState extends State<CompanyScreen> {
     setState(_reload);
   }
 
+  Future<void> _linkDriverAccount(CompanyMember member) async {
+    try {
+      final drivers = await _repository.fetchDrivers(widget.company.companyId);
+      final available = drivers
+          .where((d) => d.userId == null || d.userId == member.userId)
+          .toList();
+      if (!mounted) return;
+      if (available.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocale.language.value == 'pl'
+                  ? 'Brak wolnych kart kierowców.'
+                  : 'No available driver records.',
+            ),
+          ),
+        );
+        return;
+      }
+      String? choice;
+      final selected = await showDialog<String>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, refresh) => AlertDialog(
+            title: Text(
+              AppLocale.language.value == 'pl'
+                  ? 'Powiąż konto kierowcy'
+                  : 'Link driver account',
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(member.email),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: choice,
+                  decoration: InputDecoration(
+                    labelText: AppLocale.language.value == 'pl'
+                        ? 'Kierowca'
+                        : 'Driver',
+                  ),
+                  items: available
+                      .map(
+                        (d) => DropdownMenuItem<String>(
+                          value: d.id,
+                          child: Text(d.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => refresh(() => choice = value),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(tr('cancel')),
+              ),
+              FilledButton(
+                onPressed: choice == null
+                    ? null
+                    : () => Navigator.pop(ctx, choice),
+                child: Text(
+                  AppLocale.language.value == 'pl' ? 'Powiąż' : 'Link',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (selected == null) return;
+      await Supabase.instance.client.rpc(
+        'fleetpilot_link_driver_account',
+        params: {
+          '_company_id': widget.company.companyId,
+          '_driver_id': selected,
+          '_user_id': member.userId,
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocale.language.value == 'pl'
+                ? 'Konto powiązane z kierowcą.'
+                : 'Driver account linked.',
+          ),
+        ),
+      );
+      setState(_reload);
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   Future<void> _removeMember(CompanyMember member) async {
     await _repository.removeCompanyMember(
       companyId: widget.company.companyId,
@@ -288,6 +392,26 @@ class _CompanyScreenState extends State<CompanyScreen> {
         ),
 
         SizedBox(height: 16),
+        if (widget.company.role == 'owner' ||
+            widget.company.role == 'admin' ||
+            widget.company.role == 'manager')
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: Text(
+                AppLocale.language.value == 'pl'
+                    ? 'Prośby o zmianę vana'
+                    : 'Van change requests',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      VehicleChangeRequestsScreen(company: widget.company),
+                ),
+              ),
+            ),
+          ),
 
         FutureBuilder<CompanyEntitlements>(
           future: _entitlements,
@@ -521,6 +645,8 @@ class _CompanyScreenState extends State<CompanyScreen> {
                               onSelected: (value) {
                                 if (value == 'remove') {
                                   _removeMember(members[i]);
+                                } else if (value == 'link_driver') {
+                                  _linkDriverAccount(members[i]);
                                 } else {
                                   _updateRole(members[i], value);
                                 }
@@ -538,6 +664,19 @@ class _CompanyScreenState extends State<CompanyScreen> {
                                   value: 'viewer',
                                   child: Text(tr('viewer')),
                                 ),
+                                PopupMenuItem(
+                                  value: 'driver',
+                                  child: Text(tr('driver')),
+                                ),
+                                if (members[i].role == 'driver')
+                                  PopupMenuItem(
+                                    value: 'link_driver',
+                                    child: Text(
+                                      AppLocale.language.value == 'pl'
+                                          ? 'Powiąż z kartą kierowcy'
+                                          : 'Link driver record',
+                                    ),
+                                  ),
                                 const PopupMenuDivider(),
                                 PopupMenuItem(
                                   value: 'remove',
