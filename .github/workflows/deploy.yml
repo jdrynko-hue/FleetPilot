@@ -1,4 +1,4 @@
-name: Deploy FleetPilot
+name: Deploy Flotaryx
 
 on:
   push:
