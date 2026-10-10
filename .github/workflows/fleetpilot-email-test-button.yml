@@ -1,0 +1,77 @@
+name: FleetPilot Email Test Button
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fleetpilot-email-test-button.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Add authenticated email test button
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import base64
+          import json
+
+          screen = Path('lib/company/company_screen.dart')
+          s = screen.read_text(encoding='utf-8')
+          assert "_emailTestSending" not in s, 'Button already installed; do not duplicate'
+          anchor = "import 'package:flutter/services.dart';\n"
+          assert s.count(anchor) == 1
+          s = s.replace(anchor, anchor + "import 'package:supabase_flutter/supabase_flutter.dart';\n", 1)
+
+          method_anchor = '  Future<void> _changeLanguage(String value) async {'
+          assert s.count(method_anchor) == 1
+          s = s.replace(method_anchor, base64.b64decode('ICBib29sIF9lbWFpbFRlc3RTZW5kaW5nID0gZmFsc2U7CiAgYm9vbCBfZW1haWxUZXN0QWNjZXB0ZWQgPSBmYWxzZTsKICBTdHJpbmc/IF9lbWFpbFRlc3RNZXNzYWdlOwoKICBGdXR1cmU8dm9pZD4gX3NlbmRUZXN0RW1haWwoKSBhc3luYyB7CiAgICBpZiAoX2VtYWlsVGVzdFNlbmRpbmcgfHwgX2VtYWlsVGVzdEFjY2VwdGVkKSByZXR1cm47CiAgICBzZXRTdGF0ZSgoKSB7CiAgICAgIF9lbWFpbFRlc3RTZW5kaW5nID0gdHJ1ZTsKICAgICAgX2VtYWlsVGVzdE1lc3NhZ2UgPSBudWxsOwogICAgfSk7CiAgICB0cnkgewogICAgICBmaW5hbCBjbGllbnQgPSBTdXBhYmFzZS5pbnN0YW5jZS5jbGllbnQ7CiAgICAgIGlmIChjbGllbnQuYXV0aC5jdXJyZW50U2Vzc2lvbiA9PSBudWxsKSB7CiAgICAgICAgdGhyb3cgU3RhdGVFcnJvcignU2lnbiBpbiBmaXJzdCcpOwogICAgICB9CiAgICAgIGZpbmFsIHJlc3BvbnNlID0gYXdhaXQgY2xpZW50LmZ1bmN0aW9ucy5pbnZva2UoCiAgICAgICAgJ2ZsZWV0cGlsb3QtZW1haWwtdGVzdCcsCiAgICAgICAgYm9keTogPFN0cmluZywgZHluYW1pYz57fSwKICAgICAgKTsKICAgICAgZmluYWwgcmVzdWx0ID0gcmVzcG9uc2UuZGF0YTsKICAgICAgaWYgKHJlc3VsdCBpcyEgTWFwIHx8IHJlc3VsdFsnc3VjY2VzcyddICE9IHRydWUpIHsKICAgICAgICB0aHJvdyBTdGF0ZUVycm9yKCdSZXNlbmQgaGFzIG5vdCBhY2NlcHRlZCB0aGUgbWVzc2FnZScpOwogICAgICB9CiAgICAgIGlmICghbW91bnRlZCkgcmV0dXJuOwogICAgICBzZXRTdGF0ZSgoKSB7CiAgICAgICAgX2VtYWlsVGVzdEFjY2VwdGVkID0gdHJ1ZTsKICAgICAgICBfZW1haWxUZXN0TWVzc2FnZSA9IHRyKCdlbWFpbF9zbW9rZV9hY2NlcHRlZCcpOwogICAgICB9KTsKICAgIH0gY2F0Y2ggKF8pIHsKICAgICAgaWYgKCFtb3VudGVkKSByZXR1cm47CiAgICAgIHNldFN0YXRlKCgpID0+IF9lbWFpbFRlc3RNZXNzYWdlID0gdHIoJ2VtYWlsX3Ntb2tlX2ZhaWxlZCcpKTsKICAgIH0gZmluYWxseSB7CiAgICAgIGlmIChtb3VudGVkKSBzZXRTdGF0ZSgoKSA9PiBfZW1haWxUZXN0U2VuZGluZyA9IGZhbHNlKTsKICAgIH0KICB9Cgo=').decode() + method_anchor, 1)
+
+          card_anchor = "        SizedBox(height: 24),\n\n        Row(\n          children: ["
+          assert s.count(card_anchor) == 1, 'Company screen insertion point changed'
+          s = s.replace(card_anchor, base64.b64decode('ICAgICAgICBpZiAoX2NhbkFkbWluKSAuLi5bCiAgICAgICAgICBjb25zdCBTaXplZEJveChoZWlnaHQ6IDE2KSwKICAgICAgICAgIENhcmQoCiAgICAgICAgICAgIGNoaWxkOiBQYWRkaW5nKAogICAgICAgICAgICAgIHBhZGRpbmc6IGNvbnN0IEVkZ2VJbnNldHMuYWxsKDIwKSwKICAgICAgICAgICAgICBjaGlsZDogQ29sdW1uKAogICAgICAgICAgICAgICAgY3Jvc3NBeGlzQWxpZ25tZW50OiBDcm9zc0F4aXNBbGlnbm1lbnQuc3RhcnQsCiAgICAgICAgICAgICAgICBjaGlsZHJlbjogWwogICAgICAgICAgICAgICAgICBSb3coCiAgICAgICAgICAgICAgICAgICAgY2hpbGRyZW46IFsKICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IEljb24oSWNvbnMubWFya19lbWFpbF91bnJlYWRfb3V0bGluZWQpLAogICAgICAgICAgICAgICAgICAgICAgY29uc3QgU2l6ZWRCb3god2lkdGg6IDEyKSwKICAgICAgICAgICAgICAgICAgICAgIEV4cGFuZGVkKAogICAgICAgICAgICAgICAgICAgICAgICBjaGlsZDogVGV4dCgKICAgICAgICAgICAgICAgICAgICAgICAgICB0cignZW1haWxfc21va2VfdGl0bGUnKSwKICAgICAgICAgICAgICAgICAgICAgICAgICBzdHlsZTogVGhlbWUub2YoY29udGV4dCkudGV4dFRoZW1lLnRpdGxlTWVkaXVtLAogICAgICAgICAgICAgICAgICAgICAgICApLAogICAgICAgICAgICAgICAgICAgICAgKSwKICAgICAgICAgICAgICAgICAgICBdLAogICAgICAgICAgICAgICAgICApLAogICAgICAgICAgICAgICAgICBjb25zdCBTaXplZEJveChoZWlnaHQ6IDEwKSwKICAgICAgICAgICAgICAgICAgVGV4dCh0cignZW1haWxfc21va2VfZGVzY3JpcHRpb24nKSksCiAgICAgICAgICAgICAgICAgIGNvbnN0IFNpemVkQm94KGhlaWdodDogMTQpLAogICAgICAgICAgICAgICAgICBGaWxsZWRCdXR0b24uaWNvbigKICAgICAgICAgICAgICAgICAgICBvblByZXNzZWQ6IF9lbWFpbFRlc3RTZW5kaW5nIHx8IF9lbWFpbFRlc3RBY2NlcHRlZAogICAgICAgICAgICAgICAgICAgICAgICA/IG51bGwKICAgICAgICAgICAgICAgICAgICAgICAgOiBfc2VuZFRlc3RFbWFpbCwKICAgICAgICAgICAgICAgICAgICBpY29uOiBfZW1haWxUZXN0U2VuZGluZwogICAgICAgICAgICAgICAgICAgICAgICA/IGNvbnN0IFNpemVkQm94KAogICAgICAgICAgICAgICAgICAgICAgICAgICAgaGVpZ2h0OiAxOCwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIHdpZHRoOiAxOCwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGNoaWxkOiBDaXJjdWxhclByb2dyZXNzSW5kaWNhdG9yKHN0cm9rZVdpZHRoOiAyKSwKICAgICAgICAgICAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICAgICAgICAgIDogY29uc3QgSWNvbihJY29ucy5zZW5kX291dGxpbmVkKSwKICAgICAgICAgICAgICAgICAgICBsYWJlbDogVGV4dCgKICAgICAgICAgICAgICAgICAgICAgIF9lbWFpbFRlc3RTZW5kaW5nCiAgICAgICAgICAgICAgICAgICAgICAgICAgPyB0cignZW1haWxfc21va2Vfc2VuZGluZycpCiAgICAgICAgICAgICAgICAgICAgICAgICAgOiB0cignZW1haWxfc21va2VfYnV0dG9uJyksCiAgICAgICAgICAgICAgICAgICAgKSwKICAgICAgICAgICAgICAgICAgKSwKICAgICAgICAgICAgICAgICAgaWYgKF9lbWFpbFRlc3RNZXNzYWdlICE9IG51bGwpIC4uLlsKICAgICAgICAgICAgICAgICAgICBjb25zdCBTaXplZEJveChoZWlnaHQ6IDEyKSwKICAgICAgICAgICAgICAgICAgICBUZXh0KF9lbWFpbFRlc3RNZXNzYWdlISksCiAgICAgICAgICAgICAgICAgIF0sCiAgICAgICAgICAgICAgICBdLAogICAgICAgICAgICAgICksCiAgICAgICAgICAgICksCiAgICAgICAgICApLAogICAgICAgIF0sCgo=').decode() + card_anchor, 1)
+          screen.write_text(s, encoding='utf-8')
+
+          locale = Path('lib/core/localization.dart')
+          l = locale.read_text(encoding='utf-8')
+          translations = json.loads(base64.b64decode('eyJwbCI6IFsiVGVzdCB3eXN5xYJraSBlLW1haWwiLCAiV3nFm2xpaiB0ZXN0b3dlZ28gZS1tYWlsYSIsICJXaWFkb21vxZvEhyB0cmFmaSB3ecWCxIVjem5pZSBuYSBhZHJlcyB0ZXN0b3d5IFJlc2VuZC4gWmFsb2d1aiBzacSZIGRvIEZsZWV0UGlsb3QgbmEgdGVuIHNhbSBhZHJlcy4iLCAiV3lzecWCYW5pZS4uLiIsICJSZXNlbmQgcHJ6eWrEhcWCIHdpYWRvbW/Fm8SHLiBTcHJhd2TFuiBza3J6eW5rxJkgb3JheiBTcGFtLiIsICJOaWUgdWRhxYJvIHNpxJkgd3lzxYJhxIcuIFNwcmF3ZMW6LCBjenkgZS1tYWlsIGxvZ293YW5pYSBqZXN0IHpnb2RueSB6IFJFU0VORF9URVNUX0VNQUlMLCBvcmF6IGxvZ2kgRWRnZSBGdW5jdGlvbi4iXSwgImVuIjogWyJFbWFpbCBkZWxpdmVyeSB0ZXN0IiwgIlNlbmQgdGVzdCBlbWFpbCIsICJUaGUgbWVzc2FnZSBnb2VzIG9ubHkgdG8gdGhlIFJlc2VuZCB0ZXN0IGFkZHJlc3MuIFNpZ24gaW4gdG8gRmxlZXRQaWxvdCB3aXRoIHRoYXQgc2FtZSBlbWFpbC4iLCAiU2VuZGluZy4uLiIsICJSZXNlbmQgYWNjZXB0ZWQgdGhlIG1lc3NhZ2UuIENoZWNrIHlvdXIgaW5ib3ggYW5kIHNwYW0gZm9sZGVyLiIsICJTZW5kaW5nIGZhaWxlZC4gRW5zdXJlIHlvdXIgbG9naW4gZW1haWwgbWF0Y2hlcyBSRVNFTkRfVEVTVF9FTUFJTCBhbmQgY2hlY2sgdGhlIEVkZ2UgRnVuY3Rpb24gbG9ncy4iXSwgImRlIjogWyJFLU1haWwtVmVyc2FuZHRlc3QiLCAiVGVzdC1FLU1haWwgc2VuZGVuIiwgIkRpZSBOYWNocmljaHQgZ2VodCBudXIgYW4gZGllIFJlc2VuZC1UZXN0YWRyZXNzZS4gTWVsZGUgZGljaCBtaXQgZGVyc2VsYmVuIEUtTWFpbCBiZWkgRmxlZXRQaWxvdCBhbi4iLCAiV2lyZCBnZXNlbmRldC4uLiIsICJSZXNlbmQgaGF0IGRpZSBOYWNocmljaHQgYW5nZW5vbW1lbi4gUHLDvGZlIFBvc3RlaW5nYW5nIHVuZCBTcGFtLiIsICJTZW5kZW4gZmVobGdlc2NobGFnZW4uIFByw7xmZSwgb2IgZGllIEFubWVsZGVhZHJlc3NlIG1pdCBSRVNFTkRfVEVTVF9FTUFJTCDDvGJlcmVpbnN0aW1tdCwgdW5kIGRpZSBGdW5rdGlvbnNwcm90b2tvbGxlLiJdLCAic2siOiBbIlRlc3Qgb2Rvc2llbGFuaWEgZS1tYWlsdSIsICJPZG9zbGHFpSB0ZXN0b3ZhY8OtIGUtbWFpbCIsICJTcHLDoXZhIHNhIG9kb8WhbGUgaWJhIG5hIHRlc3RvdmFjaXUgYWRyZXN1IFJlc2VuZC4gUHJpaGzDoXMgc2EgcyByb3ZuYWvDvW0gZS1tYWlsb20uIiwgIk9kb3NpZWxhbmllLi4uIiwgIlJlc2VuZCBwcmlqYWwgc3Byw6F2dS4gU2tvbnRyb2x1aiBkb3J1xI1lbsO6IHBvxaF0dSBhIHNwYW0uIiwgIk9kb3NsYW5pZSB6bHloYWxvLiBPdmVyIHpob2R1IHByaWhsYXNvdmFjaWVobyBlLW1haWx1IHMgUkVTRU5EX1RFU1RfRU1BSUwgYSBwcm90b2tvbHkgZnVua2NpZS4iXSwgImNzIjogWyJUZXN0IG9kZXPDrWzDoW7DrSBlLW1haWx1IiwgIk9kZXNsYXQgdGVzdG92YWPDrSBlLW1haWwiLCAiWnByw6F2YSBvZGVqZGUgcG91emUgbmEgdGVzdG92YWPDrSBhZHJlc3UgUmVzZW5kLiBQxZlpaGxhcyBzZSBzdGVqbsO9bSBlLW1haWxlbS4iLCAiT2Rlc8OtbMOhbsOtLi4uIiwgIlJlc2VuZCB6cHLDoXZ1IHDFmWlqYWwuIFprb250cm9sdWogZG9ydcSNZW5vdSBwb8WhdHUgYSBzcGFtLiIsICJPZGVzbMOhbsOtIHNlbGhhbG8uIE92xJvFmSBzaG9kdSBwxZlpaGxhxaFvdmFjw61obyBlLW1haWx1IHMgUkVTRU5EX1RFU1RfRU1BSUwgYSBwcm90b2tvbHkgZnVua2NlLiJdLCAiaHUiOiBbIkUtbWFpbC1rw7xsZMOpcyB0ZXN6dGplIiwgIlRlc3p0IGUtbWFpbCBrw7xsZMOpc2UiLCAiQXogw7x6ZW5ldCBjc2FrIGEgUmVzZW5kIHRlc3p0Y8OtbcOpcmUgbWVneS4gVWd5YW5henphbCBheiBlLW1haWwtY8OtbW1lbCBqZWxlbnRrZXp6IGJlLiIsICJLw7xsZMOpcy4uLiIsICJBIFJlc2VuZCBlbGZvZ2FkdGEgYXogw7x6ZW5ldGV0LiBFbGxlbsWRcml6ZCBhIGJlasO2dsWRIMOpcyBzcGFtIG1hcHDDoXQuIiwgIkEga8O8bGTDqXMgc2lrZXJ0ZWxlbi4gRWxsZW7FkXJpemQgYSBiZWzDqXDDqXNpIGUtbWFpbCDDqXMgYSBSRVNFTkRfVEVTVF9FTUFJTCBlZ3llesOpc8OpdCwgdmFsYW1pbnQgYSBmw7xnZ3bDqW55bmFwbMOza2F0LiJdLCAicm8iOiBbIlRlc3QgdHJpbWl0ZXJlIGUtbWFpbCIsICJUcmltaXRlIGUtbWFpbCBkZSB0ZXN0IiwgIk1lc2FqdWwgbWVyZ2UgZG9hciBsYSBhZHJlc2EgZGUgdGVzdCBSZXNlbmQuIEF1dGVudGlmaWPEgy10ZSDDrm4gRmxlZXRQaWxvdCBjdSBhY2VlYciZaSBhZHJlc8SDLiIsICJTZSB0cmltaXRlLi4uIiwgIlJlc2VuZCBhIGFjY2VwdGF0IG1lc2FqdWwuIFZlcmlmaWPEgyBJbmJveCDImWkgU3BhbS4iLCAiVHJpbWl0ZXJlYSBhIGXImXVhdC4gVmVyaWZpY8SDIGRhY8SDIGUtbWFpbHVsIGRlIGNvbmVjdGFyZSBjb2luY2lkZSBjdSBSRVNFTkRfVEVTVF9FTUFJTCDImWkganVybmFsZWxlIGZ1bmPIm2llaS4iXSwgImVzIjogWyJQcnVlYmEgZGUgZW52w61vIGRlIGNvcnJlbyIsICJFbnZpYXIgY29ycmVvIGRlIHBydWViYSIsICJFbCBtZW5zYWplIHNvbG8gbGxlZ2Fyw6EgYWwgY29ycmVvIGRlIHBydWViYSBkZSBSZXNlbmQuIEFjY2VkZSBhIEZsZWV0UGlsb3QgY29uIGVzYSBtaXNtYSBkaXJlY2Npw7NuLiIsICJFbnZpYW5kby4uLiIsICJSZXNlbmQgYWNlcHTDsyBlbCBtZW5zYWplLiBSZXZpc2EgbGEgYmFuZGVqYSBkZSBlbnRyYWRhIHkgZWwgc3BhbS4iLCAiRXJyb3IgYWwgZW52aWFyLiBDb21wcnVlYmEgcXVlIHR1IGNvcnJlbyBkZSBpbmljaW8gZGUgc2VzacOzbiBjb2luY2lkYSBjb24gUkVTRU5EX1RFU1RfRU1BSUwgeSBsb3MgcmVnaXN0cm9zIGRlIGxhIGZ1bmNpw7NuLiJdLCAiZnIiOiBbIlRlc3QgZOKAmWVudm9pIGTigJllLW1haWwiLCAiRW52b3llciB1biBlLW1haWwgdGVzdCIsICJMZSBtZXNzYWdlIGlyYSB1bmlxdWVtZW50IMOgIGzigJlhZHJlc3NlIGRlIHRlc3QgUmVzZW5kLiBDb25uZWN0ZXotdm91cyDDoCBGbGVldFBpbG90IGF2ZWMgY2V0dGUgYWRyZXNzZS4iLCAiRW52b2kgZW4gY291cnMuLi4iLCAiUmVzZW5kIGEgYWNjZXB0w6kgbGUgbWVzc2FnZS4gVsOpcmlmaWV6IHZvdHJlIGJvw650ZSBkZSByw6ljZXB0aW9uIGV0IGxlcyBzcGFtcy4iLCAiw4ljaGVjIGRlIGzigJllbnZvaS4gVsOpcmlmaWV6IHF1ZSB2b3RyZSBhZHJlc3NlIGRlIGNvbm5leGlvbiBjb3JyZXNwb25kIMOgIFJFU0VORF9URVNUX0VNQUlMIGV0IGNvbnN1bHRleiBsZXMgam91cm5hdXggZGUgbGEgZm9uY3Rpb24uIl0sICJpdCI6IFsiVGVzdCBpbnZpbyBlbWFpbCIsICJJbnZpYSBlbWFpbCBkaSBwcm92YSIsICJJbCBtZXNzYWdnaW8gdmEgc29sbyBhbGzigJlpbmRpcml6em8gZGkgcHJvdmEgUmVzZW5kLiBBY2NlZGkgYSBGbGVldFBpbG90IGNvbiBsYSBzdGVzc2EgZW1haWwuIiwgIkludmlvIGluIGNvcnNvLi4uIiwgIlJlc2VuZCBoYSBhY2NldHRhdG8gaWwgbWVzc2FnZ2lvLiBDb250cm9sbGEgbGEgcG9zdGEgZSBsbyBzcGFtLiIsICJJbnZpbyBub24gcml1c2NpdG8uIENvbnRyb2xsYSBjaGUgbOKAmWVtYWlsIGRpIGFjY2Vzc28gY29ycmlzcG9uZGEgYSBSRVNFTkRfVEVTVF9FTUFJTCBlIGkgbG9nIGRlbGxhIGZ1bnppb25lLiJdLCAidWsiOiBbItCi0LXRgdGCINC90LDQtNGB0LjQu9Cw0L3QvdGPINC70LjRgdGC0LAiLCAi0J3QsNC00ZbRgdC70LDRgtC4INGC0LXRgdGC0L7QstC40Lkg0LvQuNGB0YIiLCAi0JvQuNGB0YIg0L3QsNC00ZbQudC00LUg0LvQuNGI0LUg0L3QsCDRgtC10YHRgtC+0LLRgyDQsNC00YDQtdGB0YMgUmVzZW5kLiDQo9Cy0ZbQudC00ZbRgtGMINC00L4gRmxlZXRQaWxvdCDQtyDRgtGW0ZTRjiDRgdCw0LzQvtGOINC/0L7RiNGC0L7Rji4iLCAi0J3QsNC00YHQuNC70LDQvdC90Y8uLi4iLCAiUmVzZW5kINC/0YDQuNC50L3Rj9CyINC70LjRgdGCLiDQn9C10YDQtdCy0ZbRgNGC0LUg0LLRhdGW0LTQvdGWINGC0LAg0YHQv9Cw0LwuIiwgItCd0LUg0LLQtNCw0LvQvtGB0Y8g0L3QsNC00ZbRgdC70LDRgtC4LiDQn9C10YDQtdCy0ZbRgNGC0LUg0LfQsdGW0LMg0L/QvtGI0YLQuCDQstGF0L7QtNGDINC3IFJFU0VORF9URVNUX0VNQUlMINGC0LAg0LbRg9GA0L3QsNC70Lgg0YTRg9C90LrRhtGW0ZcuIl0sICJwdCI6IFsiVGVzdGUgZGUgZW52aW8gZGUgZS1tYWlsIiwgIkVudmlhciBlLW1haWwgZGUgdGVzdGUiLCAiQSBtZW5zYWdlbSB2YWkgYXBlbmFzIHBhcmEgbyBlbmRlcmXDp28gZGUgdGVzdGUgUmVzZW5kLiBJbmljaWEgc2Vzc8OjbyBubyBGbGVldFBpbG90IGNvbSBlc3NlIGUtbWFpbC4iLCAiQSBlbnZpYXIuLi4iLCAiQSBSZXNlbmQgYWNlaXRvdSBhIG1lbnNhZ2VtLiBWZXJpZmljYSBhIGNhaXhhIGRlIGVudHJhZGEgZSBzcGFtLiIsICJGYWxoYSBubyBlbnZpby4gQ29uZmlybWEgcXVlIG8gZS1tYWlsIGRlIGFjZXNzbyBjb3JyZXNwb25kZSBhIFJFU0VORF9URVNUX0VNQUlMIGUgY29uc3VsdGEgb3MgcmVnaXN0b3MgZGEgZnVuw6fDo28uIl19'))
+          keys = ['email_smoke_title', 'email_smoke_button', 'email_smoke_description', 'email_smoke_sending', 'email_smoke_accepted', 'email_smoke_failed']
+          assert ('"email_smoke_title"') not in l, 'Localization already installed'
+          for lang, values in translations.items():
+              assert len(values) == len(keys)
+              anchor = '  "' + lang + '": <String, String>{\n'
+              assert l.count(anchor) == 1, 'Missing localization: ' + lang
+              rows = ''.join('    ' + json.dumps(k, ensure_ascii=False) + ': ' + json.dumps(v, ensure_ascii=False) + ',\n' for k,v in zip(keys,values))
+              l = l.replace(anchor, anchor + rows, 1)
+          locale.write_text(l, encoding='utf-8')
+          print('Installed single-send test email button for admins in 12 languages.')
+          PYTHON
+      - name: Verify and test app
+        run: |
+          flutter pub get
+          dart format lib/company/company_screen.dart lib/core/localization.dart
+          flutter analyze --no-fatal-infos
+          flutter test
+      - name: Save verified changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/company/company_screen.dart lib/core/localization.dart
+          git commit -m 'Add authenticated Resend smoke test to company settings'
+          git push
+      - name: Publish FleetPilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
