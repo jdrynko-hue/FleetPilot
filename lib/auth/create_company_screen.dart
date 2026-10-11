@@ -19,6 +19,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   final _country = TextEditingController(text: 'GB');
   String _currency = 'GBP';
   bool _busy = false;
+  bool _b2bConfirmed = false;
 
   @override
   void dispose() {
@@ -28,7 +29,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   }
 
   Future<void> _create() async {
-    if (_name.text.trim().isEmpty) return;
+    if (_name.text.trim().isEmpty || !_b2bConfirmed) return;
     setState(() => _busy = true);
     try {
       await _repository.createCompany(
@@ -39,9 +40,8 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
       widget.onCreated();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -109,8 +109,19 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                       decoration: InputDecoration(labelText: tr('currency')),
                     ),
                     SizedBox(height: 24),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(tr('b2b_confirmation')),
+                      subtitle: Text(tr('b2b_only')),
+                      value: _b2bConfirmed,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      onChanged: _busy
+                          ? null
+                          : (value) =>
+                                setState(() => _b2bConfirmed = value ?? false),
+                    ),
                     FilledButton(
-                      onPressed: _busy ? null : _create,
+                      onPressed: (_busy || !_b2bConfirmed) ? null : _create,
                       child: Text(_busy ? tr('creating') : tr('create_fleet')),
                     ),
                   ],

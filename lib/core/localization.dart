@@ -36,17 +36,16 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
-    "notification_test_email_only":
-        "Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.",
+    "b2b_only": "Abonamenty Flotaryx są obecnie dostępne wyłącznie dla klientów biznesowych.",
+    "b2b_confirmation": "Potwierdzam, że kupuję abonament Flotaryx dla firmy, w celach związanych z prowadzoną działalnością, a nie jako konsument.",
+    "notification_test_email_only": "Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.",
     "email_smoke_title": "Test wysyłki e-mail",
     "email_smoke_button": "Wyślij testowego e-maila",
-    "email_smoke_description":
-        "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do Flotaryx na ten sam adres.",
+    "email_smoke_description": "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do Flotaryx na ten sam adres.",
     "email_smoke_sending": "Wysyłanie...",
     "email_smoke_accepted":
         "Resend przyjął wiadomość. Sprawdź skrzynkę oraz Spam.",
-    "email_smoke_failed":
-        "Nie udało się wysłać. Sprawdź, czy e-mail logowania jest zgodny z RESEND_TEST_EMAIL, oraz logi Edge Function.",
+    "email_smoke_failed": "Nie udało się wysłać. Sprawdź, czy e-mail logowania jest zgodny z RESEND_TEST_EMAIL, oraz logi Edge Function.",
     "notifications": "Powiadomienia",
     "notification_sign_in": "Zaloguj się ponownie.",
     "notification_error": "Błąd powiadomień",
@@ -72,16 +71,13 @@ final Map<String, Map<String, String>> _translations = {
     "notification_service": "Serwis",
     "notification_email": "Powiadomienia e-mail",
     "notification_email_soon": "Wysyłkę e-mail uruchomimy w kolejnym etapie.",
-    "notification_schedule_pending":
-        "Automatyczne tworzenie alertów według harmonogramu nie jest jeszcze włączone.",
+    "notification_schedule_pending": "Automatyczne tworzenie alertów według harmonogramu nie jest jeszcze włączone.",
     "walkaround_checks": "Kontrola pojazdu",
     "walkaround_checks_subtitle":
         "Kontrola przed i po trasie, zgłaszanie usterek",
     "check_intro": "Sprawdź każdy punkt przed zapisaniem kontroli.",
-    "check_plan_unavailable":
-        "Kontrole kierowców wymagają aktywnego okresu próbnego lub planu Pro/Business.",
-    "check_not_assigned":
-        "Aby zapisać kontrolę, kierowca musi mieć konto powiązane z przypisanym do niego pojazdem. Menedżerowie mogą przeprowadzać kontrole wszystkich pojazdów.",
+    "check_plan_unavailable": "Kontrole kierowców wymagają aktywnego okresu próbnego lub planu Pro/Business.",
+    "check_not_assigned": "Aby zapisać kontrolę, kierowca musi mieć konto powiązane z przypisanym do niego pojazdem. Menedżerowie mogą przeprowadzać kontrole wszystkich pojazdów.",
     "check_type_label": "Rodzaj kontroli",
     "check_pre_trip": "Przed trasą",
     "check_post_trip": "Po trasie",
@@ -256,8 +252,7 @@ final Map<String, Map<String, String>> _translations = {
         "Dodaj pierwszy pojazd, aby rozpocząć zarządzanie flotą.",
     "edit": "Edytuj",
     "archive_vehicle_q": "Zarchiwizować pojazd?",
-    "archive_vehicle_message":
-        "Pojazd zniknie z aktywnych list, ale jego historia zostanie zachowana.",
+    "archive_vehicle_message": "Pojazd zniknie z aktywnych list, ale jego historia zostanie zachowana.",
     "cancel": "Anuluj",
     "archive": "Archiwizuj",
     "registration": "Numer rejestracyjny *",
@@ -342,8 +337,7 @@ final Map<String, Map<String, String>> _translations = {
     "no_garages_yet": "Brak warsztatów",
     "no_garages_message": "Dodaj warsztaty, aby przypisywać je do napraw.",
     "create_your_fleet": "Utwórz swoją flotę",
-    "workspace_message":
-        "Dane floty Twojej firmy są bezpiecznie oddzielone od danych innych firm.",
+    "workspace_message": "Dane floty Twojej firmy są bezpiecznie oddzielone od danych innych firm.",
     "company_name": "Nazwa firmy",
     "country_code": "Kod kraju",
     "currency_gbp": "GBP — funt brytyjski",
@@ -355,17 +349,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
-    "notification_test_email_only":
-        "Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.",
+    "b2b_only": "Flotaryx subscriptions are currently available to business customers only.",
+    "b2b_confirmation": "I confirm that I am purchasing a Flotaryx subscription for business purposes, not as a consumer.",
+    "notification_test_email_only": "Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.",
     "email_smoke_title": "Email delivery test",
     "email_smoke_button": "Send test email",
-    "email_smoke_description":
-        "The message goes only to the Resend test address. Sign in to Flotaryx with that same email.",
+    "email_smoke_description": "The message goes only to the Resend test address. Sign in to Flotaryx with that same email.",
     "email_smoke_sending": "Sending...",
     "email_smoke_accepted":
         "Resend accepted the message. Check your inbox and spam folder.",
-    "email_smoke_failed":
-        "Sending failed. Ensure your login email matches RESEND_TEST_EMAIL and check the Edge Function logs.",
+    "email_smoke_failed": "Sending failed. Ensure your login email matches RESEND_TEST_EMAIL and check the Edge Function logs.",
     "notifications": "Notifications",
     "notification_sign_in": "Please sign in again.",
     "notification_error": "Notification error",
@@ -400,8 +393,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Inspect every item before submitting the check.",
     "check_plan_unavailable":
         "Driver checks require an active trial or Pro/Business plan.",
-    "check_not_assigned":
-        "To submit a check, your account must be linked to the driver assigned to this vehicle. Managers can inspect any vehicle.",
+    "check_not_assigned": "To submit a check, your account must be linked to the driver assigned to this vehicle. Managers can inspect any vehicle.",
     "check_type_label": "Check type",
     "check_pre_trip": "Pre-trip",
     "check_post_trip": "Post-trip",
@@ -571,12 +563,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "All statuses",
     "no_vehicles_yet": "No vehicles yet",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Edit",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancel",
     "archive": "Archive",
     "registration": "Registration *",
@@ -612,8 +602,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Save driver",
     "no_drivers_yet": "No drivers yet",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Add issue",
     "edit_issue": "Edit issue",
     "select_vehicle": "Select a vehicle",
@@ -675,17 +664,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
-    "notification_test_email_only":
-        "Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.",
+    "b2b_only": "Flotaryx-Abonnements sind derzeit ausschließlich für Geschäftskunden verfügbar.",
+    "b2b_confirmation": "Ich bestätige, dass ich das Flotaryx-Abonnement für geschäftliche Zwecke und nicht als Verbraucher kaufe.",
+    "notification_test_email_only": "Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.",
     "email_smoke_title": "E-Mail-Versandtest",
     "email_smoke_button": "Test-E-Mail senden",
-    "email_smoke_description":
-        "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei Flotaryx an.",
+    "email_smoke_description": "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei Flotaryx an.",
     "email_smoke_sending": "Wird gesendet...",
     "email_smoke_accepted":
         "Resend hat die Nachricht angenommen. Prüfe Posteingang und Spam.",
-    "email_smoke_failed":
-        "Senden fehlgeschlagen. Prüfe, ob die Anmeldeadresse mit RESEND_TEST_EMAIL übereinstimmt, und die Funktionsprotokolle.",
+    "email_smoke_failed": "Senden fehlgeschlagen. Prüfe, ob die Anmeldeadresse mit RESEND_TEST_EMAIL übereinstimmt, und die Funktionsprotokolle.",
     "notifications": "Benachrichtigungen",
     "notification_sign_in": "Bitte erneut anmelden.",
     "notification_error": "Benachrichtigungsfehler",
@@ -719,8 +707,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Vor dem Speichern jeden Punkt überprüfen.",
     "check_plan_unavailable":
         "Fahrerkontrollen erfordern eine aktive Testphase oder Pro/Business.",
-    "check_not_assigned":
-        "Ihr Konto muss dem zugewiesenen Fahrer zugeordnet sein. Manager dürfen alle Fahrzeuge prüfen.",
+    "check_not_assigned": "Ihr Konto muss dem zugewiesenen Fahrer zugeordnet sein. Manager dürfen alle Fahrzeuge prüfen.",
     "check_type_label": "Kontrolltyp",
     "check_pre_trip": "Vor der Fahrt",
     "check_post_trip": "Nach der Fahrt",
@@ -890,8 +877,7 @@ final Map<String, Map<String, String>> _translations = {
         "Fügen Sie Ihr erstes Fahrzeug hinzu, um die Flotte zu verwalten.",
     "edit": "Bearbeiten",
     "archive_vehicle_q": "Fahrzeug archivieren?",
-    "archive_vehicle_message":
-        "Das Fahrzeug wird aus aktiven Listen entfernt, die Historie bleibt erhalten.",
+    "archive_vehicle_message": "Das Fahrzeug wird aus aktiven Listen entfernt, die Historie bleibt erhalten.",
     "cancel": "Abbrechen",
     "archive": "Archivieren",
     "registration": "Kennzeichen *",
@@ -978,8 +964,7 @@ final Map<String, Map<String, String>> _translations = {
     "no_garages_message":
         "Fügen Sie Werkstätten hinzu, um sie Reparaturen zuzuordnen.",
     "create_your_fleet": "Ihre Flotte erstellen",
-    "workspace_message":
-        "Die Flottendaten Ihres Unternehmens sind sicher von anderen Unternehmen getrennt.",
+    "workspace_message": "Die Flottendaten Ihres Unternehmens sind sicher von anderen Unternehmen getrennt.",
     "company_name": "Unternehmensname",
     "country_code": "Ländercode",
     "currency_gbp": "GBP — Britisches Pfund",
@@ -991,17 +976,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
-    "notification_test_email_only":
-        "Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.",
+    "b2b_only": "Predplatné Flotaryx je momentálne dostupné iba pre firemných zákazníkov.",
+    "b2b_confirmation": "Potvrdzujem, že predplatné Flotaryx kupujem na podnikateľské účely, nie ako spotrebiteľ.",
+    "notification_test_email_only": "Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.",
     "email_smoke_title": "Test odosielania e-mailu",
     "email_smoke_button": "Odoslať testovací e-mail",
-    "email_smoke_description":
-        "Správa sa odošle iba na testovaciu adresu Resend. Prihlás sa s rovnakým e-mailom.",
+    "email_smoke_description": "Správa sa odošle iba na testovaciu adresu Resend. Prihlás sa s rovnakým e-mailom.",
     "email_smoke_sending": "Odosielanie...",
     "email_smoke_accepted":
         "Resend prijal správu. Skontroluj doručenú poštu a spam.",
-    "email_smoke_failed":
-        "Odoslanie zlyhalo. Over zhodu prihlasovacieho e-mailu s RESEND_TEST_EMAIL a protokoly funkcie.",
+    "email_smoke_failed": "Odoslanie zlyhalo. Over zhodu prihlasovacieho e-mailu s RESEND_TEST_EMAIL a protokoly funkcie.",
     "notifications": "Upozornenia",
     "notification_sign_in": "Prihláste sa znova.",
     "notification_error": "Chyba upozornení",
@@ -1032,10 +1016,8 @@ final Map<String, Map<String, String>> _translations = {
     "walkaround_checks": "Kontrola vozidla",
     "walkaround_checks_subtitle": "Kontroly pred a po jazde, hlásenie závad",
     "check_intro": "Pred uložením skontrolujte každý bod.",
-    "check_plan_unavailable":
-        "Kontroly vodičov vyžadujú aktívne skúšobné obdobie alebo Pro/Business.",
-    "check_not_assigned":
-        "Účet musí byť prepojený s vodičom prideleným vozidlu. Manažéri môžu kontrolovať všetky vozidlá.",
+    "check_plan_unavailable": "Kontroly vodičov vyžadujú aktívne skúšobné obdobie alebo Pro/Business.",
+    "check_not_assigned": "Účet musí byť prepojený s vodičom prideleným vozidlu. Manažéri môžu kontrolovať všetky vozidlá.",
     "check_type_label": "Typ kontroly",
     "check_pre_trip": "Pred jazdou",
     "check_post_trip": "Po jazde",
@@ -1200,12 +1182,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Všetky stavy",
     "no_vehicles_yet": "Zatiaľ žiadne vozidlá",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Upraviť",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Zrušiť",
     "archive": "Archivovať",
     "registration": "Evidenčné číslo *",
@@ -1241,8 +1221,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Uložiť vodiča",
     "no_drivers_yet": "Zatiaľ žiadni vodiči",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Pridať poruchu",
     "edit_issue": "Upraviť poruchu",
     "select_vehicle": "Vybrať vozidlo",
@@ -1304,17 +1283,17 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
-    "notification_test_email_only":
-        "Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.",
+    "b2b_only":
+        "Předplatné Flotaryx je nyní dostupné pouze firemním zákazníkům.",
+    "b2b_confirmation": "Potvrzuji, že předplatné Flotaryx kupuji pro podnikatelské účely, nikoli jako spotřebitel.",
+    "notification_test_email_only": "Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.",
     "email_smoke_title": "Test odesílání e-mailu",
     "email_smoke_button": "Odeslat testovací e-mail",
-    "email_smoke_description":
-        "Zpráva odejde pouze na testovací adresu Resend. Přihlas se stejným e-mailem.",
+    "email_smoke_description": "Zpráva odejde pouze na testovací adresu Resend. Přihlas se stejným e-mailem.",
     "email_smoke_sending": "Odesílání...",
     "email_smoke_accepted":
         "Resend zprávu přijal. Zkontroluj doručenou poštu a spam.",
-    "email_smoke_failed":
-        "Odeslání selhalo. Ověř shodu přihlašovacího e-mailu s RESEND_TEST_EMAIL a protokoly funkce.",
+    "email_smoke_failed": "Odeslání selhalo. Ověř shodu přihlašovacího e-mailu s RESEND_TEST_EMAIL a protokoly funkce.",
     "notifications": "Oznámení",
     "notification_sign_in": "Přihlaste se znovu.",
     "notification_error": "Chyba oznámení",
@@ -1347,8 +1326,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Před uložením zkontrolujte každý bod.",
     "check_plan_unavailable":
         "Kontroly řidičů vyžadují aktivní zkušební období nebo Pro/Business.",
-    "check_not_assigned":
-        "Účet musí být propojen s přiřazeným řidičem. Manažeři mohou kontrolovat všechna vozidla.",
+    "check_not_assigned": "Účet musí být propojen s přiřazeným řidičem. Manažeři mohou kontrolovat všechna vozidla.",
     "check_type_label": "Typ kontroly",
     "check_pre_trip": "Před jízdou",
     "check_post_trip": "Po jízdě",
@@ -1513,12 +1491,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Všechny stavy",
     "no_vehicles_yet": "Zatím žádná vozidla",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Upravit",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Zrušit",
     "archive": "Archivovat",
     "registration": "Registrační značka *",
@@ -1554,8 +1530,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Uložit řidiče",
     "no_drivers_yet": "Zatím žádní řidiči",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Přidat závadu",
     "edit_issue": "Upravit závadu",
     "select_vehicle": "Vybrat vozidlo",
@@ -1617,17 +1592,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
-    "notification_test_email_only":
-        "Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.",
+    "b2b_only": "A Flotaryx-előfizetések jelenleg kizárólag üzleti ügyfelek számára érhetők el.",
+    "b2b_confirmation": "Megerősítem, hogy a Flotaryx-előfizetést üzleti célra vásárolom, nem fogyasztóként.",
+    "notification_test_email_only": "Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.",
     "email_smoke_title": "E-mail-küldés tesztje",
     "email_smoke_button": "Teszt e-mail küldése",
-    "email_smoke_description":
-        "Az üzenet csak a Resend tesztcímére megy. Ugyanazzal az e-mail-címmel jelentkezz be.",
+    "email_smoke_description": "Az üzenet csak a Resend tesztcímére megy. Ugyanazzal az e-mail-címmel jelentkezz be.",
     "email_smoke_sending": "Küldés...",
     "email_smoke_accepted":
         "A Resend elfogadta az üzenetet. Ellenőrizd a bejövő és spam mappát.",
-    "email_smoke_failed":
-        "A küldés sikertelen. Ellenőrizd a belépési e-mail és a RESEND_TEST_EMAIL egyezését, valamint a függvénynaplókat.",
+    "email_smoke_failed": "A küldés sikertelen. Ellenőrizd a belépési e-mail és a RESEND_TEST_EMAIL egyezését, valamint a függvénynaplókat.",
     "notifications": "Értesítések",
     "notification_sign_in": "Jelentkezz be újra.",
     "notification_error": "Értesítési hiba",
@@ -1661,8 +1635,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Mentés előtt ellenőrizzen minden pontot.",
     "check_plan_unavailable":
         "A járműellenőrzéshez aktív próbaidő vagy Pro/Business csomag kell.",
-    "check_not_assigned":
-        "A fióknak a járműhöz rendelt sofőrhöz kell tartoznia. A vezetők minden járművet ellenőrizhetnek.",
+    "check_not_assigned": "A fióknak a járműhöz rendelt sofőrhöz kell tartoznia. A vezetők minden járművet ellenőrizhetnek.",
     "check_type_label": "Ellenőrzés típusa",
     "check_pre_trip": "Indulás előtt",
     "check_post_trip": "Út után",
@@ -1828,12 +1801,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Minden állapot",
     "no_vehicles_yet": "Még nincs jármű",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Szerkesztés",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Mégse",
     "archive": "Archiválás",
     "registration": "Rendszám *",
@@ -1869,8 +1840,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Sofőr mentése",
     "no_drivers_yet": "Még nincs sofőr",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Hiba hozzáadása",
     "edit_issue": "Hiba szerkesztése",
     "select_vehicle": "Jármű kiválasztása",
@@ -1932,17 +1902,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
-    "notification_test_email_only":
-        "Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.",
+    "b2b_only": "Abonamentele Flotaryx sunt disponibile în prezent doar clienților comerciali.",
+    "b2b_confirmation": "Confirm că achiziționez un abonament Flotaryx în scopuri profesionale, nu în calitate de consumator.",
+    "notification_test_email_only": "Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.",
     "email_smoke_title": "Test trimitere e-mail",
     "email_smoke_button": "Trimite e-mail de test",
-    "email_smoke_description":
-        "Mesajul merge doar la adresa de test Resend. Autentifică-te în Flotaryx cu aceeași adresă.",
+    "email_smoke_description": "Mesajul merge doar la adresa de test Resend. Autentifică-te în Flotaryx cu aceeași adresă.",
     "email_smoke_sending": "Se trimite...",
     "email_smoke_accepted":
         "Resend a acceptat mesajul. Verifică Inbox și Spam.",
-    "email_smoke_failed":
-        "Trimiterea a eșuat. Verifică dacă e-mailul de conectare coincide cu RESEND_TEST_EMAIL și jurnalele funcției.",
+    "email_smoke_failed": "Trimiterea a eșuat. Verifică dacă e-mailul de conectare coincide cu RESEND_TEST_EMAIL și jurnalele funcției.",
     "notifications": "Notificări",
     "notification_sign_in": "Autentifică-te din nou.",
     "notification_error": "Eroare notificări",
@@ -1976,8 +1945,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Verificați fiecare punct înainte de trimitere.",
     "check_plan_unavailable":
         "Verificările necesită o perioadă de probă activă sau Pro/Business.",
-    "check_not_assigned":
-        "Contul trebuie asociat șoferului alocat. Managerii pot verifica orice vehicul.",
+    "check_not_assigned": "Contul trebuie asociat șoferului alocat. Managerii pot verifica orice vehicul.",
     "check_type_label": "Tip verificare",
     "check_pre_trip": "Înainte de cursă",
     "check_post_trip": "După cursă",
@@ -2142,12 +2110,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Toate stările",
     "no_vehicles_yet": "Nu există vehicule",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Editează",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Anulează",
     "archive": "Arhivează",
     "registration": "Număr de înmatriculare *",
@@ -2183,8 +2149,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Salvează șofer",
     "no_drivers_yet": "Nu există șoferi",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Adaugă problemă",
     "edit_issue": "Editează problema",
     "select_vehicle": "Selectează vehicul",
@@ -2246,17 +2211,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
-    "notification_test_email_only":
-        "Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.",
+    "b2b_only": "Las suscripciones de Flotaryx están disponibles actualmente solo para clientes empresariales.",
+    "b2b_confirmation": "Confirmo que compro una suscripción de Flotaryx con fines empresariales y no como consumidor.",
+    "notification_test_email_only": "Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.",
     "email_smoke_title": "Prueba de envío de correo",
     "email_smoke_button": "Enviar correo de prueba",
-    "email_smoke_description":
-        "El mensaje solo llegará al correo de prueba de Resend. Accede a Flotaryx con esa misma dirección.",
+    "email_smoke_description": "El mensaje solo llegará al correo de prueba de Resend. Accede a Flotaryx con esa misma dirección.",
     "email_smoke_sending": "Enviando...",
     "email_smoke_accepted":
         "Resend aceptó el mensaje. Revisa la bandeja de entrada y el spam.",
-    "email_smoke_failed":
-        "Error al enviar. Comprueba que tu correo de inicio de sesión coincida con RESEND_TEST_EMAIL y los registros de la función.",
+    "email_smoke_failed": "Error al enviar. Comprueba que tu correo de inicio de sesión coincida con RESEND_TEST_EMAIL y los registros de la función.",
     "notifications": "Notificaciones",
     "notification_sign_in": "Inicia sesión otra vez.",
     "notification_error": "Error de notificaciones",
@@ -2289,8 +2253,7 @@ final Map<String, Map<String, String>> _translations = {
         "Revisiones antes y después del viaje, incidencias",
     "check_intro": "Comprueba cada punto antes de enviar.",
     "check_plan_unavailable": "Requiere prueba activa o plan Pro/Business.",
-    "check_not_assigned":
-        "Tu cuenta debe vincularse al conductor asignado. Los gestores pueden revisar cualquier vehículo.",
+    "check_not_assigned": "Tu cuenta debe vincularse al conductor asignado. Los gestores pueden revisar cualquier vehículo.",
     "check_type_label": "Tipo de revisión",
     "check_pre_trip": "Antes del viaje",
     "check_post_trip": "Después del viaje",
@@ -2459,8 +2422,7 @@ final Map<String, Map<String, String>> _translations = {
         "Añade tu primer vehículo para empezar a gestionar la flota.",
     "edit": "Editar",
     "archive_vehicle_q": "¿Archivar vehículo?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancelar",
     "archive": "Archivar",
     "registration": "Matrícula *",
@@ -2496,8 +2458,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Referencia del empleado",
     "save_driver": "Guardar conductor",
     "no_drivers_yet": "Aún no hay conductores",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Añadir incidencia",
     "edit_issue": "Editar incidencia",
     "select_vehicle": "Seleccionar vehículo",
@@ -2560,17 +2521,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
-    "notification_test_email_only":
-        "Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.",
+    "b2b_only": "Les abonnements Flotaryx sont actuellement réservés aux clients professionnels.",
+    "b2b_confirmation": "Je confirme acheter un abonnement Flotaryx à des fins professionnelles et non en tant que consommateur.",
+    "notification_test_email_only": "Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.",
     "email_smoke_title": "Test d’envoi d’e-mail",
     "email_smoke_button": "Envoyer un e-mail test",
-    "email_smoke_description":
-        "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à Flotaryx avec cette adresse.",
+    "email_smoke_description": "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à Flotaryx avec cette adresse.",
     "email_smoke_sending": "Envoi en cours...",
-    "email_smoke_accepted":
-        "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
-    "email_smoke_failed":
-        "Échec de l’envoi. Vérifiez que votre adresse de connexion correspond à RESEND_TEST_EMAIL et consultez les journaux de la fonction.",
+    "email_smoke_accepted": "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
+    "email_smoke_failed": "Échec de l’envoi. Vérifiez que votre adresse de connexion correspond à RESEND_TEST_EMAIL et consultez les journaux de la fonction.",
     "notifications": "Notifications",
     "notification_sign_in": "Veuillez vous reconnecter.",
     "notification_error": "Erreur de notification",
@@ -2603,8 +2562,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Vérifiez chaque point avant de valider.",
     "check_plan_unavailable":
         "Nécessite un essai actif ou un forfait Pro/Business.",
-    "check_not_assigned":
-        "Votre compte doit être lié au conducteur affecté. Les gestionnaires peuvent vérifier tous les véhicules.",
+    "check_not_assigned": "Votre compte doit être lié au conducteur affecté. Les gestionnaires peuvent vérifier tous les véhicules.",
     "check_type_label": "Type de contrôle",
     "check_pre_trip": "Avant trajet",
     "check_post_trip": "Après trajet",
@@ -2769,12 +2727,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Tous les statuts",
     "no_vehicles_yet": "Aucun véhicule",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Modifier",
     "archive_vehicle_q": "Archiver le véhicule ?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Annuler",
     "archive": "Archiver",
     "registration": "Immatriculation *",
@@ -2810,8 +2766,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Référence employé",
     "save_driver": "Enregistrer le conducteur",
     "no_drivers_yet": "Aucun conducteur",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Ajouter un problème",
     "edit_issue": "Modifier le problème",
     "select_vehicle": "Sélectionner un véhicule",
@@ -2873,17 +2828,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
-    "notification_test_email_only":
-        "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
+    "b2b_only": "Gli abbonamenti Flotaryx sono attualmente riservati ai clienti aziendali.",
+    "b2b_confirmation": "Confermo di acquistare un abbonamento Flotaryx per scopi professionali e non come consumatore.",
+    "notification_test_email_only": "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
     "email_smoke_title": "Test invio email",
     "email_smoke_button": "Invia email di prova",
-    "email_smoke_description":
-        "Il messaggio va solo all’indirizzo di prova Resend. Accedi a Flotaryx con la stessa email.",
+    "email_smoke_description": "Il messaggio va solo all’indirizzo di prova Resend. Accedi a Flotaryx con la stessa email.",
     "email_smoke_sending": "Invio in corso...",
     "email_smoke_accepted":
         "Resend ha accettato il messaggio. Controlla la posta e lo spam.",
-    "email_smoke_failed":
-        "Invio non riuscito. Controlla che l’email di accesso corrisponda a RESEND_TEST_EMAIL e i log della funzione.",
+    "email_smoke_failed": "Invio non riuscito. Controlla che l’email di accesso corrisponda a RESEND_TEST_EMAIL e i log della funzione.",
     "notifications": "Notifiche",
     "notification_sign_in": "Accedi di nuovo.",
     "notification_error": "Errore notifiche",
@@ -2915,8 +2869,7 @@ final Map<String, Map<String, String>> _translations = {
     "walkaround_checks_subtitle": "Controlli prima e dopo il viaggio, guasti",
     "check_intro": "Controlla ogni voce prima di inviare.",
     "check_plan_unavailable": "Richiede prova attiva o piano Pro/Business.",
-    "check_not_assigned":
-        "Il tuo account deve essere collegato al conducente assegnato. I manager possono controllare tutti i veicoli.",
+    "check_not_assigned": "Il tuo account deve essere collegato al conducente assegnato. I manager possono controllare tutti i veicoli.",
     "check_type_label": "Tipo di controllo",
     "check_pre_trip": "Prima del viaggio",
     "check_post_trip": "Dopo il viaggio",
@@ -3081,12 +3034,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Tutti gli stati",
     "no_vehicles_yet": "Nessun veicolo",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Modifica",
     "archive_vehicle_q": "Archiviare il veicolo?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Annulla",
     "archive": "Archivia",
     "registration": "Targa *",
@@ -3122,8 +3073,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Riferimento dipendente",
     "save_driver": "Salva autista",
     "no_drivers_yet": "Nessun autista",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Aggiungi problema",
     "edit_issue": "Modifica problema",
     "select_vehicle": "Seleziona veicolo",
@@ -3185,16 +3135,15 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
-    "notification_test_email_only":
-        "Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.",
+    "b2b_only": "Підписки Flotaryx наразі доступні лише для бізнес-клієнтів.",
+    "b2b_confirmation": "Підтверджую, що купую підписку Flotaryx для підприємницької діяльності, а не як споживач.",
+    "notification_test_email_only": "Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.",
     "email_smoke_title": "Тест надсилання листа",
     "email_smoke_button": "Надіслати тестовий лист",
-    "email_smoke_description":
-        "Лист надійде лише на тестову адресу Resend. Увійдіть до Flotaryx з тією самою поштою.",
+    "email_smoke_description": "Лист надійде лише на тестову адресу Resend. Увійдіть до Flotaryx з тією самою поштою.",
     "email_smoke_sending": "Надсилання...",
     "email_smoke_accepted": "Resend прийняв лист. Перевірте вхідні та спам.",
-    "email_smoke_failed":
-        "Не вдалося надіслати. Перевірте збіг пошти входу з RESEND_TEST_EMAIL та журнали функції.",
+    "email_smoke_failed": "Не вдалося надіслати. Перевірте збіг пошти входу з RESEND_TEST_EMAIL та журнали функції.",
     "notifications": "Сповіщення",
     "notification_sign_in": "Увійдіть знову.",
     "notification_error": "Помилка сповіщень",
@@ -3228,8 +3177,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Перевірте всі пункти перед збереженням.",
     "check_plan_unavailable":
         "Потрібен активний пробний період або тариф Pro/Business.",
-    "check_not_assigned":
-        "Акаунт має бути прив’язаний до призначеного водія. Менеджери можуть перевіряти всі авто.",
+    "check_not_assigned": "Акаунт має бути прив’язаний до призначеного водія. Менеджери можуть перевіряти всі авто.",
     "check_type_label": "Тип перевірки",
     "check_pre_trip": "Перед поїздкою",
     "check_post_trip": "Після поїздки",
@@ -3395,12 +3343,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Усі статуси",
     "no_vehicles_yet": "Автомобілів ще немає",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Редагувати",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Скасувати",
     "archive": "Архівувати",
     "registration": "Реєстраційний номер *",
@@ -3436,8 +3382,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Зберегти водія",
     "no_drivers_yet": "Водіїв ще немає",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Додати несправність",
     "edit_issue": "Редагувати несправність",
     "select_vehicle": "Вибрати автомобіль",
@@ -3499,17 +3444,16 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
-    "notification_test_email_only":
-        "Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.",
+    "b2b_only": "As subscrições Flotaryx estão atualmente disponíveis apenas para clientes empresariais.",
+    "b2b_confirmation": "Confirmo que estou a comprar uma subscrição Flotaryx para fins profissionais e não como consumidor.",
+    "notification_test_email_only": "Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.",
     "email_smoke_title": "Teste de envio de e-mail",
     "email_smoke_button": "Enviar e-mail de teste",
-    "email_smoke_description":
-        "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no Flotaryx com esse e-mail.",
+    "email_smoke_description": "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no Flotaryx com esse e-mail.",
     "email_smoke_sending": "A enviar...",
     "email_smoke_accepted":
         "A Resend aceitou a mensagem. Verifica a caixa de entrada e spam.",
-    "email_smoke_failed":
-        "Falha no envio. Confirma que o e-mail de acesso corresponde a RESEND_TEST_EMAIL e consulta os registos da função.",
+    "email_smoke_failed": "Falha no envio. Confirma que o e-mail de acesso corresponde a RESEND_TEST_EMAIL e consulta os registos da função.",
     "notifications": "Notificações",
     "notification_sign_in": "Inicie sessão novamente.",
     "notification_error": "Erro de notificações",
@@ -3543,8 +3487,7 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Verifique todos os itens antes de enviar.",
     "check_plan_unavailable":
         "Requer período de teste ativo ou plano Pro/Business.",
-    "check_not_assigned":
-        "A conta deve estar associada ao condutor atribuído. Os gestores podem verificar qualquer veículo.",
+    "check_not_assigned": "A conta deve estar associada ao condutor atribuído. Os gestores podem verificar qualquer veículo.",
     "check_type_label": "Tipo de inspeção",
     "check_pre_trip": "Antes da viagem",
     "check_post_trip": "Após a viagem",
@@ -3709,12 +3652,10 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Todos os estados",
     "no_vehicles_yet": "Ainda não existem veículos",
-    "no_vehicles_message":
-        "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Editar",
     "archive_vehicle_q": "Arquivar veículo?",
-    "archive_vehicle_message":
-        "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancelar",
     "archive": "Arquivar",
     "registration": "Matrícula *",
@@ -3750,8 +3691,7 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Referência do funcionário",
     "save_driver": "Guardar condutor",
     "no_drivers_yet": "Ainda não existem condutores",
-    "no_drivers_message":
-        "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Adicionar problema",
     "edit_issue": "Editar problema",
     "select_vehicle": "Selecionar veículo",

@@ -23,6 +23,7 @@ class _BillingScreenState extends State<BillingScreen> {
   String _interval = 'month';
   int? _quantity;
   bool _busy = false;
+  bool _b2bConfirmed = false;
   String _billingMode = 'test';
   // A separate, explicit production launch is required. The existing Sandbox stays operational.
   static const bool _liveBillingAvailable = bool.fromEnvironment(
@@ -220,13 +221,16 @@ class _BillingScreenState extends State<BillingScreen> {
 
   void _showError(Object error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(error.toString())));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(error.toString())));
   }
 
   Future<void> _startCheckout(_BillingPrice price, int vehicles) async {
     if (_busy) return;
+    if (!_b2bConfirmed) {
+      _showError(StateError(tr('b2b_only')));
+      return;
+    }
     setState(() => _busy = true);
     try {
       final response = await Supabase.instance.client.functions.invoke(
@@ -238,6 +242,7 @@ class _BillingScreenState extends State<BillingScreen> {
           'plan_code': price.plan,
           'billing_interval': price.interval,
           'vehicle_count': vehicles,
+          'business_purchase_confirmed': _b2bConfirmed,
         },
       );
       if (response.data is! Map || (response.data as Map)['url'] is! String) {
@@ -658,6 +663,20 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (!billable) ...[
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(tr('b2b_confirmation')),
+                  subtitle: Text(tr('b2b_only')),
+                  value: _b2bConfirmed,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  onChanged: _busy
+                      ? null
+                      : (value) =>
+                            setState(() => _b2bConfirmed = value ?? false),
+                ),
+                const SizedBox(height: 8),
+              ],
               if (billable && active && !data.cancellationScheduled)
                 FilledButton.icon(
                   onPressed: (!valid || _busy)
@@ -690,6 +709,7 @@ class _BillingScreenState extends State<BillingScreen> {
                   onPressed:
                       (!valid ||
                           _busy ||
+                          !_b2bConfirmed ||
                           (_billingMode == 'live' && !_liveBillingAvailable))
                       ? null
                       : () => _startCheckout(selected!, vehicles),
