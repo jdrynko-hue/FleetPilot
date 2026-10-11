@@ -1,0 +1,171 @@
+name: Flotaryx Live Connection Test (No Charges)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flotaryx-live-connection-test
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: wqhymmtiawfwjikdaujo
+      PROBE_NAME: flotaryx-live-connection-test
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Ensure existing Supabase deployment credential is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo 'SUPABASE_ACCESS_TOKEN is missing from GitHub Actions secrets.'
+            exit 1
+          fi
+
+      - name: Prepare one-time, authenticated read and validation-only checks
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          export PROBE_TOKEN="$token"
+          echo "PROBE_TOKEN=$token" >> "$GITHUB_ENV"
+          mkdir -p "supabase/functions/$PROBE_NAME"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          token=os.environ.get('PROBE_TOKEN', '')
+          # A one-time bearer value is stored only in the deployed function and this workflow's masked environment.
+          if len(token)!=64 or not all(c in '0123456789abcdef' for c in token):
+              raise SystemExit('Could not prepare temporary probe authorization')
+          source = r'''const bearer = '__ONE_TIME_AUTH__';
+          const send = (data: unknown, status = 200) =>
+            new Response(JSON.stringify(data), {
+              status, headers: { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store' }
+            });
+          const probes = [
+            { name:'subscriptions_read', method:'GET', path:'/v1/subscriptions?limit=1' },
+            { name:'invoices_read', method:'GET', path:'/v1/invoices?limit=1' },
+            // Intentional validation failures. Missing mandatory fields make resource creation impossible.
+            { name:'checkout_write_permission', method:'POST', path:'/v1/checkout/sessions', body:'mode=subscription' },
+            { name:'portal_write_permission', method:'POST', path:'/v1/billing_portal/sessions', body:'' },
+            // A synthetic nonexistent subscription identifier prevents modification of any real subscription.
+            { name:'subscription_update_permission', method:'POST', path:'/v1/subscriptions/sub_FlotaryxProbeNonexistent00000000', body:'cancel_at_period_end=false' },
+          ];
+          Deno.serve(async (req: Request) => {
+            if (req.method !== 'POST') return send({ error:'Method not allowed' },405);
+            if (req.headers.get('x-flotaryx-probe-token') !== bearer) return send({ error:'Unauthorized' },401);
+            const key = Deno.env.get('STRIPE_LIVE_SECRET_KEY') || '';
+            const whsec = Deno.env.get('STRIPE_LIVE_WEBHOOK_SECRET') || '';
+            const safeGate = Deno.env.get('FLOTARYX_LIVE_BILLING_ENABLED') !== 'true';
+            const secretsOk = /^rk_live_/.test(key) && /^whsec_/.test(whsec);
+            if (!secretsOk || !safeGate) {
+              return send({ready:false, restricted_key_format:/^rk_live_/.test(key),
+                webhook_secret_format:/^whsec_/.test(whsec), live_billing_gate_closed:safeGate, probes:[]},200);
+            }
+            const checked = [];
+            for (const probe of probes) {
+              try {
+                const stripe = await fetch('https://api.stripe.com' + probe.path, {
+                  method:probe.method,
+                  headers:{ Authorization:'Bearer '+key, ...(probe.method==='POST'?{'Content-Type':'application/x-www-form-urlencoded'}:{}) },
+                  ...(probe.method==='POST'?{body:probe.body}:{}),
+                  signal:AbortSignal.timeout(12000)
+                });
+                const body = await stripe.json().catch(()=>({}));
+                const code=String(body?.error?.code || '');
+                const msg=String(body?.error?.message || '').toLowerCase();
+                const authDenied = stripe.status === 401 || stripe.status === 403 ||
+                  /permission|restricted|not authorized|not allowed/.test(code.toLowerCase()) ||
+                  /permission|restricted key|not authorized/.test(msg);
+                // Stripe validates deliberate invalid POSTs and must return 400/404; no objects created.
+                const ok = probe.method==='GET' ? stripe.status===200 :
+                  (stripe.status===400 || stripe.status===404) && !authDenied;
+                checked.push({name:probe.name,ok,http_status:stripe.status,
+                  permission_denied:authDenied,
+                  // Allow a short Stripe error code only (never publish error message, key, or customer data).
+                  stripe_error_code: /^[a-z_]{2,55}$/.test(code)?code:null});
+              } catch (_) {
+                checked.push({name:probe.name,ok:false,http_status:0,permission_denied:false,stripe_error_code:'network_error'});
+              }
+            }
+            return send({ready:checked.every(x=>x.ok), restricted_key_format:true,
+              webhook_secret_format:true,live_billing_gate_closed:safeGate, probes:checked});
+          });'''
+          source=source.replace('__ONE_TIME_AUTH__',token)
+          if source.count(token)!=1:
+              raise SystemExit('Probe credential substitution failed')
+          Path(f'supabase/functions/{os.environ["PROBE_NAME"]}/index.ts').write_text(source)
+          print('One-time, authorization-protected and no-charge Stripe diagnostic prepared.')
+          PY
+
+      - name: Deploy temporary authenticated diagnostic only
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy "$PROBE_NAME" --project-ref "$PROJECT_REF" --no-verify-jwt --use-api
+
+      - name: Execute safe diagnostics and print redacted results
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+          url=f'https://{os.environ["PROJECT_REF"]}.supabase.co/functions/v1/{os.environ["PROBE_NAME"]}'
+          token=os.environ['PROBE_TOKEN']
+          result=None
+          for attempt in range(8):
+              try:
+                  request=urllib.request.Request(url, method='POST', headers={
+                    'x-flotaryx-probe-token':token,'Content-Type':'application/json'}, data=b'{}')
+                  with urllib.request.urlopen(request,timeout=110) as response:
+                      result=json.loads(response.read(16000))
+                  break
+              except urllib.error.HTTPError as e:
+                  if e.code in (404,502,503) and attempt<7:
+                      time.sleep(3)
+                      continue
+                  raise SystemExit(f'Diagnostic endpoint returned HTTP {e.code}')
+          if result is None:
+              raise SystemExit('Diagnostic endpoint did not become ready')
+          print('Live secrets format:', 'PASS' if result.get('restricted_key_format') and result.get('webhook_secret_format') else 'FAIL')
+          print('Live checkout launch gate closed:', 'PASS' if result.get('live_billing_gate_closed') else 'FAIL')
+          for probe in result.get('probes',[]):
+              print(f'{probe["name"]}: {"PASS" if probe["ok"] else "FAIL"} (HTTP {probe["http_status"]}; Stripe error code {probe.get("stripe_error_code")})')
+          # Invalid unsigned Stripe signature must be rejected with 400, not 503 (missing secrets).
+          webhook=f'https://{os.environ["PROJECT_REF"]}.supabase.co/functions/v1/flotaryx-live-stripe-webhook'
+          check=urllib.request.Request(webhook,method='POST',headers={'Content-Type':'application/json'},data=b'{}')
+          try:
+              with urllib.request.urlopen(check,timeout=20) as response:
+                  webhook_status=response.status
+          except urllib.error.HTTPError as e:
+              webhook_status=e.code
+          print('Live webhook rejects unsigned messages with secrets configured:',
+                'PASS' if webhook_status==400 else f'FAIL (HTTP {webhook_status})')
+          if not result.get('ready') or webhook_status != 400:
+              raise SystemExit('Live Stripe needs permission/configuration review. No charges were made.')
+          print('PASS: Stripe Live restricted key authorized required operations using read or intentionally invalid requests. NO real payments or subscriptions were created.')
+          PY
+
+      - name: Delete temporary diagnostic (always, including on failure)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            supabase functions delete "$PROBE_NAME" --project-ref "$PROJECT_REF" --yes || \
+              supabase functions delete "$PROBE_NAME" --project-ref "$PROJECT_REF"
+          else
+            echo 'Missing credential; no new function should have been deployed.'
+          fi
