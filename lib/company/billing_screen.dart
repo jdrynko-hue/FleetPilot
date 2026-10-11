@@ -23,6 +23,12 @@ class _BillingScreenState extends State<BillingScreen> {
   String _interval = 'month';
   int? _quantity;
   bool _busy = false;
+  String _billingMode = 'test';
+  // A separate, explicit production launch is required. The existing Sandbox stays operational.
+  static const bool _liveBillingAvailable = bool.fromEnvironment(
+    'FLOTARYX_LIVE_BILLING',
+    defaultValue: false,
+  );
 
   bool get _polish => AppLocale.language.value == 'pl';
   String _t(String en, String pl) => _polish ? pl : en;
@@ -77,7 +83,7 @@ class _BillingScreenState extends State<BillingScreen> {
     final subscription = await client
         .from('company_subscriptions')
         .select(
-          'plan_code,status,billing_provider,stripe_subscription_id,'
+          'plan_code,status,billing_provider,stripe_subscription_id,stripe_price_id,'
           'billing_interval,billable_vehicle_count,cancel_at_period_end,current_period_end',
         )
         .eq('company_id', widget.company.companyId)
@@ -88,6 +94,30 @@ class _BillingScreenState extends State<BillingScreen> {
               'sub_',
             ) ??
             false);
+    String effectiveMode = 'test';
+    if (hasStripe) {
+      final existingPriceId = subscription['stripe_price_id']?.toString();
+      if (existingPriceId == null || !existingPriceId.startsWith('price_')) {
+        throw StateError(
+          'Cannot determine existing Stripe subscription environment',
+        );
+      }
+      final existingPrice = await client
+          .from('flotaryx_billing_prices')
+          .select('stripe_mode')
+          .eq('stripe_price_id', existingPriceId)
+          .maybeSingle();
+      final storedMode = existingPrice?['stripe_mode']?.toString();
+      if (storedMode != 'test' && storedMode != 'live') {
+        throw StateError(
+          'Existing subscription price has an unknown Stripe environment',
+        );
+      }
+      effectiveMode = storedMode!;
+    } else if (_liveBillingAvailable) {
+      effectiveMode = 'live';
+    }
+    _billingMode = effectiveMode;
     if (hasStripe) {
       final savedPlan = subscription['plan_code']?.toString();
       if (['starter', 'pro', 'business'].contains(savedPlan))
@@ -114,7 +144,7 @@ class _BillingScreenState extends State<BillingScreen> {
           'plan_code,billing_interval,included_vehicles,max_vehicles,'
           'base_amount_minor,extra_vehicle_amount_minor',
         )
-        .eq('stripe_mode', 'test')
+        .eq('stripe_mode', effectiveMode)
         .eq('currency', currency)
         .eq('is_current', true);
     return _BillingData(
@@ -152,7 +182,9 @@ class _BillingScreenState extends State<BillingScreen> {
     Map<String, dynamic>? extras,
   ]) async {
     final response = await Supabase.instance.client.functions.invoke(
-      'flotaryx-billing-manage',
+      _billingMode == 'live'
+          ? 'flotaryx-live-billing-manage'
+          : 'flotaryx-billing-manage',
       body: {
         'company_id': widget.company.companyId,
         'action': action,
@@ -198,7 +230,9 @@ class _BillingScreenState extends State<BillingScreen> {
     setState(() => _busy = true);
     try {
       final response = await Supabase.instance.client.functions.invoke(
-        'flotaryx-create-checkout',
+        _billingMode == 'live'
+            ? 'flotaryx-live-create-checkout'
+            : 'flotaryx-create-checkout',
         body: {
           'company_id': widget.company.companyId,
           'plan_code': price.plan,
@@ -421,8 +455,12 @@ class _BillingScreenState extends State<BillingScreen> {
                   children: [
                     Text(
                       _t(
-                        'SANDBOX — NO REAL CHARGES',
-                        'SANDBOX — BEZ PRAWDZIWYCH OPŁAT',
+                        _billingMode == 'live'
+                            ? 'LIVE — Real payments'
+                            : 'SANDBOX — NO REAL CHARGES',
+                        _billingMode == 'live'
+                            ? 'LIVE — Prawdziwe płatności'
+                            : 'SANDBOX — BEZ PRAWDZIWYCH OPŁAT',
                       ),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
@@ -649,13 +687,21 @@ class _BillingScreenState extends State<BillingScreen> {
                 )
               else if (!billable)
                 FilledButton.icon(
-                  onPressed: (!valid || _busy)
+                  onPressed:
+                      (!valid ||
+                          _busy ||
+                          (_billingMode == 'live' && !_liveBillingAvailable))
                       ? null
                       : () => _startCheckout(selected!, vehicles),
                   icon: const Icon(Icons.credit_card),
                   label: Text(
                     _busy
                         ? _t('Preparing...', 'Przygotowanie...')
+                        : _billingMode == 'live'
+                        ? _t(
+                            'Open secure checkout',
+                            'Otwórz bezpieczną płatność',
+                          )
                         : _t('Open test checkout', 'Otwórz płatność testową'),
                   ),
                 ),
@@ -663,8 +709,12 @@ class _BillingScreenState extends State<BillingScreen> {
             const SizedBox(height: 14),
             Text(
               _t(
-                'Test environment only. GPS not included. Price changes can be prorated.',
-                'Tylko środowisko testowe. GPS nie jest wliczony. Zmiany ceny mogą być rozliczane proporcjonalnie.',
+                _billingMode == 'live'
+                    ? 'Production subscriptions. GPS not included. Taxes may apply.'
+                    : 'Test environment only. GPS not included. Price changes can be prorated.',
+                _billingMode == 'live'
+                    ? 'Abonament produkcyjny. GPS nie jest wliczony. Mogą być naliczone podatki.'
+                    : 'Tylko środowisko testowe. GPS nie jest wliczony. Zmiany ceny mogą być rozliczane proporcjonalnie.',
               ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
