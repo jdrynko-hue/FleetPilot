@@ -1,0 +1,166 @@
+name: Flotaryx B2B Checkout Installer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/flotaryx-b2b-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flotaryx-b2b-installer
+  cancel-in-progress: false
+
+jobs:
+  install-b2b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Update B2B subscription screens and translations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_B2B'
+          from pathlib import Path
+          import json
+          import sys
+          
+          paths = {
+              'create': Path('lib/auth/create_company_screen.dart'),
+              'billing': Path('lib/company/billing_screen.dart'),
+              'locale': Path('lib/core/localization.dart'),
+          }
+          sources = {k: p.read_text(encoding='utf-8') for k, p in paths.items()}
+          
+          def replace_once(src, old, new, purpose):
+              occurrences = src.count(old)
+              if occurrences != 1:
+                  raise SystemExit(f'{purpose}: expected one anchor, found {occurrences}; files unchanged')
+              return src.replace(old, new, 1)
+          
+          create, billing, locale = [sources[key] for key in ('create', 'billing', 'locale')]
+          installed = ('_b2bConfirmed' in create, '_b2bConfirmed' in billing, '"b2b_confirmation"' in locale)
+          if all(installed):
+              print('B2B front-end already installed, nothing to do')
+              sys.exit(0)
+          if any(installed):
+              raise SystemExit('Partial B2B installation; nothing changed')
+          
+          create = replace_once(create,
+              '  bool _busy = false;',
+              '  bool _busy = false;\n  bool _b2bConfirmed = false;',
+              'create state')
+          create = replace_once(create,
+              'if (_name.text.trim().isEmpty) return;',
+              'if (_name.text.trim().isEmpty || !_b2bConfirmed) return;',
+              'create validation')
+          create = replace_once(create,
+              """                    FilledButton(
+                                onPressed: _busy ? null : _create,""",
+              """                    CheckboxListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(tr('b2b_confirmation')),
+                                subtitle: Text(tr('b2b_only')),
+                                value: _b2bConfirmed,
+                                controlAffinity: ListTileControlAffinity.leading,
+                                onChanged: _busy
+                                    ? null
+                                    : (value) => setState(() => _b2bConfirmed = value ?? false),
+                              ),
+                              FilledButton(
+                                onPressed: (_busy || !_b2bConfirmed) ? null : _create,""",
+              'create form confirmation')
+          
+          billing = replace_once(billing,
+              '  bool _busy = false;',
+              '  bool _busy = false;\n  bool _b2bConfirmed = false;',
+              'checkout state')
+          billing = replace_once(billing,
+              """  Future<void> _startCheckout(_BillingPrice price, int vehicles) async {
+              if (_busy) return;""",
+              """  Future<void> _startCheckout(_BillingPrice price, int vehicles) async {
+              if (_busy) return;
+              if (!_b2bConfirmed) {
+                _showError(StateError(tr('b2b_only')));
+                return;
+              }""",
+              'checkout declaration')
+          billing = replace_once(billing,
+              """          'billing_interval': price.interval,
+                    'vehicle_count': vehicles,""",
+              """          'billing_interval': price.interval,
+                    'vehicle_count': vehicles,
+                    'business_purchase_confirmed': _b2bConfirmed,""",
+              'checkout payload')
+          billing = replace_once(billing,
+              """              const SizedBox(height: 12),
+                        if (billable && active && !data.cancellationScheduled)""",
+              """              const SizedBox(height: 12),
+                        if (!billable) ...[
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(tr('b2b_confirmation')),
+                            subtitle: Text(tr('b2b_only')),
+                            value: _b2bConfirmed,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            onChanged: _busy
+                                ? null
+                                : (value) => setState(() => _b2bConfirmed = value ?? false),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        if (billable && active && !data.cancellationScheduled)""",
+              'checkout confirmation control')
+          billing = replace_once(billing,
+              """                          _busy ||
+                                    (_billingMode == 'live' && !_liveBillingAvailable)""",
+              """                          _busy ||
+                                    !_b2bConfirmed ||
+                                    (_billingMode == 'live' && !_liveBillingAvailable)""",
+              'checkout disabled until confirmation')
+          
+          translations = {'pl': ('Abonamenty Flotaryx są obecnie dostępne wyłącznie dla klientów biznesowych.', 'Potwierdzam, że kupuję abonament Flotaryx dla firmy, w celach związanych z prowadzoną działalnością, a nie jako konsument.'), 'en': ('Flotaryx subscriptions are currently available to business customers only.', 'I confirm that I am purchasing a Flotaryx subscription for business purposes, not as a consumer.'), 'de': ('Flotaryx-Abonnements sind derzeit ausschließlich für Geschäftskunden verfügbar.', 'Ich bestätige, dass ich das Flotaryx-Abonnement für geschäftliche Zwecke und nicht als Verbraucher kaufe.'), 'sk': ('Predplatné Flotaryx je momentálne dostupné iba pre firemných zákazníkov.', 'Potvrdzujem, že predplatné Flotaryx kupujem na podnikateľské účely, nie ako spotrebiteľ.'), 'cs': ('Předplatné Flotaryx je nyní dostupné pouze firemním zákazníkům.', 'Potvrzuji, že předplatné Flotaryx kupuji pro podnikatelské účely, nikoli jako spotřebitel.'), 'hu': ('A Flotaryx-előfizetések jelenleg kizárólag üzleti ügyfelek számára érhetők el.', 'Megerősítem, hogy a Flotaryx-előfizetést üzleti célra vásárolom, nem fogyasztóként.'), 'ro': ('Abonamentele Flotaryx sunt disponibile în prezent doar clienților comerciali.', 'Confirm că achiziționez un abonament Flotaryx în scopuri profesionale, nu în calitate de consumator.'), 'es': ('Las suscripciones de Flotaryx están disponibles actualmente solo para clientes empresariales.', 'Confirmo que compro una suscripción de Flotaryx con fines empresariales y no como consumidor.'), 'fr': ('Les abonnements Flotaryx sont actuellement réservés aux clients professionnels.', 'Je confirme acheter un abonnement Flotaryx à des fins professionnelles et non en tant que consommateur.'), 'it': ('Gli abbonamenti Flotaryx sono attualmente riservati ai clienti aziendali.', 'Confermo di acquistare un abbonamento Flotaryx per scopi professionali e non come consumatore.'), 'uk': ('Підписки Flotaryx наразі доступні лише для бізнес-клієнтів.', 'Підтверджую, що купую підписку Flotaryx для підприємницької діяльності, а не як споживач.'), 'pt': ('As subscrições Flotaryx estão atualmente disponíveis apenas para clientes empresariais.', 'Confirmo que estou a comprar uma subscrição Flotaryx para fins profissionais e não como consumidor.')}
+          for lang, (notice, declaration) in translations.items():
+              marker = '  "' + lang + '": <String, String>{'
+              replacement = (marker + '\n'
+                  + '    "b2b_only": ' + json.dumps(notice, ensure_ascii=False) + ',\n'
+                  + '    "b2b_confirmation": ' + json.dumps(declaration, ensure_ascii=False) + ',')
+              locale = replace_once(locale, marker, replacement, 'locale ' + lang)
+          
+          if locale.count('"b2b_confirmation"') != len(translations):
+              raise SystemExit('Localization count mismatch')
+          if "'FLOTARYX_LIVE_BILLING'" not in billing or 'defaultValue: false' not in billing:
+              raise SystemExit('Payment mode safety gate missing')
+          
+          for key, code in [('create', create), ('billing', billing), ('locale', locale)]:
+              paths[key].write_text(code, encoding='utf-8')
+              print('Prepared', paths[key])
+          PY_B2B
+      - name: Format and validate
+        run: |
+          dart format lib/auth/create_company_screen.dart lib/company/billing_screen.dart lib/core/localization.dart
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+      - name: Commit after successful validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/auth/create_company_screen.dart lib/company/billing_screen.dart lib/core/localization.dart
+          if git diff --cached --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git commit -m "Add business-only purchase attestation to Flotaryx"
+          git push origin HEAD:main
