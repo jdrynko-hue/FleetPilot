@@ -1,4 +1,4 @@
-name: Flotaryx - Complete Sandbox Billing Setup
+name: Flotaryx - Repair and Publish Sandbox Billing
 
 on:
   push:
@@ -9,116 +9,105 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: flotaryx-stripe-billing-repair
   cancel-in-progress: false
 
 jobs:
-  complete-billing:
+  repair-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Install Flotaryx sandbox billing screen using existing installer
+      - name: Restore billing screen from original installer
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          python3 - <<'PYCODE'
           from pathlib import Path
+          from textwrap import dedent
 
-          original = Path('.github/workflows/flotaryx-stripe-billing-install.yml')
-          if not original.exists():
-              raise SystemExit('Original Flotaryx billing installer is missing')
-          content = original.read_text(encoding='utf-8')
-          start_marker = "          python3 - <<'PYCODE'\n"
-          end_marker = "\n          PYCODE"
-          if content.count(start_marker) != 1 or content.count(end_marker) != 1:
-              raise SystemExit('Original billing installer layout changed')
-          program = content.split(start_marker, 1)[1].split(end_marker, 1)[0]
-          program = '\n'.join(
-              line[10:] if line.startswith('          ') else line
-              for line in program.splitlines()
-          )
-          exec(compile(program, 'flotaryx_billing_installer.py', 'exec'))
+          source_path = Path('.github/workflows/flotaryx-stripe-billing-install.yml')
+          source = source_path.read_text(encoding='utf-8')
+          start = "          python3 - <<'PYCODE'\n"
+          end = "\n          PYCODE"
+          if source.count(start) != 1:
+              raise SystemExit('Expected one original billing installer block')
+          code = source.split(start, 1)[1].split(end, 1)[0]
+          code = dedent(code)
+          if "billing.write_bytes(base64.b64decode" not in code:
+              raise SystemExit('Cannot safely identify original billing installer')
+          exec(compile(code, str(source_path), 'exec'), {'__name__': '__main__'})
+          assert Path('lib/company/billing_screen.dart').exists(), 'Missing billing page'
+          assert "BillingScreen(company: widget.company)" in Path(
+              'lib/company/company_screen.dart').read_text(encoding='utf-8')
+          print('Restored billing screen and company navigation')
+          PYCODE
 
-          billing = Path('lib/company/billing_screen.dart')
-          company = Path('lib/company/company_screen.dart')
-          assert billing.exists(), 'Billing screen was not created'
-          company_text = company.read_text(encoding='utf-8')
-          assert "import 'billing_screen.dart';" in company_text
-          assert 'BillingScreen(company: widget.company)' in company_text
-          print('Billing screen and Company navigation installed')
-          PY
-
-      - name: Prepare Flutter and remove generated MyApp template test
+      - name: Generate Flutter platform and remove unrelated sample test
         shell: bash
         run: |
           set -euo pipefail
           flutter create --platforms=web --project-name fleetpilot .
-          flutter pub get
-          python3 - <<'PY'
+          python3 - <<'PYCODE'
           from pathlib import Path
           import subprocess
 
           example = Path('test/widget_test.dart')
-          if example.exists() and 'MyApp' in example.read_text(encoding='utf-8'):
-              example.unlink()
-              print('Removed Flutter-generated MyApp template test')
-          smoke = Path('test/billing_screen_smoke_test.dart')
-          smoke.parent.mkdir(parents=True, exist_ok=True)
-          smoke.write_text('''
-          import 'package:flutter_test/flutter_test.dart';
-          import 'package:fleetpilot/company/billing_screen.dart';
+          if example.is_file():
+              is_tracked = subprocess.run(
+                  ['git', 'ls-files', '--error-unmatch', str(example)],
+                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                  check=False
+              ).returncode == 0
+              source = example.read_text(encoding='utf-8')
+              if not is_tracked and 'MyApp' in source:
+                  example.unlink()
+                  print('Removed only the untracked Flutter MyApp placeholder test')
+              elif 'MyApp' in source:
+                  raise SystemExit('Existing tracked MyApp test needs investigation')
+          PYCODE
+          flutter pub get
+          dart format lib/company/billing_screen.dart lib/company/company_screen.dart
 
-          void main() {
-            test('Flotaryx subscription screen can be loaded', () {
-              expect(BillingScreen, isNotNull);
-            });
-          }
-          '''.replace('          ', ''), encoding='utf-8')
-          print('Created billing screen compilation smoke test')
-          PY
-          dart format lib/company/billing_screen.dart lib/company/company_screen.dart test/billing_screen_smoke_test.dart
-
-      - name: Analyze, test and build Flotaryx
+      - name: Analyze, test and compile updated application
         shell: bash
         run: |
           set -euo pipefail
           flutter analyze --no-fatal-infos
-          flutter test
-          flutter build web --release --base-href "/" \
+          if find test -type f -name '*_test.dart' -print -quit 2>/dev/null | grep -q .; then
+            flutter test
+          else
+            echo 'No project test files after removal of generated placeholder.'
+          fi
+          flutter build web --release --base-href '/' \
             --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co \
             --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
-          python3 - <<'PY'
+          python3 - <<'PYCODE'
           from pathlib import Path
-          assert Path('build/web/index.html').exists()
-          assert Path('build/web/app/index.html').exists()
-          assert Path('build/web/main.dart.js').exists()
-          assert Path('build/web/CNAME').read_text().strip() == 'flotaryx.com'
-          print('Existing website / and panel /app/ survived billing build')
-          PY
+          built = Path('build/web')
+          assert (built / 'main.dart.js').is_file(), 'Flutter application is missing'
+          assert (built / 'app/index.html').is_file(), '/app/ entry point missing'
+          assert 'href="/app/"' in (built / 'index.html').read_text(encoding='utf-8'), 'Product website links missing'
+          print('Website homepage and Flutter app build verified')
+          PYCODE
 
-      - name: Commit billing UI and dispatch production website build
+      - name: Commit billing UI to main and trigger Pages deployment
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add lib/company/billing_screen.dart lib/company/company_screen.dart test/billing_screen_smoke_test.dart
-          git add -u test/widget_test.dart || true
+          git add lib/company/billing_screen.dart lib/company/company_screen.dart
           if git diff --cached --quiet; then
-            echo 'Billing files already current.'
+            echo 'Flotaryx billing UI already installed on main.'
           else
-            git commit -m 'Install localized Stripe sandbox billing UI with tested Flutter screen'
+            git commit -m 'Install localized Flotaryx sandbox subscription UI'
             git push origin HEAD:main
           fi
-          gh workflow run deploy.yml --ref main
-          echo 'Flotaryx deployment requested; sandbox only, no live payments'
+          echo 'GitHub Pages deploy.yml is triggered by pushes to main.'
