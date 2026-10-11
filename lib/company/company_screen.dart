@@ -8,6 +8,7 @@ import '../core/localization.dart';
 import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
+import 'billing_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({
@@ -369,6 +370,30 @@ class _CompanyScreenState extends State<CompanyScreen> {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
       children: [
         Text(tr('company'), style: Theme.of(context).textTheme.headlineMedium),
+
+        if (_canAdmin)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.credit_card_outlined),
+              title: Text(
+                AppLocale.language.value == 'pl'
+                    ? 'Abonament i płatności'
+                    : 'Subscription and billing',
+              ),
+              subtitle: Text(
+                AppLocale.language.value == 'pl'
+                    ? 'Wybierz plan i otwórz płatność testową'
+                    : 'Choose a plan and test Stripe Checkout',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BillingScreen(company: widget.company),
+                ),
+              ),
+            ),
+          ),
+
         SizedBox(height: 16),
 
         Card(
