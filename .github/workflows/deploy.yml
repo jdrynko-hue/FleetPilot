@@ -84,3 +84,24 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # A successful artifact upload is not proof that the public URLs work.
+      - name: Smoke-test published Flotaryx URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://flotaryx.com"
+          curl --fail --silent --show-error --location --retry 8 \
+            --retry-delay 10 --retry-all-errors \
+            "$base/" -o /tmp/flotaryx-home.html
+          grep -Fq 'Flotaryx' /tmp/flotaryx-home.html
+          curl --fail --silent --show-error --location --retry 8 \
+            --retry-delay 10 --retry-all-errors \
+            "$base/app/" -o /tmp/flotaryx-app.html
+          grep -Fq '<base href="/app/">' /tmp/flotaryx-app.html
+          grep -Fq 'flutter_bootstrap.js' /tmp/flotaryx-app.html
+          for asset in flutter_bootstrap.js main.dart.js; do
+            curl --fail --silent --show-error --location --retry 8 \
+              --retry-delay 10 --retry-all-errors \
+              "$base/app/$asset" -o /dev/null
+          done
