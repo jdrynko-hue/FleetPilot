@@ -41,6 +41,28 @@ class _FleetShellState extends State<FleetShell> {
     _memberships = List.from(widget.memberships);
 
     _membership = _memberships.first;
+
+    // Stripe returns to /app/?billing=success or ?billing=cancel.
+    // These URL parameters describe the Checkout navigation result,
+    // not a verified payment; subscription status comes from webhooks.
+    final billingReturn = Uri.base.queryParameters['billing'];
+    if (billingReturn == 'success' || billingReturn == 'cancel') {
+      _index = 7; // Company → Subscription and billing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final polish = AppLocale.language.value == 'pl';
+        final message = billingReturn == 'success'
+            ? (polish
+                ? 'Powrót ze Stripe. Potwierdzenie płatności może chwilę potrwać. Sprawdź status w Abonamentach.'
+                : 'Returned from Stripe. Payment confirmation may take a moment. Check the status in Subscriptions.')
+            : (polish
+                ? 'Płatność w Stripe została przerwana. Możesz ponownie wybrać abonament.'
+                : 'Stripe Checkout was canceled. You can choose a subscription again.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), duration: const Duration(seconds: 8)),
+        );
+      });
+    }
   }
 
   void _refreshAll() {
