@@ -451,6 +451,11 @@ class _BillingScreenState extends State<BillingScreen> {
         final active = ['active', 'trialing', 'past_due'].contains(data.status);
         // The server only permits a plan change for active/trialing subscriptions.
         final canChangePlan = ['active', 'trialing'].contains(data.status);
+        // A finished Sandbox subscription can be restarted through a new Checkout.
+        // The backend independently verifies cancellation with Stripe.
+        final canRestart = billable &&
+            data.status == 'canceled' &&
+            _billingMode == 'test';
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
           children: [
@@ -518,7 +523,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
             if (billable &&
-                ['unpaid', 'canceled', 'incomplete', 'paused'].contains(data.status))
+                ['unpaid', 'incomplete', 'paused'].contains(data.status))
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
@@ -529,6 +534,17 @@ class _BillingScreenState extends State<BillingScreen> {
                       'Nie można zmienić tego abonamentu. Skontaktuj się z pomocą, aby wznowić rozliczenia.',
                     ),
                   ),
+                ),
+              ),
+            if (canRestart)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.restart_alt),
+                  title: Text(_t('Subscription ended', 'Abonament zakończony')),
+                  subtitle: Text(_t(
+                    'You can select a plan and restart your subscription in Stripe Sandbox.',
+                    'Możesz wybrać plan i ponownie wykupić abonament w Stripe Sandbox.',
+                  )),
                 ),
               ),
             if (billable) ...[
@@ -570,7 +586,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       icon: const Icon(Icons.event_busy),
                       label: Text(_t('Cancel renewal', 'Anuluj odnowienie')),
                     ),
-                  if (data.cancellationScheduled)
+                  if (data.cancellationScheduled && active)
                     FilledButton.tonalIcon(
                       onPressed: _busy ? null : () => _execute('resume'),
                       icon: const Icon(Icons.restart_alt),
@@ -582,8 +598,8 @@ class _BillingScreenState extends State<BillingScreen> {
             ],
             Text(
               _t(
-                billable ? 'Change your plan' : 'Choose a plan',
-                billable ? 'Zmień plan' : 'Wybierz plan',
+                billable && !canRestart ? 'Change your plan' : 'Choose a plan',
+                billable && !canRestart ? 'Zmień plan' : 'Wybierz plan',
               ),
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -692,7 +708,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (!billable) ...[
+              if (!billable || canRestart) ...[
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(tr('b2b_confirmation')),
@@ -733,7 +749,7 @@ class _BillingScreenState extends State<BillingScreen> {
                         : _t('Change subscription', 'Zmień abonament'),
                   ),
                 )
-              else if (!billable)
+              else if (!billable || canRestart)
                 FilledButton.icon(
                   onPressed:
                       (!valid ||
@@ -746,6 +762,8 @@ class _BillingScreenState extends State<BillingScreen> {
                   label: Text(
                     _busy
                         ? _t('Preparing...', 'Przygotowanie...')
+                        : canRestart
+                        ? _t('Restart test subscription', 'Wykup ponownie testowy abonament')
                         : _billingMode == 'live'
                         ? _t(
                             'Open secure checkout',
