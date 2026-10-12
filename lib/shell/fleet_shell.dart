@@ -40,12 +40,20 @@ class _FleetShellState extends State<FleetShell> {
 
     _memberships = List.from(widget.memberships);
 
-    _membership = _memberships.first;
+    // A checkout may return from any fleet, not necessarily the first one.
+    // Resolve the URL hint against memberships fetched under this user's RLS.
+    final billingReturn = Uri.base.queryParameters['billing'];
+    final returnedFleetId = Uri.base.queryParameters['fleet'];
+    _membership = _memberships.firstWhere(
+      (member) =>
+          (billingReturn == 'success' || billingReturn == 'cancel') &&
+          member.companyId == returnedFleetId,
+      orElse: () => _memberships.first,
+    );
 
     // Stripe returns to /app/?billing=success or ?billing=cancel.
     // These URL parameters describe the Checkout navigation result,
     // not a verified payment; subscription status comes from webhooks.
-    final billingReturn = Uri.base.queryParameters['billing'];
     if (billingReturn == 'success' || billingReturn == 'cancel') {
       _index = 7; // Company → Subscription and billing
       WidgetsBinding.instance.addPostFrameCallback((_) {
