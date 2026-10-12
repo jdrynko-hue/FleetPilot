@@ -10,8 +10,15 @@ String _phrase(String en, String pl) =>
     AppLocale.language.value == 'pl' ? pl : en;
 
 class DriverHomeScreen extends StatefulWidget {
-  const DriverHomeScreen({required this.company, super.key});
+  const DriverHomeScreen({
+    required this.company,
+    this.memberships = const [],
+    this.onFleetSelected,
+    super.key,
+  });
   final CompanyMembership company;
+  final List<CompanyMembership> memberships;
+  final ValueChanged<String>? onFleetSelected;
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -374,6 +381,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ],
       ),
       actions: [
+        if (widget.memberships.length > 1 && widget.onFleetSelected != null)
+          PopupMenuButton<String>(
+            tooltip: _phrase('Switch fleet', 'Zmień flotę'),
+            icon: const Icon(Icons.swap_horiz),
+            onSelected: widget.onFleetSelected,
+            itemBuilder: (context) => widget.memberships
+                .map(
+                  (membership) => CheckedPopupMenuItem<String>(
+                    value: membership.companyId,
+                    checked: membership.companyId == widget.company.companyId,
+                    child: Text(membership.companyName),
+                  ),
+                )
+                .toList(),
+          ),
         IconButton(
           icon: const Icon(Icons.refresh),
           onPressed: () => setState(_reload),
