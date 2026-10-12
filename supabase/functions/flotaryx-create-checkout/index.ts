@@ -177,8 +177,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const form = new URLSearchParams();
     form.set("mode", "subscription");
-    form.set("success_url", "https://flotaryx.com/app/?billing=success&session_id={CHECKOUT_SESSION_ID}");
-    form.set("cancel_url", "https://flotaryx.com/app/?billing=cancel");
+    form.set("success_url", "https://flotaryx.com/app/?billing=success&fleet=" + encodeURIComponent(companyId) + "&session_id={CHECKOUT_SESSION_ID}");
+    form.set("cancel_url", "https://flotaryx.com/app/?billing=cancel&fleet=" + encodeURIComponent(companyId));
     form.set("client_reference_id", companyId);
     form.set("line_items[0][price]", String(price.stripe_price_id));
     form.set("line_items[0][quantity]", String(planCode === "starter" ? 1 : count));
