@@ -39,6 +39,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return reply({ error: "Invalid JSON" }, 400);
   }
+  // A business-only purchase must be expressly confirmed by the purchaser.
+  if (input.business_purchase_confirmed !== true) {
+    return reply({ error: "Business purchase confirmation is required" }, 400);
+  }
   const companyId = input.company_id;
   const planCode = input.plan_code;
   const interval = input.billing_interval;
@@ -137,6 +141,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     form.set("line_items[0][quantity]", String(planCode === "starter" ? 1 : count));
     form.set("billing_address_collection", "required");
     form.set("tax_id_collection[enabled]", "true");
+    // Mirror production Checkout: Stripe computes the appropriate test tax.
+    form.set("automatic_tax[enabled]", "true");
     form.set("locale", "auto");
     for (const [k,v] of Object.entries({
       company_id: companyId, user_id: user.id,
