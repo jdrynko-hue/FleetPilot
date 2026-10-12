@@ -104,6 +104,15 @@ class _FleetShellState extends State<FleetShell> {
       return DriverHomeScreen(
         key: ValueKey(_membership.companyId),
         company: _membership,
+        memberships: _memberships,
+        onFleetSelected: (id) {
+          if (id == _membership.companyId) return;
+          setState(() {
+            _membership = _memberships.firstWhere((m) => m.companyId == id);
+            _index = 0;
+            _refreshToken++;
+          });
+        },
       );
     }
 
