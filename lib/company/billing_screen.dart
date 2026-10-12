@@ -24,6 +24,7 @@ class _BillingScreenState extends State<BillingScreen> {
   int? _quantity;
   bool _busy = false;
   bool _b2bConfirmed = false;
+  bool _vatRegistered = false;
   String _billingMode = 'test';
   // A separate, explicit production launch is required. The existing Sandbox stays operational.
   static const bool _liveBillingAvailable = bool.fromEnvironment(
@@ -243,6 +244,7 @@ class _BillingScreenState extends State<BillingScreen> {
           'billing_interval': price.interval,
           'vehicle_count': vehicles,
           'business_purchase_confirmed': _b2bConfirmed,
+          if (_billingMode == 'test') 'vat_registered': _vatRegistered,
         },
       );
       if (response.data is! Map || (response.data as Map)['url'] is! String) {
@@ -721,6 +723,23 @@ class _BillingScreenState extends State<BillingScreen> {
                             setState(() => _b2bConfirmed = value ?? false),
                 ),
                 const SizedBox(height: 8),
+                if (_billingMode == 'test')
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_t(
+                      'My business is registered for VAT',
+                      'Moja firma jest zarejestrowana do VAT',
+                    )),
+                    subtitle: Text(_t(
+                      'Select only if you have a VAT registration number. Businesses without VAT registration can also subscribe. Use your legal business name as the billing name.',
+                      'Zaznacz tylko, jeśli masz numer rejestracji VAT. Firmy niezarejestrowane do VAT również mogą wykupić abonament. Jako nazwę do rozliczeń wpisz nazwę prawną firmy.',
+                    )),
+                    value: _vatRegistered,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(() => _vatRegistered = value ?? false),
+                  ),
               ],
               if (billable && canChangePlan && !data.cancellationScheduled)
                 FilledButton.icon(
@@ -832,3 +851,4 @@ class _BillingPrice {
     (row['extra_vehicle_amount_minor'] as num).toInt(),
   );
 }
+
