@@ -47,7 +47,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase functions download flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo --use-api
+          supabase functions download --help
+          supabase functions download flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo
           python3 - <<'PY'
           import json, os, urllib.request
           from pathlib import Path
