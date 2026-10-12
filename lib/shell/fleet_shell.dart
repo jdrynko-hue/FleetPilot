@@ -122,7 +122,13 @@ class _FleetShellState extends State<FleetShell> {
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
 
-        final body = IndexedStack(index: _index, children: pages);
+        // Reset screen state when switching fleets. Besides refreshing queries,
+        // this prevents cached widgets from briefly showing the previous fleet.
+        final body = IndexedStack(
+          key: ValueKey(_membership.companyId),
+          index: _index,
+          children: pages,
+        );
 
         return Scaffold(
           appBar: AppBar(
