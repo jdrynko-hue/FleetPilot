@@ -132,6 +132,49 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return reply({ error: "Vehicle count must cover your active fleet and stay within plan limits",
         active_vehicles: activeVehicles.length, maximum: max }, 400);
     }
+    // Reserve a single checkout per fleet atomically in Postgres, even when
+    // different devices request different plans concurrently.
+    const reservedResponse = await fetch(
+      supabaseUrl + "/rest/v1/rpc/flotaryx_reserve_test_checkout", {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _company_id: companyId,
+          _plan_code: String(planCode),
+          _billing_interval: String(interval),
+          _vehicle_count: count,
+        }),
+      },
+    );
+    if (!reservedResponse.ok) {
+      console.error("Checkout reservation failed", reservedResponse.status);
+      return reply({ error: "Checkout cannot be reserved for this fleet" }, 409);
+    }
+    const reservation = await reservedResponse.json();
+    if (!reservation || !["reserved", "ready", "busy"].includes(reservation.state)) {
+      return reply({ error: "Invalid checkout reservation response" }, 503);
+    }
+    if (reservation.state === "busy") {
+      return reply({
+        error: "Another checkout is already in progress for this fleet. Complete or wait for it to expire.",
+      }, 409);
+    }
+    if (reservation.state === "ready") {
+      const checkoutUrl = String(reservation.checkout_url || "");
+      const verifiedUrl = new URL(checkoutUrl);
+      if (verifiedUrl.protocol !== "https:" || verifiedUrl.hostname !== "checkout.stripe.com") {
+        return reply({ error: "Invalid reserved Stripe URL" }, 503);
+      }
+      return reply({ url: checkoutUrl, mode: "test", reused: true });
+    }
+    const attemptId = reservation.attempt_id;
+    const sessionExpiry = Date.parse(String(reservation.session_expires_at || ""));
+    if (typeof attemptId !== "string" || !uuidPattern.test(attemptId)
+        || !Number.isFinite(sessionExpiry) || sessionExpiry < Date.now() + 30 * 60 * 1000) {
+      // A reservation near its expiration should never cause an invalid Stripe request.
+      return reply({ error: "Checkout reservation is not ready. Try again after it expires." }, 409);
+    }
+
     const form = new URLSearchParams();
     form.set("mode", "subscription");
     form.set("success_url", "https://flotaryx.com/app/?billing=success&session_id={CHECKOUT_SESSION_ID}");
@@ -144,6 +187,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Mirror production Checkout: Stripe computes the appropriate test tax.
     form.set("automatic_tax[enabled]", "true");
     form.set("locale", "auto");
+    form.set("expires_at", String(Math.floor(sessionExpiry / 1000)));
     for (const [k,v] of Object.entries({
       company_id: companyId, user_id: user.id,
       plan_code: String(planCode), vehicle_count: String(count), currency, billing_interval: String(interval),
@@ -156,15 +200,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } else {
       form.set("customer_email", user.email);
     }
-    // Stripe idempotency avoids accidentally creating two subscriptions
-    // when one purchaser double-clicks or retries the same request.
-    // Scoped to the authenticated buyer, selected plan and a 30-minute window.
-    // This does not replace an eventual atomic pending-session lock.
-    const retryWindow = Math.floor(Date.now() / (30 * 60 * 1000));
-    const checkoutKey = [
-      "flotaryx", "sandbox", "checkout-v1", companyId, user.id,
-      String(planCode), String(interval), String(count), String(retryWindow),
-    ].join(":");
+    // The reservation ID stays constant for all retries of the same purchase,
+    // so Stripe's idempotency works across callers and request windows.
+    const checkoutKey = "flotaryx:sandbox:checkout-v2:" + attemptId;
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
@@ -178,6 +216,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!stripeResponse.ok || typeof checkout.url !== "string" || !checkout.url.startsWith("https://checkout.stripe.com/")) {
       console.error("Stripe Checkout rejected request with status", stripeResponse.status);
       return reply({ error: "Unable to start test checkout" }, 502);
+    }
+    // Store the Stripe session before returning it to the user. If this fails,
+    // a retry uses the same attempt key and can recover without another charge.
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceKey) return reply({ error: "Checkout finalization is unavailable" }, 503);
+    const saved = await fetch(
+      supabaseUrl + "/rest/v1/rpc/flotaryx_finalize_test_checkout", {
+        method: "POST",
+        headers: {
+          apikey: serviceKey,
+          Authorization: "Bearer " + serviceKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          _company_id: companyId,
+          _attempt_id: attemptId,
+          _session_id: checkout.id,
+          _checkout_url: checkout.url,
+        }),
+      },
+    );
+    if (!saved.ok || (await saved.json()) !== true) {
+      console.error("Checkout session could not be finalized", saved.status);
+      return reply({ error: "Checkout finalization failed. Please retry." }, 503);
     }
     return reply({
       url: checkout.url, session_id: checkout.id, mode: "test",
