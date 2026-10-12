@@ -1,0 +1,131 @@
+name: Flotaryx - Business Review Console Installer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/flotaryx-business-review-console-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: flotaryx-business-review-console-installer
+  cancel-in-progress: false
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install reviewed operator console
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_INSTALL'
+          import base64, gzip, pathlib, subprocess
+          company = pathlib.Path('lib/company/company_screen.dart')
+          screen = pathlib.Path('lib/company/business_review_console_screen.dart')
+          expected = '6a6863623f867e3ae228a54ed9aaa0a443fb78fc'
+          actual = subprocess.check_output(['git','hash-object',str(company)], text=True).strip()
+          if actual != expected:
+              raise SystemExit('Company page changed; installation stopped for review: '+actual)
+          if screen.exists():
+              raise SystemExit('Admin console exists; refusing to overwrite it')
+          source = company.read_text(encoding='utf-8')
+          def replace_once(old,new):
+              global source
+              if source.count(old) != 1:
+                  raise SystemExit('Unexpected company page structure; stopped safely: '+old)
+              source = source.replace(old,new,1)
+
+          replace_once("import 'billing_screen.dart';", "import 'billing_screen.dart';\nimport 'business_review_console_screen.dart';")
+          replace_once('  Future<List<CompanyInvite>>? _invites;', '  Future<List<CompanyInvite>>? _invites;\n  late Future<bool> _operatorAccess;')
+          replace_once('  void initState() {\n    super.initState();', '  void initState() {\n    super.initState();\n    _operatorAccess = _fetchOperatorAccess();')
+          marker='  void _reload() {'
+          accessor='''  Future<bool> _fetchOperatorAccess() async {
+              final client = Supabase.instance.client;
+              final id = client.auth.currentUser?.id;
+              if (id == null) return false;
+              try {
+                final rows = await client
+                    .from('flotaryx_verification_operators')
+                    .select('user_id')
+                    .eq('user_id', id)
+                    .limit(1);
+                return rows.isNotEmpty;
+              } catch (_) {
+                return false;
+              }
+            }
+
+          '''
+          replace_once(marker,accessor+marker)
+          before='''        if (_canAdmin)
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.business_center_outlined),'''
+          card='''        FutureBuilder<bool>(
+                    future: _operatorAccess,
+                    builder: (context, snapshot) {
+                      if (snapshot.data != true) {
+                        return const SizedBox.shrink();
+                      }
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.admin_panel_settings_outlined),
+                          title: Text(AppLocale.language.value == 'pl'
+                              ? 'Panel weryfikacji firm'
+                              : 'Business verification console'),
+                          subtitle: Text(AppLocale.language.value == 'pl'
+                              ? 'Ręczna weryfikacja zgłoszeń biznesowych'
+                              : 'Review and verify business applications'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const BusinessReviewConsoleScreen(),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+          '''
+          replace_once(before,card+before)
+          encoded='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'
+          data=gzip.decompress(base64.b64decode(encoded)).decode('utf-8')
+          if len(data)<10000 or 'flotaryx_operator_review' not in data or 'p_expected_profile_updated_at' not in data:
+              raise SystemExit('Unexpected admin console source; install cancelled')
+          screen.write_text(data,encoding='utf-8')
+          company.write_text(source,encoding='utf-8')
+          print('Business review console installed. Live billing unchanged.')
+          PY_INSTALL
+      - name: Validate Flutter build and tests
+        run: |
+          flutter pub get
+          dart format lib/company/company_screen.dart lib/company/business_review_console_screen.dart
+          flutter analyze --no-fatal-infos
+          flutter test
+      - name: Commit validated changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/company/company_screen.dart lib/company/business_review_console_screen.dart
+          git diff --cached --quiet && { echo 'No changes'; exit 1; }
+          git commit -m 'Add controlled B2B verification operator console'
+          git push origin HEAD:main
+      - name: Request site deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 8
+          gh workflow run deploy.yml --ref main
