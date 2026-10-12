@@ -43,6 +43,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (input.business_purchase_confirmed !== true) {
     return reply({ error: "Business purchase confirmation is required" }, 400);
   }
+  if (input.vat_registered !== undefined && typeof input.vat_registered !== "boolean") {
+    return reply({ error: "VAT registration must be true or false" }, 400);
+  }
+  // Business eligibility and VAT registration are separate decisions.
+  const vatRegistered = input.vat_registered === true;
   const companyId = input.company_id;
   const planCode = input.plan_code;
   const interval = input.billing_interval;
@@ -165,6 +170,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (verifiedUrl.protocol !== "https:" || verifiedUrl.hostname !== "checkout.stripe.com") {
         return reply({ error: "Invalid reserved Stripe URL" }, 503);
       }
+      // A reserved session is immutable: never silently reuse an older form
+      // or a checkout prepared with a different VAT-registration choice.
+      const sessionId = verifiedUrl.pathname.match(/^\/c\/pay\/(cs_test_[A-Za-z0-9]+)$/)?.[1] || "";
+      if (!/^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
+        return reply({ error: "The previous checkout must expire before preparing a new one" }, 409);
+      }
+      const sessionResponse = await fetch(
+        "https://api.stripe.com/v1/checkout/sessions/" + encodeURIComponent(sessionId),
+        { headers: { Authorization: "Bearer " + stripeKey } },
+      );
+      if (!sessionResponse.ok) return reply({ error: "Cannot verify the previous checkout" }, 502);
+      const session = await sessionResponse.json();
+      if (session.livemode !== false || session.status !== "open"
+          || session.client_reference_id !== companyId
+          || session.adaptive_pricing?.enabled !== false
+          || session.metadata?.vat_registered !== String(vatRegistered)) {
+        return reply({ error: "A previous checkout has different billing details. Complete it or wait for it to expire before changing VAT registration." }, 409);
+      }
       return reply({ url: checkoutUrl, mode: "test", reused: true });
     }
     const attemptId = reservation.attempt_id;
@@ -183,7 +206,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     form.set("line_items[0][price]", String(price.stripe_price_id));
     form.set("line_items[0][quantity]", String(planCode === "starter" ? 1 : count));
     form.set("billing_address_collection", "required");
-    form.set("tax_id_collection[enabled]", "true");
+    // Sandbox-only direct Checkout is required to control currency and the
+    // optional VAT-ID form. Managed Payments mandates adaptive pricing.
+    // This function rejects live keys; production billing is separate.
+    form.set("managed_payments[enabled]", "false");
+    // Use the selected GBP/PLN/EUR price without IP-based conversion.
+    form.set("adaptive_pricing[enabled]", "false");
+    form.set("tax_id_collection[enabled]", String(vatRegistered));
+    if (vatRegistered) form.set("tax_id_collection[required]", "if_supported");
     // Mirror production Checkout: Stripe computes the appropriate test tax.
     form.set("automatic_tax[enabled]", "true");
     form.set("locale", "auto");
@@ -191,6 +221,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     for (const [k,v] of Object.entries({
       company_id: companyId, user_id: user.id,
       plan_code: String(planCode), vehicle_count: String(count), currency, billing_interval: String(interval),
+      vat_registered: String(vatRegistered),
     })) {
       form.set("metadata[" + k + "]", v);
       form.set("subscription_data[metadata][" + k + "]", v);
@@ -251,3 +282,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return reply({ error: "Unable to prepare subscription checkout" }, 503);
   }
 });
+
