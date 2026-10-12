@@ -40,7 +40,7 @@ jobs:
             exit 1
           fi
           supabase functions deploy --help
-          supabase functions deploy flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo --use-api
+          supabase functions deploy flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo
       - name: Verify deployed Sandbox code and JWT protection
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
