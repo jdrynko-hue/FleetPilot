@@ -156,9 +156,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } else {
       form.set("customer_email", user.email);
     }
+    // Stripe idempotency avoids accidentally creating two subscriptions
+    // when one purchaser double-clicks or retries the same request.
+    // Scoped to the authenticated buyer, selected plan and a 30-minute window.
+    // This does not replace an eventual atomic pending-session lock.
+    const retryWindow = Math.floor(Date.now() / (30 * 60 * 1000));
+    const checkoutKey = [
+      "flotaryx", "sandbox", "checkout-v1", companyId, user.id,
+      String(planCode), String(interval), String(count), String(retryWindow),
+    ].join(":");
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + stripeKey, "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Authorization": "Bearer " + stripeKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Idempotency-Key": checkoutKey,
+      },
       body: form,
     });
     const checkout = await stripeResponse.json();
