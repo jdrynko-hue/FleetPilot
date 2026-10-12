@@ -9,6 +9,7 @@ import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import 'billing_screen.dart';
+import 'business_verification_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({
@@ -370,6 +371,22 @@ class _CompanyScreenState extends State<CompanyScreen> {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
       children: [
         Text(tr('company'), style: Theme.of(context).textTheme.headlineMedium),
+
+        if (_canAdmin)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.business_center_outlined),
+              title: Text(tr('business_profile_title')),
+              subtitle: Text(tr('business_profile_subtitle')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      BusinessVerificationScreen(company: widget.company),
+                ),
+              ),
+            ),
+          ),
 
         if (_canAdmin)
           Card(

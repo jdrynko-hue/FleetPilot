@@ -36,16 +36,54 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
-    "b2b_only": "Abonamenty Flotaryx są obecnie dostępne wyłącznie dla klientów biznesowych.",
-    "b2b_confirmation": "Potwierdzam, że kupuję abonament Flotaryx dla firmy, w celach związanych z prowadzoną działalnością, a nie jako konsument.",
-    "notification_test_email_only": "Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.",
+    "business_profile_title": "Dane firmy i weryfikacja",
+    "business_profile_subtitle":
+        "Uzupełnij dane działalności. Weryfikacja jest wymagana przed prawdziwą płatnością.",
+    "business_profile_legal": "Pełna nazwa firmy",
+    "business_profile_reg": "Numer rejestrowy firmy (opcjonalny)",
+    "business_profile_vat": "Numer VAT (opcjonalny)",
+    "business_profile_address1": "Adres – ulica i numer",
+    "business_profile_address2": "Adres – dodatkowe informacje (opcjonalne)",
+    "business_profile_city": "Miasto",
+    "business_profile_region": "Województwo / region (opcjonalnie)",
+    "business_profile_postcode": "Kod pocztowy",
+    "business_profile_activity": "Opis działalności (opcjonalnie)",
+    "business_profile_evidence":
+        "Link do rejestru firmy lub inny dowód działalności (opcjonalnie)",
+    "business_profile_country": "Kraj rozliczeniowy firmy",
+    "business_profile_submit": "Prześlij do weryfikacji",
+    "business_profile_saving": "Zapisywanie...",
+    "business_profile_saved": "Dane firmy zapisane. Oczekuj na weryfikację.",
+    "business_profile_failed": "Nie udało się pobrać lub zapisać danych firmy.",
+    "business_profile_required": "Wypełnij poprawnie wymagane pole.",
+    "business_profile_country_invalid":
+        "Kraj firmy jest nieprawidłowy. Skontaktuj się z pomocą.",
+    "business_profile_review_note": "Uwagi weryfikatora",
+    "business_profile_vat_optional":
+        "Nie masz VAT? Możesz złożyć wniosek, podając inne dane działalności.",
+    "business_profile_status_none": "Nie przesłano danych firmy",
+    "business_profile_status_pending": "Oczekuje na weryfikację",
+    "business_profile_status_needs_info": "Wymagane dodatkowe informacje",
+    "business_profile_status_verified": "Firma zweryfikowana",
+    "business_profile_status_rejected": "Weryfikacja odrzucona",
+    "business_profile_attestation_required":
+        "Potwierdź, że działasz jako firma.",
+
+    "b2b_only":
+        "Abonamenty Flotaryx są obecnie dostępne wyłącznie dla klientów biznesowych.",
+    "b2b_confirmation":
+        "Potwierdzam, że kupuję abonament Flotaryx dla firmy, w celach związanych z prowadzoną działalnością, a nie jako konsument.",
+    "notification_test_email_only":
+        "Tryb testowy: automatyczne wiadomości mogą trafiać wyłącznie na Twój adres e-mail zapisany w Resend. Harmonogram skonfigurujemy osobno.",
     "email_smoke_title": "Test wysyłki e-mail",
     "email_smoke_button": "Wyślij testowego e-maila",
-    "email_smoke_description": "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do Flotaryx na ten sam adres.",
+    "email_smoke_description":
+        "Wiadomość trafi wyłącznie na adres testowy Resend. Zaloguj się do Flotaryx na ten sam adres.",
     "email_smoke_sending": "Wysyłanie...",
     "email_smoke_accepted":
         "Resend przyjął wiadomość. Sprawdź skrzynkę oraz Spam.",
-    "email_smoke_failed": "Nie udało się wysłać. Sprawdź, czy e-mail logowania jest zgodny z RESEND_TEST_EMAIL, oraz logi Edge Function.",
+    "email_smoke_failed":
+        "Nie udało się wysłać. Sprawdź, czy e-mail logowania jest zgodny z RESEND_TEST_EMAIL, oraz logi Edge Function.",
     "notifications": "Powiadomienia",
     "notification_sign_in": "Zaloguj się ponownie.",
     "notification_error": "Błąd powiadomień",
@@ -71,13 +109,16 @@ final Map<String, Map<String, String>> _translations = {
     "notification_service": "Serwis",
     "notification_email": "Powiadomienia e-mail",
     "notification_email_soon": "Wysyłkę e-mail uruchomimy w kolejnym etapie.",
-    "notification_schedule_pending": "Automatyczne tworzenie alertów według harmonogramu nie jest jeszcze włączone.",
+    "notification_schedule_pending":
+        "Automatyczne tworzenie alertów według harmonogramu nie jest jeszcze włączone.",
     "walkaround_checks": "Kontrola pojazdu",
     "walkaround_checks_subtitle":
         "Kontrola przed i po trasie, zgłaszanie usterek",
     "check_intro": "Sprawdź każdy punkt przed zapisaniem kontroli.",
-    "check_plan_unavailable": "Kontrole kierowców wymagają aktywnego okresu próbnego lub planu Pro/Business.",
-    "check_not_assigned": "Aby zapisać kontrolę, kierowca musi mieć konto powiązane z przypisanym do niego pojazdem. Menedżerowie mogą przeprowadzać kontrole wszystkich pojazdów.",
+    "check_plan_unavailable":
+        "Kontrole kierowców wymagają aktywnego okresu próbnego lub planu Pro/Business.",
+    "check_not_assigned":
+        "Aby zapisać kontrolę, kierowca musi mieć konto powiązane z przypisanym do niego pojazdem. Menedżerowie mogą przeprowadzać kontrole wszystkich pojazdów.",
     "check_type_label": "Rodzaj kontroli",
     "check_pre_trip": "Przed trasą",
     "check_post_trip": "Po trasie",
@@ -252,7 +293,8 @@ final Map<String, Map<String, String>> _translations = {
         "Dodaj pierwszy pojazd, aby rozpocząć zarządzanie flotą.",
     "edit": "Edytuj",
     "archive_vehicle_q": "Zarchiwizować pojazd?",
-    "archive_vehicle_message": "Pojazd zniknie z aktywnych list, ale jego historia zostanie zachowana.",
+    "archive_vehicle_message":
+        "Pojazd zniknie z aktywnych list, ale jego historia zostanie zachowana.",
     "cancel": "Anuluj",
     "archive": "Archiwizuj",
     "registration": "Numer rejestracyjny *",
@@ -337,7 +379,8 @@ final Map<String, Map<String, String>> _translations = {
     "no_garages_yet": "Brak warsztatów",
     "no_garages_message": "Dodaj warsztaty, aby przypisywać je do napraw.",
     "create_your_fleet": "Utwórz swoją flotę",
-    "workspace_message": "Dane floty Twojej firmy są bezpiecznie oddzielone od danych innych firm.",
+    "workspace_message":
+        "Dane floty Twojej firmy są bezpiecznie oddzielone od danych innych firm.",
     "company_name": "Nazwa firmy",
     "country_code": "Kod kraju",
     "currency_gbp": "GBP — funt brytyjski",
@@ -349,16 +392,54 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
-    "b2b_only": "Flotaryx subscriptions are currently available to business customers only.",
-    "b2b_confirmation": "I confirm that I am purchasing a Flotaryx subscription for business purposes, not as a consumer.",
-    "notification_test_email_only": "Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.",
+    "business_profile_title": "Business details and verification",
+    "business_profile_subtitle":
+        "Provide your business details. Verification is required before live payments.",
+    "business_profile_legal": "Legal business name",
+    "business_profile_reg": "Business registration number (optional)",
+    "business_profile_vat": "VAT number (optional)",
+    "business_profile_address1": "Address line 1",
+    "business_profile_address2": "Address line 2 (optional)",
+    "business_profile_city": "City",
+    "business_profile_region": "State / region (optional)",
+    "business_profile_postcode": "Postcode / ZIP",
+    "business_profile_activity": "Business activity (optional)",
+    "business_profile_evidence":
+        "Public business register link or other evidence (optional)",
+    "business_profile_country": "Company billing country",
+    "business_profile_submit": "Submit for verification",
+    "business_profile_saving": "Saving...",
+    "business_profile_saved": "Business details saved. Await verification.",
+    "business_profile_failed": "Could not load or save business details.",
+    "business_profile_required": "Complete this required field.",
+    "business_profile_country_invalid":
+        "The business country is invalid. Contact support.",
+    "business_profile_review_note": "Reviewer notes",
+    "business_profile_vat_optional":
+        "No VAT number? You can apply using other evidence of business activity.",
+    "business_profile_status_none": "Not submitted",
+    "business_profile_status_pending": "Pending verification",
+    "business_profile_status_needs_info": "More information required",
+    "business_profile_status_verified": "Business verified",
+    "business_profile_status_rejected": "Verification rejected",
+    "business_profile_attestation_required":
+        "Confirm that you are acting as a business.",
+
+    "b2b_only":
+        "Flotaryx subscriptions are currently available to business customers only.",
+    "b2b_confirmation":
+        "I confirm that I am purchasing a Flotaryx subscription for business purposes, not as a consumer.",
+    "notification_test_email_only":
+        "Test mode: automatic emails can only go to your Resend account email. The daily schedule is configured separately.",
     "email_smoke_title": "Email delivery test",
     "email_smoke_button": "Send test email",
-    "email_smoke_description": "The message goes only to the Resend test address. Sign in to Flotaryx with that same email.",
+    "email_smoke_description":
+        "The message goes only to the Resend test address. Sign in to Flotaryx with that same email.",
     "email_smoke_sending": "Sending...",
     "email_smoke_accepted":
         "Resend accepted the message. Check your inbox and spam folder.",
-    "email_smoke_failed": "Sending failed. Ensure your login email matches RESEND_TEST_EMAIL and check the Edge Function logs.",
+    "email_smoke_failed":
+        "Sending failed. Ensure your login email matches RESEND_TEST_EMAIL and check the Edge Function logs.",
     "notifications": "Notifications",
     "notification_sign_in": "Please sign in again.",
     "notification_error": "Notification error",
@@ -393,7 +474,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Inspect every item before submitting the check.",
     "check_plan_unavailable":
         "Driver checks require an active trial or Pro/Business plan.",
-    "check_not_assigned": "To submit a check, your account must be linked to the driver assigned to this vehicle. Managers can inspect any vehicle.",
+    "check_not_assigned":
+        "To submit a check, your account must be linked to the driver assigned to this vehicle. Managers can inspect any vehicle.",
     "check_type_label": "Check type",
     "check_pre_trip": "Pre-trip",
     "check_post_trip": "Post-trip",
@@ -563,10 +645,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "All statuses",
     "no_vehicles_yet": "No vehicles yet",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Edit",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancel",
     "archive": "Archive",
     "registration": "Registration *",
@@ -602,7 +686,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Save driver",
     "no_drivers_yet": "No drivers yet",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Add issue",
     "edit_issue": "Edit issue",
     "select_vehicle": "Select a vehicle",
@@ -664,16 +749,55 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
-    "b2b_only": "Flotaryx-Abonnements sind derzeit ausschließlich für Geschäftskunden verfügbar.",
-    "b2b_confirmation": "Ich bestätige, dass ich das Flotaryx-Abonnement für geschäftliche Zwecke und nicht als Verbraucher kaufe.",
-    "notification_test_email_only": "Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.",
+    "business_profile_title": "Firmendaten und Prüfung",
+    "business_profile_subtitle":
+        "Geben Sie Ihre Firmendaten ein. Vor Live-Zahlungen ist eine Prüfung erforderlich.",
+    "business_profile_legal": "Rechtlicher Firmenname",
+    "business_profile_reg": "Handelsregisternummer (optional)",
+    "business_profile_vat": "USt-IdNr. (optional)",
+    "business_profile_address1": "Adresszeile 1",
+    "business_profile_address2": "Adresszeile 2 (optional)",
+    "business_profile_city": "Stadt",
+    "business_profile_region": "Bundesland / Region (optional)",
+    "business_profile_postcode": "Postleitzahl",
+    "business_profile_activity": "Geschäftstätigkeit (optional)",
+    "business_profile_evidence":
+        "Link zum Firmenregister oder anderer Nachweis (optional)",
+    "business_profile_country": "Rechnungsland der Firma",
+    "business_profile_submit": "Zur Prüfung einreichen",
+    "business_profile_saving": "Wird gespeichert...",
+    "business_profile_saved": "Firmendaten gespeichert. Prüfung steht aus.",
+    "business_profile_failed":
+        "Firmendaten konnten nicht geladen oder gespeichert werden.",
+    "business_profile_required": "Pflichtfeld bitte ausfüllen.",
+    "business_profile_country_invalid":
+        "Ungültiges Firmenland. Bitte Support kontaktieren.",
+    "business_profile_review_note": "Hinweise der Prüfstelle",
+    "business_profile_vat_optional":
+        "Keine USt-IdNr.? Andere Nachweise der Geschäftstätigkeit sind möglich.",
+    "business_profile_status_none": "Nicht eingereicht",
+    "business_profile_status_pending": "Prüfung ausstehend",
+    "business_profile_status_needs_info": "Weitere Angaben erforderlich",
+    "business_profile_status_verified": "Firma geprüft",
+    "business_profile_status_rejected": "Prüfung abgelehnt",
+    "business_profile_attestation_required":
+        "Bestätigen Sie, dass Sie geschäftlich handeln.",
+
+    "b2b_only":
+        "Flotaryx-Abonnements sind derzeit ausschließlich für Geschäftskunden verfügbar.",
+    "b2b_confirmation":
+        "Ich bestätige, dass ich das Flotaryx-Abonnement für geschäftliche Zwecke und nicht als Verbraucher kaufe.",
+    "notification_test_email_only":
+        "Testmodus: Automatische E-Mails gehen nur an Ihre Resend-Kontoadresse. Der Zeitplan wird separat eingerichtet.",
     "email_smoke_title": "E-Mail-Versandtest",
     "email_smoke_button": "Test-E-Mail senden",
-    "email_smoke_description": "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei Flotaryx an.",
+    "email_smoke_description":
+        "Die Nachricht geht nur an die Resend-Testadresse. Melde dich mit derselben E-Mail bei Flotaryx an.",
     "email_smoke_sending": "Wird gesendet...",
     "email_smoke_accepted":
         "Resend hat die Nachricht angenommen. Prüfe Posteingang und Spam.",
-    "email_smoke_failed": "Senden fehlgeschlagen. Prüfe, ob die Anmeldeadresse mit RESEND_TEST_EMAIL übereinstimmt, und die Funktionsprotokolle.",
+    "email_smoke_failed":
+        "Senden fehlgeschlagen. Prüfe, ob die Anmeldeadresse mit RESEND_TEST_EMAIL übereinstimmt, und die Funktionsprotokolle.",
     "notifications": "Benachrichtigungen",
     "notification_sign_in": "Bitte erneut anmelden.",
     "notification_error": "Benachrichtigungsfehler",
@@ -707,7 +831,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Vor dem Speichern jeden Punkt überprüfen.",
     "check_plan_unavailable":
         "Fahrerkontrollen erfordern eine aktive Testphase oder Pro/Business.",
-    "check_not_assigned": "Ihr Konto muss dem zugewiesenen Fahrer zugeordnet sein. Manager dürfen alle Fahrzeuge prüfen.",
+    "check_not_assigned":
+        "Ihr Konto muss dem zugewiesenen Fahrer zugeordnet sein. Manager dürfen alle Fahrzeuge prüfen.",
     "check_type_label": "Kontrolltyp",
     "check_pre_trip": "Vor der Fahrt",
     "check_post_trip": "Nach der Fahrt",
@@ -877,7 +1002,8 @@ final Map<String, Map<String, String>> _translations = {
         "Fügen Sie Ihr erstes Fahrzeug hinzu, um die Flotte zu verwalten.",
     "edit": "Bearbeiten",
     "archive_vehicle_q": "Fahrzeug archivieren?",
-    "archive_vehicle_message": "Das Fahrzeug wird aus aktiven Listen entfernt, die Historie bleibt erhalten.",
+    "archive_vehicle_message":
+        "Das Fahrzeug wird aus aktiven Listen entfernt, die Historie bleibt erhalten.",
     "cancel": "Abbrechen",
     "archive": "Archivieren",
     "registration": "Kennzeichen *",
@@ -964,7 +1090,8 @@ final Map<String, Map<String, String>> _translations = {
     "no_garages_message":
         "Fügen Sie Werkstätten hinzu, um sie Reparaturen zuzuordnen.",
     "create_your_fleet": "Ihre Flotte erstellen",
-    "workspace_message": "Die Flottendaten Ihres Unternehmens sind sicher von anderen Unternehmen getrennt.",
+    "workspace_message":
+        "Die Flottendaten Ihres Unternehmens sind sicher von anderen Unternehmen getrennt.",
     "company_name": "Unternehmensname",
     "country_code": "Ländercode",
     "currency_gbp": "GBP — Britisches Pfund",
@@ -976,16 +1103,54 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
-    "b2b_only": "Predplatné Flotaryx je momentálne dostupné iba pre firemných zákazníkov.",
-    "b2b_confirmation": "Potvrdzujem, že predplatné Flotaryx kupujem na podnikateľské účely, nie ako spotrebiteľ.",
-    "notification_test_email_only": "Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.",
+    "business_profile_title": "Údaje o firme a overenie",
+    "business_profile_subtitle":
+        "Vyplňte údaje o firme. Pred ostrou platbou sa vyžaduje overenie.",
+    "business_profile_legal": "Oficiálny názov firmy",
+    "business_profile_reg": "Registračné číslo firmy (nepovinné)",
+    "business_profile_vat": "IČ DPH (nepovinné)",
+    "business_profile_address1": "Adresa – riadok 1",
+    "business_profile_address2": "Adresa – riadok 2 (nepovinné)",
+    "business_profile_city": "Mesto",
+    "business_profile_region": "Kraj / región (nepovinné)",
+    "business_profile_postcode": "PSČ",
+    "business_profile_activity": "Opis podnikania (nepovinné)",
+    "business_profile_evidence":
+        "Odkaz na obchodný register alebo iný dôkaz (nepovinné)",
+    "business_profile_country": "Krajina fakturácie",
+    "business_profile_submit": "Odoslať na overenie",
+    "business_profile_saving": "Ukladanie...",
+    "business_profile_saved": "Údaje uložené. Počkajte na overenie.",
+    "business_profile_failed":
+        "Údaje o firme sa nepodarilo načítať alebo uložiť.",
+    "business_profile_required": "Vyplňte povinné pole.",
+    "business_profile_country_invalid":
+        "Neplatná krajina firmy. Kontaktujte podporu.",
+    "business_profile_review_note": "Poznámky overovateľa",
+    "business_profile_vat_optional":
+        "Nemáte IČ DPH? Môžete doložiť iné dôkazy o podnikaní.",
+    "business_profile_status_none": "Neodoslané",
+    "business_profile_status_pending": "Čaká na overenie",
+    "business_profile_status_needs_info": "Potrebné ďalšie údaje",
+    "business_profile_status_verified": "Firma overená",
+    "business_profile_status_rejected": "Overenie zamietnuté",
+    "business_profile_attestation_required": "Potvrďte, že konáte ako firma.",
+
+    "b2b_only":
+        "Predplatné Flotaryx je momentálne dostupné iba pre firemných zákazníkov.",
+    "b2b_confirmation":
+        "Potvrdzujem, že predplatné Flotaryx kupujem na podnikateľské účely, nie ako spotrebiteľ.",
+    "notification_test_email_only":
+        "Testovací režim: automatické e-maily idú len na adresu účtu Resend. Plán sa nastavuje samostatne.",
     "email_smoke_title": "Test odosielania e-mailu",
     "email_smoke_button": "Odoslať testovací e-mail",
-    "email_smoke_description": "Správa sa odošle iba na testovaciu adresu Resend. Prihlás sa s rovnakým e-mailom.",
+    "email_smoke_description":
+        "Správa sa odošle iba na testovaciu adresu Resend. Prihlás sa s rovnakým e-mailom.",
     "email_smoke_sending": "Odosielanie...",
     "email_smoke_accepted":
         "Resend prijal správu. Skontroluj doručenú poštu a spam.",
-    "email_smoke_failed": "Odoslanie zlyhalo. Over zhodu prihlasovacieho e-mailu s RESEND_TEST_EMAIL a protokoly funkcie.",
+    "email_smoke_failed":
+        "Odoslanie zlyhalo. Over zhodu prihlasovacieho e-mailu s RESEND_TEST_EMAIL a protokoly funkcie.",
     "notifications": "Upozornenia",
     "notification_sign_in": "Prihláste sa znova.",
     "notification_error": "Chyba upozornení",
@@ -1016,8 +1181,10 @@ final Map<String, Map<String, String>> _translations = {
     "walkaround_checks": "Kontrola vozidla",
     "walkaround_checks_subtitle": "Kontroly pred a po jazde, hlásenie závad",
     "check_intro": "Pred uložením skontrolujte každý bod.",
-    "check_plan_unavailable": "Kontroly vodičov vyžadujú aktívne skúšobné obdobie alebo Pro/Business.",
-    "check_not_assigned": "Účet musí byť prepojený s vodičom prideleným vozidlu. Manažéri môžu kontrolovať všetky vozidlá.",
+    "check_plan_unavailable":
+        "Kontroly vodičov vyžadujú aktívne skúšobné obdobie alebo Pro/Business.",
+    "check_not_assigned":
+        "Účet musí byť prepojený s vodičom prideleným vozidlu. Manažéri môžu kontrolovať všetky vozidlá.",
     "check_type_label": "Typ kontroly",
     "check_pre_trip": "Pred jazdou",
     "check_post_trip": "Po jazde",
@@ -1182,10 +1349,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Všetky stavy",
     "no_vehicles_yet": "Zatiaľ žiadne vozidlá",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Upraviť",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Zrušiť",
     "archive": "Archivovať",
     "registration": "Evidenčné číslo *",
@@ -1221,7 +1390,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Uložiť vodiča",
     "no_drivers_yet": "Zatiaľ žiadni vodiči",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Pridať poruchu",
     "edit_issue": "Upraviť poruchu",
     "select_vehicle": "Vybrať vozidlo",
@@ -1283,17 +1453,53 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
+    "business_profile_title": "Údaje o firmě a ověření",
+    "business_profile_subtitle":
+        "Vyplňte údaje o firmě. Před ostrou platbou je nutné ověření.",
+    "business_profile_legal": "Oficiální název firmy",
+    "business_profile_reg": "Registrační číslo firmy (nepovinné)",
+    "business_profile_vat": "DIČ (nepovinné)",
+    "business_profile_address1": "Adresa – řádek 1",
+    "business_profile_address2": "Adresa – řádek 2 (nepovinné)",
+    "business_profile_city": "Město",
+    "business_profile_region": "Kraj / region (nepovinné)",
+    "business_profile_postcode": "PSČ",
+    "business_profile_activity": "Popis podnikání (nepovinné)",
+    "business_profile_evidence":
+        "Odkaz na obchodní rejstřík nebo jiný doklad (nepovinné)",
+    "business_profile_country": "Země fakturace",
+    "business_profile_submit": "Odeslat k ověření",
+    "business_profile_saving": "Ukládání...",
+    "business_profile_saved": "Údaje uloženy. Čekejte na ověření.",
+    "business_profile_failed": "Údaje firmy se nepodařilo načíst nebo uložit.",
+    "business_profile_required": "Vyplňte povinné pole.",
+    "business_profile_country_invalid":
+        "Neplatná země firmy. Kontaktujte podporu.",
+    "business_profile_review_note": "Poznámky ověřovatele",
+    "business_profile_vat_optional":
+        "Nemáte DIČ? Můžete doložit jiné podklady o podnikání.",
+    "business_profile_status_none": "Neodesláno",
+    "business_profile_status_pending": "Čeká na ověření",
+    "business_profile_status_needs_info": "Je třeba doplnit údaje",
+    "business_profile_status_verified": "Firma ověřena",
+    "business_profile_status_rejected": "Ověření zamítnuto",
+    "business_profile_attestation_required": "Potvrďte, že jednáte za firmu.",
+
     "b2b_only":
         "Předplatné Flotaryx je nyní dostupné pouze firemním zákazníkům.",
-    "b2b_confirmation": "Potvrzuji, že předplatné Flotaryx kupuji pro podnikatelské účely, nikoli jako spotřebitel.",
-    "notification_test_email_only": "Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.",
+    "b2b_confirmation":
+        "Potvrzuji, že předplatné Flotaryx kupuji pro podnikatelské účely, nikoli jako spotřebitel.",
+    "notification_test_email_only":
+        "Testovací režim: automatické e-maily chodí jen na adresu účtu Resend. Plán se nastavuje zvlášť.",
     "email_smoke_title": "Test odesílání e-mailu",
     "email_smoke_button": "Odeslat testovací e-mail",
-    "email_smoke_description": "Zpráva odejde pouze na testovací adresu Resend. Přihlas se stejným e-mailem.",
+    "email_smoke_description":
+        "Zpráva odejde pouze na testovací adresu Resend. Přihlas se stejným e-mailem.",
     "email_smoke_sending": "Odesílání...",
     "email_smoke_accepted":
         "Resend zprávu přijal. Zkontroluj doručenou poštu a spam.",
-    "email_smoke_failed": "Odeslání selhalo. Ověř shodu přihlašovacího e-mailu s RESEND_TEST_EMAIL a protokoly funkce.",
+    "email_smoke_failed":
+        "Odeslání selhalo. Ověř shodu přihlašovacího e-mailu s RESEND_TEST_EMAIL a protokoly funkce.",
     "notifications": "Oznámení",
     "notification_sign_in": "Přihlaste se znovu.",
     "notification_error": "Chyba oznámení",
@@ -1326,7 +1532,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Před uložením zkontrolujte každý bod.",
     "check_plan_unavailable":
         "Kontroly řidičů vyžadují aktivní zkušební období nebo Pro/Business.",
-    "check_not_assigned": "Účet musí být propojen s přiřazeným řidičem. Manažeři mohou kontrolovat všechna vozidla.",
+    "check_not_assigned":
+        "Účet musí být propojen s přiřazeným řidičem. Manažeři mohou kontrolovat všechna vozidla.",
     "check_type_label": "Typ kontroly",
     "check_pre_trip": "Před jízdou",
     "check_post_trip": "Po jízdě",
@@ -1491,10 +1698,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Všechny stavy",
     "no_vehicles_yet": "Zatím žádná vozidla",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Upravit",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Zrušit",
     "archive": "Archivovat",
     "registration": "Registrační značka *",
@@ -1530,7 +1739,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Uložit řidiče",
     "no_drivers_yet": "Zatím žádní řidiči",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Přidat závadu",
     "edit_issue": "Upravit závadu",
     "select_vehicle": "Vybrat vozidlo",
@@ -1592,16 +1802,55 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
-    "b2b_only": "A Flotaryx-előfizetések jelenleg kizárólag üzleti ügyfelek számára érhetők el.",
-    "b2b_confirmation": "Megerősítem, hogy a Flotaryx-előfizetést üzleti célra vásárolom, nem fogyasztóként.",
-    "notification_test_email_only": "Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.",
+    "business_profile_title": "Cégadatok és ellenőrzés",
+    "business_profile_subtitle":
+        "Adja meg cége adatait. Éles fizetés előtt ellenőrzés szükséges.",
+    "business_profile_legal": "Hivatalos cégnév",
+    "business_profile_reg": "Cégjegyzékszám (nem kötelező)",
+    "business_profile_vat": "ÁFA-azonosító (nem kötelező)",
+    "business_profile_address1": "Cím 1. sora",
+    "business_profile_address2": "Cím 2. sora (nem kötelező)",
+    "business_profile_city": "Város",
+    "business_profile_region": "Megye / régió (nem kötelező)",
+    "business_profile_postcode": "Irányítószám",
+    "business_profile_activity": "Üzleti tevékenység (nem kötelező)",
+    "business_profile_evidence":
+        "Cégnyilvántartási link vagy egyéb bizonyíték (nem kötelező)",
+    "business_profile_country": "Számlázási ország",
+    "business_profile_submit": "Beküldés ellenőrzésre",
+    "business_profile_saving": "Mentés...",
+    "business_profile_saved": "Cégadatok mentve. Ellenőrzésre vár.",
+    "business_profile_failed":
+        "Nem sikerült a cégadatokat betölteni vagy menteni.",
+    "business_profile_required": "Töltse ki a kötelező mezőt.",
+    "business_profile_country_invalid":
+        "Érvénytelen cégország. Forduljon az ügyfélszolgálathoz.",
+    "business_profile_review_note": "Ellenőrző megjegyzései",
+    "business_profile_vat_optional":
+        "Nincs ÁFA-száma? Más üzleti igazolást is megadhat.",
+    "business_profile_status_none": "Nincs beküldve",
+    "business_profile_status_pending": "Ellenőrzésre vár",
+    "business_profile_status_needs_info": "További adatok szükségesek",
+    "business_profile_status_verified": "Cég ellenőrizve",
+    "business_profile_status_rejected": "Ellenőrzés elutasítva",
+    "business_profile_attestation_required":
+        "Erősítse meg, hogy vállalkozásként jár el.",
+
+    "b2b_only":
+        "A Flotaryx-előfizetések jelenleg kizárólag üzleti ügyfelek számára érhetők el.",
+    "b2b_confirmation":
+        "Megerősítem, hogy a Flotaryx-előfizetést üzleti célra vásárolom, nem fogyasztóként.",
+    "notification_test_email_only":
+        "Tesztmód: automatikus e-mail csak a Resend-fiók címére küldhető. Az ütemezést külön állítjuk be.",
     "email_smoke_title": "E-mail-küldés tesztje",
     "email_smoke_button": "Teszt e-mail küldése",
-    "email_smoke_description": "Az üzenet csak a Resend tesztcímére megy. Ugyanazzal az e-mail-címmel jelentkezz be.",
+    "email_smoke_description":
+        "Az üzenet csak a Resend tesztcímére megy. Ugyanazzal az e-mail-címmel jelentkezz be.",
     "email_smoke_sending": "Küldés...",
     "email_smoke_accepted":
         "A Resend elfogadta az üzenetet. Ellenőrizd a bejövő és spam mappát.",
-    "email_smoke_failed": "A küldés sikertelen. Ellenőrizd a belépési e-mail és a RESEND_TEST_EMAIL egyezését, valamint a függvénynaplókat.",
+    "email_smoke_failed":
+        "A küldés sikertelen. Ellenőrizd a belépési e-mail és a RESEND_TEST_EMAIL egyezését, valamint a függvénynaplókat.",
     "notifications": "Értesítések",
     "notification_sign_in": "Jelentkezz be újra.",
     "notification_error": "Értesítési hiba",
@@ -1635,7 +1884,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Mentés előtt ellenőrizzen minden pontot.",
     "check_plan_unavailable":
         "A járműellenőrzéshez aktív próbaidő vagy Pro/Business csomag kell.",
-    "check_not_assigned": "A fióknak a járműhöz rendelt sofőrhöz kell tartoznia. A vezetők minden járművet ellenőrizhetnek.",
+    "check_not_assigned":
+        "A fióknak a járműhöz rendelt sofőrhöz kell tartoznia. A vezetők minden járművet ellenőrizhetnek.",
     "check_type_label": "Ellenőrzés típusa",
     "check_pre_trip": "Indulás előtt",
     "check_post_trip": "Út után",
@@ -1801,10 +2051,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Minden állapot",
     "no_vehicles_yet": "Még nincs jármű",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Szerkesztés",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Mégse",
     "archive": "Archiválás",
     "registration": "Rendszám *",
@@ -1840,7 +2092,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Sofőr mentése",
     "no_drivers_yet": "Még nincs sofőr",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Hiba hozzáadása",
     "edit_issue": "Hiba szerkesztése",
     "select_vehicle": "Jármű kiválasztása",
@@ -1902,16 +2155,55 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
-    "b2b_only": "Abonamentele Flotaryx sunt disponibile în prezent doar clienților comerciali.",
-    "b2b_confirmation": "Confirm că achiziționez un abonament Flotaryx în scopuri profesionale, nu în calitate de consumator.",
-    "notification_test_email_only": "Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.",
+    "business_profile_title": "Datele firmei și verificare",
+    "business_profile_subtitle":
+        "Completați datele firmei. Verificarea este necesară înaintea plăților reale.",
+    "business_profile_legal": "Denumirea legală a firmei",
+    "business_profile_reg": "Număr de înregistrare (opțional)",
+    "business_profile_vat": "Cod TVA (opțional)",
+    "business_profile_address1": "Adresă – linia 1",
+    "business_profile_address2": "Adresă – linia 2 (opțional)",
+    "business_profile_city": "Oraș",
+    "business_profile_region": "Județ / regiune (opțional)",
+    "business_profile_postcode": "Cod poștal",
+    "business_profile_activity": "Activitate comercială (opțional)",
+    "business_profile_evidence":
+        "Link la registrul firmelor sau alte dovezi (opțional)",
+    "business_profile_country": "Țara de facturare",
+    "business_profile_submit": "Trimite pentru verificare",
+    "business_profile_saving": "Se salvează...",
+    "business_profile_saved": "Datele au fost salvate. Așteptați verificarea.",
+    "business_profile_failed": "Nu s-au putut încărca sau salva datele firmei.",
+    "business_profile_required": "Completați câmpul obligatoriu.",
+    "business_profile_country_invalid":
+        "Țara firmei este invalidă. Contactați asistența.",
+    "business_profile_review_note": "Notele verificatorului",
+    "business_profile_vat_optional":
+        "Nu aveți cod TVA? Puteți furniza alte dovezi ale activității.",
+    "business_profile_status_none": "Netrimis",
+    "business_profile_status_pending": "În curs de verificare",
+    "business_profile_status_needs_info":
+        "Sunt necesare informații suplimentare",
+    "business_profile_status_verified": "Firmă verificată",
+    "business_profile_status_rejected": "Verificare respinsă",
+    "business_profile_attestation_required":
+        "Confirmați că acționați ca firmă.",
+
+    "b2b_only":
+        "Abonamentele Flotaryx sunt disponibile în prezent doar clienților comerciali.",
+    "b2b_confirmation":
+        "Confirm că achiziționez un abonament Flotaryx în scopuri profesionale, nu în calitate de consumator.",
+    "notification_test_email_only":
+        "Mod test: e-mailurile automate ajung doar la adresa contului Resend. Programarea se configurează separat.",
     "email_smoke_title": "Test trimitere e-mail",
     "email_smoke_button": "Trimite e-mail de test",
-    "email_smoke_description": "Mesajul merge doar la adresa de test Resend. Autentifică-te în Flotaryx cu aceeași adresă.",
+    "email_smoke_description":
+        "Mesajul merge doar la adresa de test Resend. Autentifică-te în Flotaryx cu aceeași adresă.",
     "email_smoke_sending": "Se trimite...",
     "email_smoke_accepted":
         "Resend a acceptat mesajul. Verifică Inbox și Spam.",
-    "email_smoke_failed": "Trimiterea a eșuat. Verifică dacă e-mailul de conectare coincide cu RESEND_TEST_EMAIL și jurnalele funcției.",
+    "email_smoke_failed":
+        "Trimiterea a eșuat. Verifică dacă e-mailul de conectare coincide cu RESEND_TEST_EMAIL și jurnalele funcției.",
     "notifications": "Notificări",
     "notification_sign_in": "Autentifică-te din nou.",
     "notification_error": "Eroare notificări",
@@ -1945,7 +2237,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Verificați fiecare punct înainte de trimitere.",
     "check_plan_unavailable":
         "Verificările necesită o perioadă de probă activă sau Pro/Business.",
-    "check_not_assigned": "Contul trebuie asociat șoferului alocat. Managerii pot verifica orice vehicul.",
+    "check_not_assigned":
+        "Contul trebuie asociat șoferului alocat. Managerii pot verifica orice vehicul.",
     "check_type_label": "Tip verificare",
     "check_pre_trip": "Înainte de cursă",
     "check_post_trip": "După cursă",
@@ -2110,10 +2403,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Toate stările",
     "no_vehicles_yet": "Nu există vehicule",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Editează",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Anulează",
     "archive": "Arhivează",
     "registration": "Număr de înmatriculare *",
@@ -2149,7 +2444,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Salvează șofer",
     "no_drivers_yet": "Nu există șoferi",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Adaugă problemă",
     "edit_issue": "Editează problema",
     "select_vehicle": "Selectează vehicul",
@@ -2211,16 +2507,53 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
-    "b2b_only": "Las suscripciones de Flotaryx están disponibles actualmente solo para clientes empresariales.",
-    "b2b_confirmation": "Confirmo que compro una suscripción de Flotaryx con fines empresariales y no como consumidor.",
-    "notification_test_email_only": "Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.",
+    "business_profile_title": "Datos de empresa y verificación",
+    "business_profile_subtitle":
+        "Complete los datos de su empresa. Debe verificarse antes de pagar en producción.",
+    "business_profile_legal": "Nombre legal de la empresa",
+    "business_profile_reg": "Número de registro (opcional)",
+    "business_profile_vat": "Número de IVA (opcional)",
+    "business_profile_address1": "Dirección, línea 1",
+    "business_profile_address2": "Dirección, línea 2 (opcional)",
+    "business_profile_city": "Ciudad",
+    "business_profile_region": "Provincia / región (opcional)",
+    "business_profile_postcode": "Código postal",
+    "business_profile_activity": "Actividad comercial (opcional)",
+    "business_profile_evidence":
+        "Enlace al registro mercantil u otra prueba (opcional)",
+    "business_profile_country": "País de facturación",
+    "business_profile_submit": "Enviar para verificación",
+    "business_profile_saving": "Guardando...",
+    "business_profile_saved": "Datos guardados. Pendiente de verificación.",
+    "business_profile_failed": "No se pudieron cargar o guardar los datos.",
+    "business_profile_required": "Complete este campo obligatorio.",
+    "business_profile_country_invalid":
+        "País de empresa no válido. Contacte con soporte.",
+    "business_profile_review_note": "Notas del verificador",
+    "business_profile_vat_optional":
+        "¿Sin IVA? Puede aportar otras pruebas de actividad empresarial.",
+    "business_profile_status_none": "Sin enviar",
+    "business_profile_status_pending": "Pendiente de verificación",
+    "business_profile_status_needs_info": "Se requiere más información",
+    "business_profile_status_verified": "Empresa verificada",
+    "business_profile_status_rejected": "Verificación rechazada",
+    "business_profile_attestation_required": "Confirme que actúa como empresa.",
+
+    "b2b_only":
+        "Las suscripciones de Flotaryx están disponibles actualmente solo para clientes empresariales.",
+    "b2b_confirmation":
+        "Confirmo que compro una suscripción de Flotaryx con fines empresariales y no como consumidor.",
+    "notification_test_email_only":
+        "Modo de prueba: solo se envían correos a tu dirección de Resend. El horario se configura por separado.",
     "email_smoke_title": "Prueba de envío de correo",
     "email_smoke_button": "Enviar correo de prueba",
-    "email_smoke_description": "El mensaje solo llegará al correo de prueba de Resend. Accede a Flotaryx con esa misma dirección.",
+    "email_smoke_description":
+        "El mensaje solo llegará al correo de prueba de Resend. Accede a Flotaryx con esa misma dirección.",
     "email_smoke_sending": "Enviando...",
     "email_smoke_accepted":
         "Resend aceptó el mensaje. Revisa la bandeja de entrada y el spam.",
-    "email_smoke_failed": "Error al enviar. Comprueba que tu correo de inicio de sesión coincida con RESEND_TEST_EMAIL y los registros de la función.",
+    "email_smoke_failed":
+        "Error al enviar. Comprueba que tu correo de inicio de sesión coincida con RESEND_TEST_EMAIL y los registros de la función.",
     "notifications": "Notificaciones",
     "notification_sign_in": "Inicia sesión otra vez.",
     "notification_error": "Error de notificaciones",
@@ -2253,7 +2586,8 @@ final Map<String, Map<String, String>> _translations = {
         "Revisiones antes y después del viaje, incidencias",
     "check_intro": "Comprueba cada punto antes de enviar.",
     "check_plan_unavailable": "Requiere prueba activa o plan Pro/Business.",
-    "check_not_assigned": "Tu cuenta debe vincularse al conductor asignado. Los gestores pueden revisar cualquier vehículo.",
+    "check_not_assigned":
+        "Tu cuenta debe vincularse al conductor asignado. Los gestores pueden revisar cualquier vehículo.",
     "check_type_label": "Tipo de revisión",
     "check_pre_trip": "Antes del viaje",
     "check_post_trip": "Después del viaje",
@@ -2422,7 +2756,8 @@ final Map<String, Map<String, String>> _translations = {
         "Añade tu primer vehículo para empezar a gestionar la flota.",
     "edit": "Editar",
     "archive_vehicle_q": "¿Archivar vehículo?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancelar",
     "archive": "Archivar",
     "registration": "Matrícula *",
@@ -2458,7 +2793,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Referencia del empleado",
     "save_driver": "Guardar conductor",
     "no_drivers_yet": "Aún no hay conductores",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Añadir incidencia",
     "edit_issue": "Editar incidencia",
     "select_vehicle": "Seleccionar vehículo",
@@ -2521,15 +2857,57 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
-    "b2b_only": "Les abonnements Flotaryx sont actuellement réservés aux clients professionnels.",
-    "b2b_confirmation": "Je confirme acheter un abonnement Flotaryx à des fins professionnelles et non en tant que consommateur.",
-    "notification_test_email_only": "Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.",
+    "business_profile_title": "Informations d’entreprise et vérification",
+    "business_profile_subtitle":
+        "Renseignez les informations de votre entreprise. Vérification requise avant tout paiement réel.",
+    "business_profile_legal": "Raison sociale",
+    "business_profile_reg": "Numéro d’immatriculation (facultatif)",
+    "business_profile_vat": "Numéro de TVA (facultatif)",
+    "business_profile_address1": "Adresse, ligne 1",
+    "business_profile_address2": "Adresse, ligne 2 (facultatif)",
+    "business_profile_city": "Ville",
+    "business_profile_region": "Région (facultatif)",
+    "business_profile_postcode": "Code postal",
+    "business_profile_activity": "Activité professionnelle (facultatif)",
+    "business_profile_evidence":
+        "Lien vers un registre officiel ou autre preuve (facultatif)",
+    "business_profile_country": "Pays de facturation",
+    "business_profile_submit": "Soumettre à vérification",
+    "business_profile_saving": "Enregistrement...",
+    "business_profile_saved":
+        "Informations enregistrées. Vérification en attente.",
+    "business_profile_failed":
+        "Impossible de charger ou d’enregistrer les informations.",
+    "business_profile_required": "Remplissez ce champ obligatoire.",
+    "business_profile_country_invalid":
+        "Pays invalide. Contactez l’assistance.",
+    "business_profile_review_note": "Notes du vérificateur",
+    "business_profile_vat_optional":
+        "Pas de numéro de TVA ? D’autres justificatifs sont acceptés.",
+    "business_profile_status_none": "Non soumis",
+    "business_profile_status_pending": "Vérification en attente",
+    "business_profile_status_needs_info":
+        "Informations supplémentaires requises",
+    "business_profile_status_verified": "Entreprise vérifiée",
+    "business_profile_status_rejected": "Vérification refusée",
+    "business_profile_attestation_required":
+        "Confirmez agir au nom d’une entreprise.",
+
+    "b2b_only":
+        "Les abonnements Flotaryx sont actuellement réservés aux clients professionnels.",
+    "b2b_confirmation":
+        "Je confirme acheter un abonnement Flotaryx à des fins professionnelles et non en tant que consommateur.",
+    "notification_test_email_only":
+        "Mode test : les e-mails vont uniquement à votre adresse Resend. La planification sera configurée séparément.",
     "email_smoke_title": "Test d’envoi d’e-mail",
     "email_smoke_button": "Envoyer un e-mail test",
-    "email_smoke_description": "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à Flotaryx avec cette adresse.",
+    "email_smoke_description":
+        "Le message ira uniquement à l’adresse de test Resend. Connectez-vous à Flotaryx avec cette adresse.",
     "email_smoke_sending": "Envoi en cours...",
-    "email_smoke_accepted": "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
-    "email_smoke_failed": "Échec de l’envoi. Vérifiez que votre adresse de connexion correspond à RESEND_TEST_EMAIL et consultez les journaux de la fonction.",
+    "email_smoke_accepted":
+        "Resend a accepté le message. Vérifiez votre boîte de réception et les spams.",
+    "email_smoke_failed":
+        "Échec de l’envoi. Vérifiez que votre adresse de connexion correspond à RESEND_TEST_EMAIL et consultez les journaux de la fonction.",
     "notifications": "Notifications",
     "notification_sign_in": "Veuillez vous reconnecter.",
     "notification_error": "Erreur de notification",
@@ -2562,7 +2940,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Vérifiez chaque point avant de valider.",
     "check_plan_unavailable":
         "Nécessite un essai actif ou un forfait Pro/Business.",
-    "check_not_assigned": "Votre compte doit être lié au conducteur affecté. Les gestionnaires peuvent vérifier tous les véhicules.",
+    "check_not_assigned":
+        "Votre compte doit être lié au conducteur affecté. Les gestionnaires peuvent vérifier tous les véhicules.",
     "check_type_label": "Type de contrôle",
     "check_pre_trip": "Avant trajet",
     "check_post_trip": "Après trajet",
@@ -2727,10 +3106,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Tous les statuts",
     "no_vehicles_yet": "Aucun véhicule",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Modifier",
     "archive_vehicle_q": "Archiver le véhicule ?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Annuler",
     "archive": "Archiver",
     "registration": "Immatriculation *",
@@ -2766,7 +3147,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Référence employé",
     "save_driver": "Enregistrer le conducteur",
     "no_drivers_yet": "Aucun conducteur",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Ajouter un problème",
     "edit_issue": "Modifier le problème",
     "select_vehicle": "Sélectionner un véhicule",
@@ -2828,16 +3210,54 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
-    "b2b_only": "Gli abbonamenti Flotaryx sono attualmente riservati ai clienti aziendali.",
-    "b2b_confirmation": "Confermo di acquistare un abbonamento Flotaryx per scopi professionali e non come consumatore.",
-    "notification_test_email_only": "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
+    "business_profile_title": "Dati aziendali e verifica",
+    "business_profile_subtitle":
+        "Inserisci i dati aziendali. La verifica è necessaria prima dei pagamenti reali.",
+    "business_profile_legal": "Ragione sociale",
+    "business_profile_reg": "Numero di registrazione (facoltativo)",
+    "business_profile_vat": "Partita IVA (facoltativa)",
+    "business_profile_address1": "Indirizzo, riga 1",
+    "business_profile_address2": "Indirizzo, riga 2 (facoltativo)",
+    "business_profile_city": "Città",
+    "business_profile_region": "Regione (facoltativo)",
+    "business_profile_postcode": "CAP",
+    "business_profile_activity": "Attività aziendale (facoltativa)",
+    "business_profile_evidence":
+        "Link al registro imprese o altra prova (facoltativo)",
+    "business_profile_country": "Paese di fatturazione",
+    "business_profile_submit": "Invia per la verifica",
+    "business_profile_saving": "Salvataggio...",
+    "business_profile_saved": "Dati salvati. In attesa di verifica.",
+    "business_profile_failed":
+        "Impossibile caricare o salvare i dati aziendali.",
+    "business_profile_required": "Compila questo campo obbligatorio.",
+    "business_profile_country_invalid":
+        "Paese non valido. Contatta l’assistenza.",
+    "business_profile_review_note": "Note del verificatore",
+    "business_profile_vat_optional":
+        "Non hai partita IVA? Puoi fornire altre prove dell’attività.",
+    "business_profile_status_none": "Non inviato",
+    "business_profile_status_pending": "Verifica in corso",
+    "business_profile_status_needs_info": "Servono altre informazioni",
+    "business_profile_status_verified": "Azienda verificata",
+    "business_profile_status_rejected": "Verifica rifiutata",
+    "business_profile_attestation_required": "Conferma di agire come azienda.",
+
+    "b2b_only":
+        "Gli abbonamenti Flotaryx sono attualmente riservati ai clienti aziendali.",
+    "b2b_confirmation":
+        "Confermo di acquistare un abbonamento Flotaryx per scopi professionali e non come consumatore.",
+    "notification_test_email_only":
+        "Modalità test: le e-mail vanno solo all'indirizzo del tuo account Resend. La pianificazione è separata.",
     "email_smoke_title": "Test invio email",
     "email_smoke_button": "Invia email di prova",
-    "email_smoke_description": "Il messaggio va solo all’indirizzo di prova Resend. Accedi a Flotaryx con la stessa email.",
+    "email_smoke_description":
+        "Il messaggio va solo all’indirizzo di prova Resend. Accedi a Flotaryx con la stessa email.",
     "email_smoke_sending": "Invio in corso...",
     "email_smoke_accepted":
         "Resend ha accettato il messaggio. Controlla la posta e lo spam.",
-    "email_smoke_failed": "Invio non riuscito. Controlla che l’email di accesso corrisponda a RESEND_TEST_EMAIL e i log della funzione.",
+    "email_smoke_failed":
+        "Invio non riuscito. Controlla che l’email di accesso corrisponda a RESEND_TEST_EMAIL e i log della funzione.",
     "notifications": "Notifiche",
     "notification_sign_in": "Accedi di nuovo.",
     "notification_error": "Errore notifiche",
@@ -2869,7 +3289,8 @@ final Map<String, Map<String, String>> _translations = {
     "walkaround_checks_subtitle": "Controlli prima e dopo il viaggio, guasti",
     "check_intro": "Controlla ogni voce prima di inviare.",
     "check_plan_unavailable": "Richiede prova attiva o piano Pro/Business.",
-    "check_not_assigned": "Il tuo account deve essere collegato al conducente assegnato. I manager possono controllare tutti i veicoli.",
+    "check_not_assigned":
+        "Il tuo account deve essere collegato al conducente assegnato. I manager possono controllare tutti i veicoli.",
     "check_type_label": "Tipo di controllo",
     "check_pre_trip": "Prima del viaggio",
     "check_post_trip": "Dopo il viaggio",
@@ -3034,10 +3455,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Tutti gli stati",
     "no_vehicles_yet": "Nessun veicolo",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Modifica",
     "archive_vehicle_q": "Archiviare il veicolo?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Annulla",
     "archive": "Archivia",
     "registration": "Targa *",
@@ -3073,7 +3496,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Riferimento dipendente",
     "save_driver": "Salva autista",
     "no_drivers_yet": "Nessun autista",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Aggiungi problema",
     "edit_issue": "Modifica problema",
     "select_vehicle": "Seleziona veicolo",
@@ -3135,15 +3559,52 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
+    "business_profile_title": "Дані компанії та перевірка",
+    "business_profile_subtitle":
+        "Укажіть дані компанії. Перед реальними платежами потрібна перевірка.",
+    "business_profile_legal": "Юридична назва компанії",
+    "business_profile_reg": "Реєстраційний номер (необов’язково)",
+    "business_profile_vat": "Номер ПДВ (необов’язково)",
+    "business_profile_address1": "Адреса, рядок 1",
+    "business_profile_address2": "Адреса, рядок 2 (необов’язково)",
+    "business_profile_city": "Місто",
+    "business_profile_region": "Область / регіон (необов’язково)",
+    "business_profile_postcode": "Поштовий індекс",
+    "business_profile_activity": "Опис діяльності (необов’язково)",
+    "business_profile_evidence":
+        "Посилання на реєстр або інше підтвердження (необов’язково)",
+    "business_profile_country": "Країна оплати",
+    "business_profile_submit": "Надіслати на перевірку",
+    "business_profile_saving": "Збереження...",
+    "business_profile_saved": "Дані збережено. Очікуйте перевірку.",
+    "business_profile_failed": "Не вдалося завантажити або зберегти дані.",
+    "business_profile_required": "Заповніть обов’язкове поле.",
+    "business_profile_country_invalid":
+        "Недійсна країна компанії. Зверніться до підтримки.",
+    "business_profile_review_note": "Примітки перевіряльника",
+    "business_profile_vat_optional":
+        "Немає номера ПДВ? Можна надати інше підтвердження діяльності.",
+    "business_profile_status_none": "Не надіслано",
+    "business_profile_status_pending": "Очікує перевірки",
+    "business_profile_status_needs_info": "Потрібні додаткові дані",
+    "business_profile_status_verified": "Компанію перевірено",
+    "business_profile_status_rejected": "У перевірці відмовлено",
+    "business_profile_attestation_required":
+        "Підтвердьте, що дієте як компанія.",
+
     "b2b_only": "Підписки Flotaryx наразі доступні лише для бізнес-клієнтів.",
-    "b2b_confirmation": "Підтверджую, що купую підписку Flotaryx для підприємницької діяльності, а не як споживач.",
-    "notification_test_email_only": "Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.",
+    "b2b_confirmation":
+        "Підтверджую, що купую підписку Flotaryx для підприємницької діяльності, а не як споживач.",
+    "notification_test_email_only":
+        "Тестовий режим: листи надходять лише на адресу вашого акаунта Resend. Розклад налаштовується окремо.",
     "email_smoke_title": "Тест надсилання листа",
     "email_smoke_button": "Надіслати тестовий лист",
-    "email_smoke_description": "Лист надійде лише на тестову адресу Resend. Увійдіть до Flotaryx з тією самою поштою.",
+    "email_smoke_description":
+        "Лист надійде лише на тестову адресу Resend. Увійдіть до Flotaryx з тією самою поштою.",
     "email_smoke_sending": "Надсилання...",
     "email_smoke_accepted": "Resend прийняв лист. Перевірте вхідні та спам.",
-    "email_smoke_failed": "Не вдалося надіслати. Перевірте збіг пошти входу з RESEND_TEST_EMAIL та журнали функції.",
+    "email_smoke_failed":
+        "Не вдалося надіслати. Перевірте збіг пошти входу з RESEND_TEST_EMAIL та журнали функції.",
     "notifications": "Сповіщення",
     "notification_sign_in": "Увійдіть знову.",
     "notification_error": "Помилка сповіщень",
@@ -3177,7 +3638,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Перевірте всі пункти перед збереженням.",
     "check_plan_unavailable":
         "Потрібен активний пробний період або тариф Pro/Business.",
-    "check_not_assigned": "Акаунт має бути прив’язаний до призначеного водія. Менеджери можуть перевіряти всі авто.",
+    "check_not_assigned":
+        "Акаунт має бути прив’язаний до призначеного водія. Менеджери можуть перевіряти всі авто.",
     "check_type_label": "Тип перевірки",
     "check_pre_trip": "Перед поїздкою",
     "check_post_trip": "Після поїздки",
@@ -3343,10 +3805,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Усі статуси",
     "no_vehicles_yet": "Автомобілів ще немає",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Редагувати",
     "archive_vehicle_q": "Archive vehicle?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Скасувати",
     "archive": "Архівувати",
     "registration": "Реєстраційний номер *",
@@ -3382,7 +3846,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Employee reference",
     "save_driver": "Зберегти водія",
     "no_drivers_yet": "Водіїв ще немає",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Додати несправність",
     "edit_issue": "Редагувати несправність",
     "select_vehicle": "Вибрати автомобіль",
@@ -3444,16 +3909,54 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
-    "b2b_only": "As subscrições Flotaryx estão atualmente disponíveis apenas para clientes empresariais.",
-    "b2b_confirmation": "Confirmo que estou a comprar uma subscrição Flotaryx para fins profissionais e não como consumidor.",
-    "notification_test_email_only": "Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.",
+    "business_profile_title": "Dados da empresa e verificação",
+    "business_profile_subtitle":
+        "Indique os dados da empresa. A verificação é necessária antes dos pagamentos reais.",
+    "business_profile_legal": "Nome legal da empresa",
+    "business_profile_reg": "Número de registo (opcional)",
+    "business_profile_vat": "Número de IVA (opcional)",
+    "business_profile_address1": "Morada, linha 1",
+    "business_profile_address2": "Morada, linha 2 (opcional)",
+    "business_profile_city": "Cidade",
+    "business_profile_region": "Região (opcional)",
+    "business_profile_postcode": "Código postal",
+    "business_profile_activity": "Atividade empresarial (opcional)",
+    "business_profile_evidence":
+        "Ligação ao registo comercial ou outra prova (opcional)",
+    "business_profile_country": "País de faturação",
+    "business_profile_submit": "Enviar para verificação",
+    "business_profile_saving": "A guardar...",
+    "business_profile_saved": "Dados guardados. Aguarde a verificação.",
+    "business_profile_failed": "Não foi possível carregar ou guardar os dados.",
+    "business_profile_required": "Preencha este campo obrigatório.",
+    "business_profile_country_invalid":
+        "País da empresa inválido. Contacte o suporte.",
+    "business_profile_review_note": "Notas do verificador",
+    "business_profile_vat_optional":
+        "Sem número de IVA? Pode fornecer outras provas de atividade.",
+    "business_profile_status_none": "Não enviado",
+    "business_profile_status_pending": "A aguardar verificação",
+    "business_profile_status_needs_info": "São necessárias mais informações",
+    "business_profile_status_verified": "Empresa verificada",
+    "business_profile_status_rejected": "Verificação recusada",
+    "business_profile_attestation_required":
+        "Confirme que está a agir como empresa.",
+
+    "b2b_only":
+        "As subscrições Flotaryx estão atualmente disponíveis apenas para clientes empresariais.",
+    "b2b_confirmation":
+        "Confirmo que estou a comprar uma subscrição Flotaryx para fins profissionais e não como consumidor.",
+    "notification_test_email_only":
+        "Modo de teste: os e-mails só chegam ao endereço da conta Resend. O agendamento é configurado separadamente.",
     "email_smoke_title": "Teste de envio de e-mail",
     "email_smoke_button": "Enviar e-mail de teste",
-    "email_smoke_description": "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no Flotaryx com esse e-mail.",
+    "email_smoke_description":
+        "A mensagem vai apenas para o endereço de teste Resend. Inicia sessão no Flotaryx com esse e-mail.",
     "email_smoke_sending": "A enviar...",
     "email_smoke_accepted":
         "A Resend aceitou a mensagem. Verifica a caixa de entrada e spam.",
-    "email_smoke_failed": "Falha no envio. Confirma que o e-mail de acesso corresponde a RESEND_TEST_EMAIL e consulta os registos da função.",
+    "email_smoke_failed":
+        "Falha no envio. Confirma que o e-mail de acesso corresponde a RESEND_TEST_EMAIL e consulta os registos da função.",
     "notifications": "Notificações",
     "notification_sign_in": "Inicie sessão novamente.",
     "notification_error": "Erro de notificações",
@@ -3487,7 +3990,8 @@ final Map<String, Map<String, String>> _translations = {
     "check_intro": "Verifique todos os itens antes de enviar.",
     "check_plan_unavailable":
         "Requer período de teste ativo ou plano Pro/Business.",
-    "check_not_assigned": "A conta deve estar associada ao condutor atribuído. Os gestores podem verificar qualquer veículo.",
+    "check_not_assigned":
+        "A conta deve estar associada ao condutor atribuído. Os gestores podem verificar qualquer veículo.",
     "check_type_label": "Tipo de inspeção",
     "check_pre_trip": "Antes da viagem",
     "check_post_trip": "Após a viagem",
@@ -3652,10 +4156,12 @@ final Map<String, Map<String, String>> _translations = {
     "status": "Status",
     "all_statuses": "Todos os estados",
     "no_vehicles_yet": "Ainda não existem veículos",
-    "no_vehicles_message": "Add your first vehicle when you are ready to start managing the fleet.",
+    "no_vehicles_message":
+        "Add your first vehicle when you are ready to start managing the fleet.",
     "edit": "Editar",
     "archive_vehicle_q": "Arquivar veículo?",
-    "archive_vehicle_message": "The vehicle will disappear from active lists but its historical data will be preserved.",
+    "archive_vehicle_message":
+        "The vehicle will disappear from active lists but its historical data will be preserved.",
     "cancel": "Cancelar",
     "archive": "Arquivar",
     "registration": "Matrícula *",
@@ -3691,7 +4197,8 @@ final Map<String, Map<String, String>> _translations = {
     "employee_reference": "Referência do funcionário",
     "save_driver": "Guardar condutor",
     "no_drivers_yet": "Ainda não existem condutores",
-    "no_drivers_message": "Driver records will be available to assign to vehicles and issue reports.",
+    "no_drivers_message":
+        "Driver records will be available to assign to vehicles and issue reports.",
     "add_issue": "Adicionar problema",
     "edit_issue": "Editar problema",
     "select_vehicle": "Selecionar veículo",
