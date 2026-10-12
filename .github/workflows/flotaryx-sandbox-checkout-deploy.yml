@@ -1,0 +1,65 @@
+name: Deploy Flotaryx Sandbox Checkout
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/flotaryx-create-checkout/**'
+      - 'tests/checkout.test.mjs'
+      - '.github/workflows/flotaryx-sandbox-checkout-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flotaryx-sandbox-checkout
+  cancel-in-progress: false
+
+jobs:
+  deploy-sandbox-checkout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test Sandbox Checkout
+        run: node --test tests/checkout.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy only the Sandbox Checkout function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo 'Missing SUPABASE_ACCESS_TOKEN GitHub secret'
+            exit 1
+          fi
+          supabase functions deploy --help
+          supabase functions deploy flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo --use-api
+      - name: Verify deployed Sandbox code and JWT protection
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions download flotaryx-create-checkout --project-ref wqhymmtiawfwjikdaujo --use-api
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          code = Path('supabase/functions/flotaryx-create-checkout/index.ts').read_text()
+          assert 'form.set("managed_payments[enabled]", "false")' in code
+          assert 'form.set("adaptive_pricing[enabled]", "false")' in code
+          assert 'String(vatRegistered)' in code
+          assert 'stripeKey.startsWith("sk_test_")' in code
+          url = 'https://api.supabase.com/v1/projects/wqhymmtiawfwjikdaujo/functions/flotaryx-create-checkout'
+          request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['SUPABASE_ACCESS_TOKEN']})
+          with urllib.request.urlopen(request) as response:
+              deployed = json.load(response)
+          assert deployed['verify_jwt'] is True
+          print('Sandbox Checkout verified; JWT protection enabled; version', deployed['version'])
+          PY
