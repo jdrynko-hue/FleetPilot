@@ -150,10 +150,15 @@ class _BusinessReviewConsoleScreenState
                         controller: reference,
                         maxLength: 1000,
                         maxLines: 2,
+                        onChanged: (_) => refreshDialog(() {}),
                         decoration: InputDecoration(
                           labelText: _t(
                             'Sprawdzone źródło / numer',
                             'Checked source / reference',
+                          ),
+                          helperText: _t(
+                            'Wymagane: minimum 6 znaków',
+                            'Required: at least 6 characters',
                           ),
                           border: const OutlineInputBorder(),
                         ),
@@ -164,10 +169,15 @@ class _BusinessReviewConsoleScreenState
                       controller: note,
                       maxLength: 2000,
                       maxLines: 3,
+                      onChanged: (_) => refreshDialog(() {}),
                       decoration: InputDecoration(
                         labelText: _t(
                           'Uzasadnienie decyzji',
                           'Review decision notes',
+                        ),
+                        helperText: _t(
+                          'Wymagane: minimum 5 znaków',
+                          'Required: at least 5 characters',
                         ),
                         border: const OutlineInputBorder(),
                       ),
@@ -182,16 +192,18 @@ class _BusinessReviewConsoleScreenState
                 child: Text(_t('Anuluj', 'Cancel')),
               ),
               FilledButton(
-                onPressed: () {
-                  final memo = note.text.trim();
-                  final ref = reference.text.trim();
-                  if (memo.length < 5 || (approved && ref.length < 6)) return;
-                  Navigator.pop(dialogContext, {
-                    'note': memo,
-                    'method': approved ? method : '',
-                    'reference': approved ? ref : '',
-                  });
-                },
+                onPressed: note.text.trim().length >= 5 &&
+                        (!approved || reference.text.trim().length >= 6)
+                    ? () {
+                        final memo = note.text.trim();
+                        final ref = reference.text.trim();
+                        Navigator.pop(dialogContext, {
+                          'note': memo,
+                          'method': approved ? method : '',
+                          'reference': approved ? ref : '',
+                        });
+                      }
+                    : null,
                 child: Text(
                   approved
                       ? _t('Potwierdź weryfikację', 'Confirm verification')
