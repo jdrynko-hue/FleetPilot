@@ -31,19 +31,46 @@ jobs:
       - name: Install packages
         run: flutter pub get
 
-      - name: Build web app
+      # The root URL hosts the marketing pages; Flutter must be built
+      # separately at /app/ with its own bootstrap script and asset paths.
+      - name: Stage Flutter portal entrypoint
+        run: cp web/app/index.html web/index.html
+
+      - name: Build Flutter portal
         run: >
           flutter build web
           --release
-          --base-href "/"
+          --base-href "/app/"
           --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
+
+      - name: Assemble and validate public site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          # Preserve legal documents, branding, landing pages, CNAME and icons.
+          cp -a web/. site/
+          # Restore the marketing landing page from the checked-out commit.
+          git show HEAD:web/index.html > site/index.html
+          sed -i 's|<base href="\$FLUTTER_BASE_HREF">|<base href="/">|' site/index.html
+          # Put all Flutter generated assets next to the /app/ entrypoint.
+          mkdir -p site/app
+          cp -a build/web/. site/app/
+          test -s site/index.html
+          test -s site/app/index.html
+          test -s site/app/flutter_bootstrap.js
+          test -s site/app/main.dart.js
+          test -s site/CNAME
+          grep -Fq '<base href="/app/">' site/app/index.html
+          grep -Fq 'flutter_bootstrap.js' site/app/index.html
+          grep -Fq 'flotaryx.com' site/CNAME
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: site
 
   deploy:
     environment:
