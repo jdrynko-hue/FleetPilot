@@ -5,9 +5,10 @@ import '../core/localization.dart';
 import '../data/fleet_repository.dart';
 
 class CreateCompanyScreen extends StatefulWidget {
-  const CreateCompanyScreen({required this.onCreated, super.key});
+  const CreateCompanyScreen({required this.onCreated, this.allowCancel = false, super.key});
 
   final VoidCallback onCreated;
+  final bool allowCancel;
 
   @override
   State<CreateCompanyScreen> createState() => _CreateCompanyScreenState();
@@ -50,6 +51,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.allowCancel ? AppBar(title: Text(tr('create_your_fleet'))) : null,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
