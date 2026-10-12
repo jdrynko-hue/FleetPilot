@@ -9,6 +9,7 @@ import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import 'billing_screen.dart';
+import 'business_review_console_screen.dart';
 import 'business_verification_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
   late Future<List<CompanyMember>> _members;
   late Future<CompanyEntitlements> _entitlements;
   Future<List<CompanyInvite>>? _invites;
+  late Future<bool> _operatorAccess;
 
   bool get _canAdmin =>
       widget.company.role == 'owner' || widget.company.role == 'admin';
@@ -39,6 +41,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
   @override
   void initState() {
     super.initState();
+    _operatorAccess = _fetchOperatorAccess();
     _reload();
   }
 
@@ -55,6 +58,22 @@ class _CompanyScreenState extends State<CompanyScreen> {
   void dispose() {
     _inviteCode.dispose();
     super.dispose();
+  }
+
+  Future<bool> _fetchOperatorAccess() async {
+    final client = Supabase.instance.client;
+    final id = client.auth.currentUser?.id;
+    if (id == null) return false;
+    try {
+      final rows = await client
+          .from('flotaryx_verification_operators')
+          .select('user_id')
+          .eq('user_id', id)
+          .limit(1);
+      return rows.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _reload() {
@@ -371,6 +390,36 @@ class _CompanyScreenState extends State<CompanyScreen> {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
       children: [
         Text(tr('company'), style: Theme.of(context).textTheme.headlineMedium),
+
+        FutureBuilder<bool>(
+          future: _operatorAccess,
+          builder: (context, snapshot) {
+            if (snapshot.data != true) {
+              return const SizedBox.shrink();
+            }
+            return Card(
+              child: ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: Text(
+                  AppLocale.language.value == 'pl'
+                      ? 'Panel weryfikacji firm'
+                      : 'Business verification console',
+                ),
+                subtitle: Text(
+                  AppLocale.language.value == 'pl'
+                      ? 'Ręczna weryfikacja zgłoszeń biznesowych'
+                      : 'Review and verify business applications',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const BusinessReviewConsoleScreen(),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
 
         if (_canAdmin)
           Card(
