@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/localization.dart';
 
@@ -18,9 +19,26 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   final _repository = FleetRepository();
   final _name = TextEditingController();
   final _country = TextEditingController(text: 'GB');
-  String _currency = 'GBP';
   bool _busy = false;
   bool _b2bConfirmed = false;
+
+  // Supported billing markets: GBP (UK), PLN (Poland), EUR (euro-area).
+  static const _euroCountries = <String>{
+    'AT', 'BE', 'BG', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR',
+    'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES',
+  };
+
+  String? get _countryCurrency {
+    final code = _country.text.trim().toUpperCase();
+    if (code == 'GB') return 'GBP';
+    if (code == 'PL') return 'PLN';
+    if (_euroCountries.contains(code)) return 'EUR';
+    return null;
+  }
+
+  bool get _canCreate =>
+      !_busy && _b2bConfirmed && _name.text.trim().isNotEmpty &&
+      _countryCurrency != null;
 
   @override
   void dispose() {
@@ -30,13 +48,14 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   }
 
   Future<void> _create() async {
-    if (_name.text.trim().isEmpty || !_b2bConfirmed) return;
+    if (!_canCreate) return;
+    final currency = _countryCurrency!;
     setState(() => _busy = true);
     try {
       await _repository.createCompany(
         name: _name.text.trim(),
         country: _country.text.trim().toUpperCase(),
-        currency: _currency,
+        currency: currency,
       );
       widget.onCreated();
     } catch (error) {
@@ -63,15 +82,18 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      tr('create_your_fleet'),
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    SizedBox(height: 8),
+                    if (!widget.allowCancel) ...[
+                      Text(
+                        tr('create_your_fleet'),
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     Text(tr('workspace_message')),
                     SizedBox(height: 24),
                     TextField(
                       controller: _name,
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: tr('company_name'),
                       ),
@@ -80,35 +102,35 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                     TextField(
                       controller: _country,
                       textCapitalization: TextCapitalization.characters,
+                      maxLength: 2,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]')),
+                      ],
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: tr('country_code'),
                         hintText: 'GB',
+                        helperText: AppLocale.language.value == 'pl'
+                            ? 'Obsługiwane: GB, PL i kraje strefy euro'
+                            : 'Supported: GB, PL and euro-area countries',
                       ),
                     ),
                     SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: _currency,
-                      items: [
-                        DropdownMenuItem(
-                          value: 'GBP',
-                          child: Text(tr('currency_gbp')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'EUR',
-                          child: Text(tr('currency_eur')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'PLN',
-                          child: Text(tr('currency_pln')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'USD',
-                          child: Text(tr('currency_usd')),
-                        ),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _currency = value ?? 'GBP'),
-                      decoration: InputDecoration(labelText: tr('currency')),
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: tr('currency'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      child: Text(
+                        switch (_countryCurrency) {
+                          'GBP' => tr('currency_gbp'),
+                          'PLN' => tr('currency_pln'),
+                          'EUR' => tr('currency_eur'),
+                          _ => AppLocale.language.value == 'pl'
+                              ? 'Nieobsługiwany kraj'
+                              : 'Country not supported',
+                        },
+                      ),
                     ),
                     SizedBox(height: 24),
                     CheckboxListTile(
@@ -123,7 +145,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                                 setState(() => _b2bConfirmed = value ?? false),
                     ),
                     FilledButton(
-                      onPressed: (_busy || !_b2bConfirmed) ? null : _create,
+                      onPressed: _canCreate ? _create : null,
                       child: Text(_busy ? tr('creating') : tr('create_fleet')),
                     ),
                   ],
