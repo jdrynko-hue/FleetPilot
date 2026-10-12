@@ -449,6 +449,8 @@ class _BillingScreenState extends State<BillingScreen> {
                   math.max(0, vehicles - selected.included) * selected.extra;
         final billable = data.hasStripe;
         final active = ['active', 'trialing', 'past_due'].contains(data.status);
+        // The server only permits a plan change for active/trialing subscriptions.
+        final canChangePlan = ['active', 'trialing'].contains(data.status);
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
           children: [
@@ -502,6 +504,33 @@ class _BillingScreenState extends State<BillingScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            if (billable && data.status == 'past_due')
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.warning_amber_outlined),
+                  title: Text(_t('Payment overdue', 'Zaległa płatność')),
+                  subtitle: Text(
+                    _t(
+                      'Update your payment method to resolve the outstanding payment before changing plans.',
+                      'Zaktualizuj metodę płatności, aby uregulować zaległość przed zmianą planu.',
+                    ),
+                  ),
+                ),
+              ),
+            if (billable &&
+                ['unpaid', 'canceled', 'incomplete', 'paused'].contains(data.status))
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(_t('Subscription inactive', 'Abonament nieaktywny')),
+                  subtitle: Text(
+                    _t(
+                      'The current subscription cannot be changed here. Contact support if you need to restart billing.',
+                      'Nie można zmienić tego abonamentu. Skontaktuj się z pomocą, aby wznowić rozliczenia.',
+                    ),
+                  ),
+                ),
+              ),
             if (billable) ...[
               Text(
                 _t('Manage subscription', 'Zarządzanie abonamentem'),
@@ -677,7 +706,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
                 const SizedBox(height: 8),
               ],
-              if (billable && active && !data.cancellationScheduled)
+              if (billable && canChangePlan && !data.cancellationScheduled)
                 FilledButton.icon(
                   onPressed: (!valid || _busy)
                       ? null
