@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../auth/create_company_screen.dart';
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
@@ -382,6 +383,20 @@ class _CompanyScreenState extends State<CompanyScreen> {
     setState(_reload);
   }
 
+  Future<void> _openAdditionalFleet() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => CreateCompanyScreen(
+          allowCancel: true,
+          onCreated: () async {
+            Navigator.of(routeContext).pop();
+            await widget.onMembershipChanged();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = _repository.currentUser?.id;
@@ -457,6 +472,25 @@ class _CompanyScreenState extends State<CompanyScreen> {
                   builder: (_) => BillingScreen(company: widget.company),
                 ),
               ),
+            ),
+          ),
+
+        if (_canAdmin)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.add_business_outlined),
+              title: Text(
+                AppLocale.language.value == 'pl'
+                    ? 'Utwórz kolejną flotę'
+                    : 'Create another fleet',
+              ),
+              subtitle: Text(
+                AppLocale.language.value == 'pl'
+                    ? 'Oddzielne pojazdy, kierowcy i rozliczenia'
+                    : 'Separate vehicles, drivers and billing',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _openAdditionalFleet,
             ),
           ),
 
