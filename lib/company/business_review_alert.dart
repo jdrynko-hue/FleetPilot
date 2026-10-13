@@ -62,13 +62,14 @@ class _BusinessReviewAlertState extends State<BusinessReviewAlert> {
         .limit(1);
     if (operators.isEmpty) return null;
 
-    // Independent server-side operator check; at most 100 rows are returned.
-    final reviews = await client.rpc(
-      'flotaryx_operator_list_reviews',
-      params: {'p_status': 'pending'},
-    );
-    if (reviews is! List) throw const FormatException('Invalid review list');
-    return reviews.length;
+    // Use a server-side count, without downloading applicant names,
+    // addresses or evidence. This also avoids the 100-row review-list cap.
+    // The RPC independently enforces operator authorization.
+    final pending = await client.rpc('flotaryx_operator_pending_review_count');
+    if (pending is! int || pending < 0) {
+      throw const FormatException('Invalid pending review count');
+    }
+    return pending;
   }
 
   Future<void> _refresh() async {
