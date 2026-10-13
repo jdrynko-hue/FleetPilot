@@ -1,7 +1,15 @@
-# Flotaryx Garage — product specification and rollout plan
+# Flotaryx — unified Fleet + Garage ecosystem release plan
 
-Status: **planning only**. Fleet production release remains the top priority.
-Owner decision (13 October 2026): serve **independent repair workshops of every kind**, including passenger cars, vans, trucks and mixed garages, whether or not their customers use Flotaryx Fleet.
+Status: **planning and development, not approved for paid launch**.
+
+Owner decisions (13 October 2026):
+1. Deliver **one combined public product launch**: Fleet, independent Garage and Fleet↔Garage connections ready together. Existing Fleet remains available as an internal/QA beta, not an independently paid launch.
+2. Serve **every type of independent repair workshop**, including passenger cars, vans, trucks and mixed garages, whether or not its customers use Fleet.
+3. The strongest proposed differentiation is a single driver-fault → manager-request → workshop-quote → approved repair → real-time status → vehicle-back-in-service workflow, with estimated downtime impact. See [competitive review and flagship scenario](flotaryx-competitive-white-space-20261013.md).
+
+### One product, optional modules
+
+One login and Flotaryx brand, with Fleet and Garage role-specific views. A workshop can purchase Garage without Fleet; a fleet can use Fleet without running a workshop; combined tiers unlock cross-product coordination. Individuals bringing personal cars do not need a SaaS subscription. Stripe is Sandbox-only until explicit owner authorization. **There will be no separate Fleet or Garage paid release.**
 
 ## Product boundaries
 
@@ -12,7 +20,7 @@ Owner decision (13 October 2026): serve **independent repair workshops of every 
 - A garage employee may belong to a garage and to a Fleet company through the same `auth.users` identity, but each tenant and product has separate roles/entitlements.
 - A workshop may accept private individual customers (B2C work) while the paying SaaS subscriber is the workshop business (B2B).
 
-## Garage MVP (first sellable standalone product)
+## Garage MVP (required component of the unified ecosystem launch)
 
 ### Functional scope
 
@@ -46,7 +54,9 @@ Important: existing `public.garages` has `company_id` and is a *Fleet contact*; 
 
 RLS on **all new customer- or shop-facing tables** and private Storage; server-side role checks for every privileged RPC. Automated tests with workshop A/B, Fleet A/B, unauthorized customer, mechanic and owner; cover both row reads and writes, uploads and signed-link expiry. Review SECURITY DEFINER functions against cross-tenant parameter forgery. Protect user/customer PII and workshop commercial prices, log permission changes.
 
-## Optional Fleet ↔ Garage integration (after Garage standalone pilot)
+## Required Fleet ↔ Garage integration (at unified ecosystem launch)
+
+**Flagship workflow — Flotaryx RepairBridge + Downtime Radar:** driver reports a fault; fleet manager sends a scoped repair request to a chosen garage; garage can respond with availability and a quote, including through a secure time-limited invite if it does not yet subscribe; fleet manager approves a versioned itemized quote; the workshop updates progress and estimated completion; fleet sees cost, likely downtime and spare-vehicle suggestions based on its own available records. Both organizations retain separate databases and can revoke ongoing sharing. No unsupported AI diagnosis or automatic authorization.
 
 1. Workshop invites Fleet to connect, and authorized Fleet owner approves. Either party can revoke.
 2. Fleet manager sends a specific issue or repair request to a chosen connected workshop. Explicitly select fields/documents; default minimal sharing.
@@ -54,18 +64,19 @@ RLS on **all new customer- or shop-facing tables** and private Storage; server-s
 4. Garage marks work ready; Fleet receives authorized update, attachment metadata and costs; workshop retains its own full records.
 5. Do not sync other customer records or whole vehicle history. Revocation stops future access; document historical retention rules separately.
 
-## Release sequencing and non-interference rule
+## Development phases — one coordinated external release
 
-| Stage | Target | Exit criteria |
-| --- | --- | --- |
-| F0: Fleet release readiness (current priority) | ongoing | Auth/cross-fleet security, billing Sandbox, recovery/redirect check, backups, terms/tax review, production support monitoring; do not enable Stripe Live without owner approval |
-| G1: Garage design spike | ~1–2 weeks AFTER Fleet release gates | UX prototype, tenant+role design, storage cost model, workflow review with 2–3 garages, prioritized backlog |
-| G2: Standalone Garage MVP | ~4–6 weeks engineering estimate | all 9 MVP functional sections, RLS tests, private files, complete flows on iPhone and desktop |
-| G3: Closed pilot | ~2–3 weeks | 3–5 real shops including car and van workshops, seeded/non-production test billing, usability/security fixes |
-| G4: Garage paid launch | after explicit business/legal approval | Garage-only pricing, terms/DPA, data retention, tested subscriptions, customer support and monitoring |
-| G5: Optional Fleet integration | after standalone reliability | consent workflow, cross-product sharing, revocation and consistency tests |
+| Stage | Deliverable / quality gate |
+| --- | --- |
+| F0. Secure Fleet beta | Auth/recovery redirects, cross-tenant tests, stable roles, backup restore, continuous CI; Fleet continues running in QA |
+| G1. Garage core | Independent workshop accounts, customers, vehicle types, mechanics, basic jobs; per-shop RLS and tests |
+| G2. Photos, quotes and documents | Private Storage, evidence limits, invoice attachments, versioned estimates and approval audit; mobile validation |
+| G3. RepairBridge | Consent-based connection, fleet-initiated requests, safe one-job guest shop responses, job progress and revocation |
+| G4. Downtime Radar | Estimated vehicle-off-road costs derived only from user-supplied inputs, comparisons and optional spare vehicle suggestions |
+| G5. Integrated pilot | Real workshops and fleets; complete driver→garage→approval→handover path, tenant-isolation abuse tests, private vehicle customers |
+| G6. Combined commercial release | One Flotaryx site and product with optional Fleet/Garage/Ecosystem tiers; legal/tax/restore checks; launch only after explicit owner approval, including Stripe Live |
 
-These are **estimates**, not commitments or a reason to delay Fleet. G1 can be documented now; no Garage migrations, public navigation links, billing changes or new paid services until the owner approves implementation.
+Build and test phases sequentially **without releasing either module commercially on its own**. Garage schema changes must first pass isolated-environment tests; do not apply unreviewed or destructive migrations to hosted QA data. Production subscriptions remain disabled until approved.
 
 ## Monetization decision to validate
 
@@ -83,7 +94,7 @@ A separate **garage subscription** paid by the workshop; private vehicle custome
 - A Fleet company must explicitly approve every integration connection; revoking the connection removes access.
 - Original Fleet customer flows remain unchanged; full Flutter and backend regression remains green.
 
-## Known open decisions (not blockers to Fleet)
+## Known open decisions before unified public launch
 
 - UK-only first pilot vs UK+Poland (translations can be built without launching in all markets).
 - Garage tenancy: single branch per workspace first, with multi-branch model forward-compatible.
@@ -91,8 +102,12 @@ A separate **garage subscription** paid by the workshop; private vehicle custome
 - Whether customer status updates are read-only via secure links in a later version.
 - Detailed paid tier pricing; jurisdiction-specific VAT and consumer data processing obligations.
 
-## Current Fleet status and next work
+## Current status and next work
 
-The Fleet release is **not yet approved for live paid sales**. GitHub CI deploys current app, but server-side Auth Management API read of recovery redirect settings remains blocked (HTTP 403); legal/tax, backup restore, device-based user journeys and cross-tenant RPC security remain independent gates.
+Fleet QA portal deploys successfully and operator-alert access revocation hardening was merged in PR #21. The Fleet application is **not approved for live paid sales** on its own. The Supabase Management API recovery redirect validation remains blocked by HTTP 403; restore rehearsal, regional VAT, privacy, legal review, on-device user journeys and cross-tenant RPC security tests are independent gates.
 
-In parallel, Fleet's operator alert is being hardened so a failed reauthorization hides the operator icon even after it was previously displayed. This does **not** enable Garage and does not loosen backend authorization.
+Garage implementation has not yet started; this document is the specification. Next build milestone: Garage tenant schema + role separation in a sandbox environment, without interrupting Fleet QA, then first independent workshop job card with tests and RLS. RepairBridge, downtime costs, and evidence transfer are launch-gating features once Garage core is stable.
+
+**Differentiation audit:** [competitive white-space research](flotaryx-competitive-white-space-20261013.md). Competitors already provide AI voice notes, customer portals, vehicle passports, workshop connections and some repair bookings; do not claim absolute originality for any single feature.
+
+No Stripe Live, new paid services, or public Garage marketing availability until separately authorized.
