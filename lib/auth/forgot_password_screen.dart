@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/fleet_repository.dart';
+import '../core/localization.dart';
 
 typedef PasswordResetRequester = Future<void> Function(String email);
 
@@ -16,6 +17,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   bool _busy = false;
+  String _loc(String en, String pl) =>
+      AppLocale.language.value == 'pl' ? pl : en;
   bool _submitted = false;
   String? _error;
 
@@ -41,7 +44,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (mounted) setState(() => _submitted = true);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Could not process the request. Try again later.');
+        setState(() => _error = _loc('Could not process the request. Try again later.', 'Nie udało się wysłać wiadomości. Spróbuj później.'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -51,7 +54,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset password')),
+      appBar: AppBar(title: Text(_loc('Reset password', 'Resetowanie hasła'))),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
@@ -60,13 +63,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             shrinkWrap: true,
             children: [
               Text(
-                'Password recovery',
+                _loc('Password recovery', 'Odzyskiwanie hasła'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
               if (_submitted)
-                const Text(
-                  'If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.',
+                Text(
+                  _loc('If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.', 'Jeśli konto o tym adresie istnieje, wysłaliśmy link do zmiany hasła. Sprawdź skrzynkę i spam.'),
                   key: Key('reset_request_confirmation'),
                 )
               else
@@ -75,7 +78,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('Enter the email address for your Flotaryx account.'),
+                      Text(_loc('Enter the email address for your Flotaryx account.', 'Podaj adres e-mail konta Flotaryx.')),
                       const SizedBox(height: 12),
                       TextFormField(
                         key: const Key('reset_email'),
@@ -83,14 +86,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
+                        decoration: InputDecoration(
+                          labelText: _loc('Email', 'E-mail'),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           final email = (value ?? '').trim();
                           if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-                            return 'Enter a valid email address.';
+                            return _loc('Enter a valid email address.', 'Podaj prawidłowy adres e-mail.');
                           }
                           return null;
                         },
@@ -107,7 +110,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       FilledButton(
                         key: const Key('request_reset_button'),
                         onPressed: _busy ? null : _send,
-                        child: Text(_busy ? 'Sending…' : 'Send reset link'),
+                        child: Text(_busy ? _loc('Sending…', 'Wysyłanie…') : _loc('Send reset link', 'Wyślij link do zmiany hasła')),
                       ),
                     ],
                   ),
