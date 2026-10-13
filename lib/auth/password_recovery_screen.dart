@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/fleet_repository.dart';
 import '../core/localization.dart';
+import 'password_policy.dart';
 
 typedef PasswordUpdater = Future<void> Function(String password);
 typedef PasswordRecoveryCompleted = Future<void> Function();
@@ -94,10 +95,11 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if ((value ?? '').length < 12) {
-                            return _loc('Use at least 12 characters.', 'Hasło musi mieć co najmniej 12 znaków.');
-                          }
-                          return null;
+                          return validateAccountPassword(
+                            value,
+                            creatingNewPassword: true,
+                            locale: AppLocale.language.value,
+                          );
                         },
                       ),
                       const SizedBox(height: 12),

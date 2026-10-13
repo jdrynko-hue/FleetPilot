@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'forgot_password_screen.dart';
+import 'password_policy.dart';
 import '../data/fleet_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -179,11 +180,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if ((value ?? '').length < 8) {
-                              return tr('short_password');
-                            }
-
-                            return null;
+                            return validateAccountPassword(
+                              value,
+                              creatingNewPassword: _registerMode,
+                              locale: _language,
+                            );
                           },
                         ),
                         const SizedBox(height: 20),
