@@ -7,6 +7,8 @@ on:
       - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'supabase/functions/**'
+      - 'tests/**'
       - '.github/workflows/full-regression.yml'
   push:
     branches: [main]
@@ -15,6 +17,8 @@ on:
       - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'supabase/functions/**'
+      - 'tests/**'
       - '.github/workflows/full-regression.yml'
   workflow_dispatch:
 
@@ -26,6 +30,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sandbox-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test current Sandbox backend sources without external services
+        run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs
+
   flutter:
     runs-on: ubuntu-latest
     timeout-minutes: 15

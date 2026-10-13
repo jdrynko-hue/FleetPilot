@@ -35,7 +35,7 @@ globalThis.fetch=async(input, options={})=>{
     currency:'gbp',created:now,hosted_invoice_url:'https://invoice.stripe.com/i/mock'}]});
   throw Error('unexpected request: '+url.toString());
 };
-await import('./billing-manage.compiled.mjs');
+await import('../supabase/functions/flotaryx-billing-manage/index.ts');
 assert.equal(typeof handler,'function');
 const request=(body,headers={})=>new Request('https://demo.supabase.co/functions/v1/flotaryx-billing-manage',{
   method:'POST',headers:{'Content-Type':'application/json',origin:'https://flotaryx.com',Authorization:'Bearer mock',...headers},body:JSON.stringify(body),
