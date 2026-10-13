@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/fleet_repository.dart';
+import '../core/localization.dart';
 
 typedef PasswordUpdater = Future<void> Function(String password);
 typedef PasswordRecoveryCompleted = Future<void> Function();
@@ -25,6 +26,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
   bool _busy = false;
+  String _loc(String en, String pl) =>
+      AppLocale.language.value == 'pl' ? pl : en;
   bool _completed = false;
   String? _error;
 
@@ -51,7 +54,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       setState(() => _completed = true);
       if (widget.onCompleted != null) await widget.onCompleted!();
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not update password. Request a new link if it has expired.');
+      if (mounted) setState(() => _error = _loc('Could not update password. Request a new link if it has expired.', 'Nie udało się zmienić hasła. Jeśli link wygasł, poproś o nowy.'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -67,12 +70,12 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
             shrinkWrap: true,
             padding: const EdgeInsets.all(24),
             children: [
-              Text('Choose a new password',
+              Text(_loc('Choose a new password', 'Ustaw nowe hasło'),
                 style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 12),
               if (_completed)
-                const Text(
-                  'Your password was updated. Please sign in again.',
+                Text(
+                  _loc('Your password was updated. Please sign in again.', 'Hasło zostało zmienione. Zaloguj się ponownie.'),
                   key: Key('password_recovery_completed'),
                 )
               else
@@ -86,13 +89,13 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                         controller: _password,
                         obscureText: true,
                         autofillHints: const [AutofillHints.newPassword],
-                        decoration: const InputDecoration(
-                          labelText: 'New password',
+                        decoration: InputDecoration(
+                          labelText: _loc('New password', 'Nowe hasło'),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if ((value ?? '').length < 12) {
-                            return 'Use at least 12 characters.';
+                            return _loc('Use at least 12 characters.', 'Hasło musi mieć co najmniej 12 znaków.');
                           }
                           return null;
                         },
@@ -103,12 +106,12 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                         controller: _confirmation,
                         obscureText: true,
                         autofillHints: const [AutofillHints.newPassword],
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm new password',
+                        decoration: InputDecoration(
+                          labelText: _loc('Confirm new password', 'Potwierdź nowe hasło'),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value != _password.text) return 'Passwords do not match.';
+                          if (value != _password.text) return _loc('Passwords do not match.', 'Hasła są różne.');
                           return null;
                         },
                       ),
@@ -124,7 +127,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                       FilledButton(
                         key: const Key('set_password_button'),
                         onPressed: _busy ? null : _save,
-                        child: Text(_busy ? 'Updating…' : 'Update password'),
+                        child: Text(_busy ? _loc('Updating…', 'Zapisywanie…') : _loc('Update password', 'Zapisz nowe hasło')),
                       ),
                     ],
                   ),
