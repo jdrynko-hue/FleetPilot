@@ -130,7 +130,7 @@ void main() {
     storedCancellation = true;
     await openBilling(tester);
     await tester.tap(find.text('Resume renewal'));
-    await tester.pumpAndSettle();
+    await settleMutation(tester);
     expect(find.text('Cancel renewal'), findsOneWidget);
     expect(storedCancellation, isTrue);
     expect(subscriptionReads, 1);
