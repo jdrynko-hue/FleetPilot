@@ -6,7 +6,9 @@ import 'core/localization.dart';
 import 'core/theme.dart';
 
 class FleetPilotApp extends StatelessWidget {
-  const FleetPilotApp({super.key});
+  const FleetPilotApp({super.key, this.recoveryLinkOnLaunch = false});
+
+  final bool recoveryLinkOnLaunch;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,7 @@ class FleetPilotApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: buildFleetPilotTheme(),
           home: AppConfig.isConfigured
-              ? const AuthGate()
+              ? AuthGate(recoveryLinkOnLaunch: recoveryLinkOnLaunch)
               : const _MissingConfigurationScreen(),
         );
       },
