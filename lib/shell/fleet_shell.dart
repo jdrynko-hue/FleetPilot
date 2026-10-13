@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../company/business_review_alert.dart';
 import '../company/company_screen.dart';
 import '../company/manager_control_panel.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
+import 'fleet_app_bar.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -171,94 +171,36 @@ class _FleetShellState extends State<FleetShell> {
         );
 
         return Scaffold(
-          appBar: AppBar(
-            title: Row(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                 Image.asset('assets/branding/flotaryx_mark.png', width: 32, height: 32),
-                 const SizedBox(width: 10),
-                 const Text('Flotaryx'),
-               ],
-             ),
-            actions: [
-              const BusinessReviewAlert(),
-              if (_memberships.length > 1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      dropdownColor: const Color(0xFF102A43),
-                      style: const TextStyle(color: Colors.white),
-                      iconEnabledColor: Colors.white,
-                      value: _membership.companyId,
-                      items: _memberships
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m.companyId,
-                              child: Text(m.companyName),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (id) {
-                        if (id == null) {
-                          return;
-                        }
-
-                        setState(() {
-                          _membership = _memberships.firstWhere(
-                            (m) => m.companyId == id,
-                          );
-
-                          _index = 0;
-                          _refreshToken++;
-                        });
-                      },
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Center(child: Text(_membership.companyName)),
+          appBar: A          appBar: FleetAppBar(
+            memberships: _memberships,
+            selectedMembership: _membership,
+            canManage: canManage,
+            compact: !wide,
+            onFleetSelected: (id) {
+              if (id == _membership.companyId) return;
+              setState(() {
+                _membership = _memberships.firstWhere((m) => m.companyId == id);
+                _index = 0;
+                _refreshToken++;
+              });
+            },
+            onManagerPressed: () async {
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ManagerControlPanel(company: _membership),
                 ),
-              if (canManage)
-                IconButton(
-                  tooltip: AppLocale.language.value == 'pl'
-                      ? 'Panel managera'
-                      : 'Manager control panel',
-                  icon: const Icon(Icons.admin_panel_settings_outlined),
-                  onPressed: () async {
-                    await Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ManagerControlPanel(company: _membership),
-                      ),
-                    );
-                    if (mounted) _refreshAll();
-                  },
-                ),
-              IconButton(
-                tooltip: tr('notifications'),
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => NotificationsScreen(company: _membership),
-                  ),
-                ),
+              );
+              if (mounted) _refreshAll();
+            },
+            onNotificationsPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => NotificationsScreen(company: _membership),
               ),
-              IconButton(
-                tooltip: tr('refresh'),
-                onPressed: _refreshAll,
-                icon: const Icon(Icons.refresh),
-              ),
-              IconButton(
-                tooltip: tr('sign_out'),
-                onPressed: () => _repository.signOut(),
-                icon: const Icon(Icons.logout),
-              ),
-            ],
+            ),
+            onRefreshPressed: _refreshAll,
+            onSignOutPressed: () => _repository.signOut(),
           ),
-          body: wide
+e
               ? Row(
                   children: [
                     NavigationRail(
