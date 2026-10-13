@@ -5,12 +5,16 @@ on:
     branches: [main]
     paths:
       - 'scripts/verify_auth_policy.py'
+      - 'scripts/check_public_password_policy.py'
       - 'tests/auth_policy_test.py'
+      - 'tests/public_password_policy_test.py'
       - '.github/workflows/auth-policy.yml'
   pull_request:
     paths:
       - 'scripts/verify_auth_policy.py'
+      - 'scripts/check_public_password_policy.py'
       - 'tests/auth_policy_test.py'
+      - 'tests/public_password_policy_test.py'
       - '.github/workflows/auth-policy.yml'
   workflow_dispatch:
 
@@ -25,6 +29,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify bounded configuration changes
         run: python3 -m unittest discover -s tests -p auth_policy_test.py -v
+      - name: Verify public probe cannot mistake other errors for success
+        run: python3 -m unittest discover -s tests -p public_password_policy_test.py -v
+
+  public-password-policy:
+    needs: policy-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deployed password minimum without an admin token
+        run: python3 scripts/check_public_password_policy.py
 
   server-policy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
