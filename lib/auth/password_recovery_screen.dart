@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../data/fleet_repository.dart';
 
 typedef PasswordUpdater = Future<void> Function(String password);
 typedef PasswordRecoveryCompleted = Future<void> Function();
@@ -45,9 +45,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       if (widget.updatePassword != null) {
         await widget.updatePassword!(_password.text);
       } else {
-        await Supabase.instance.client.auth.updateUser(
-          UserAttributes(password: _password.text),
-        );
+        await FleetRepository().setNewPassword(_password.text);
       }
       if (!mounted) return;
       setState(() => _completed = true);
