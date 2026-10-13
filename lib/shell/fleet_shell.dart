@@ -171,7 +171,7 @@ class _FleetShellState extends State<FleetShell> {
         );
 
         return Scaffold(
-          appBar: A          appBar: FleetAppBar(
+          appBar: FleetAppBar(
             memberships: _memberships,
             selectedMembership: _membership,
             canManage: canManage,
@@ -200,7 +200,7 @@ class _FleetShellState extends State<FleetShell> {
             onRefreshPressed: _refreshAll,
             onSignOutPressed: () => _repository.signOut(),
           ),
-e
+          body: wide
               ? Row(
                   children: [
                     NavigationRail(
