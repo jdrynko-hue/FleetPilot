@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../company/business_review_alert.dart';
 import '../company/company_screen.dart';
 import '../company/manager_control_panel.dart';
 import '../core/constants.dart';
@@ -180,6 +181,7 @@ class _FleetShellState extends State<FleetShell> {
                ],
              ),
             actions: [
+              const BusinessReviewAlert(),
               if (_memberships.length > 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
