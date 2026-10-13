@@ -93,10 +93,12 @@ void main() {
 
   Future<void> settleMutation(WidgetTester tester) async {
     // FunctionsClient JSON serialization runs outside Flutter's fake clock.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+    for (var stage = 0; stage < 3; stage++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pumpAndSettle();
+    }
   }
 
   Future<void> cancel(WidgetTester tester) async {
