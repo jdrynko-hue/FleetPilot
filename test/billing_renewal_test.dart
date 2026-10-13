@@ -50,7 +50,7 @@ void main() {
             };
           case '/rest/v1/flotaryx_billing_prices':
             body = request.url.queryParameters['select'] == 'stripe_mode'
-                ? {'stripe_mode': 'test'}
+                ? [{'stripe_mode': 'test'}]
                 : [{
                     'plan_code': 'pro', 'billing_interval': 'month',
                     'included_vehicles': 10, 'max_vehicles': 25,
@@ -86,6 +86,9 @@ void main() {
           companyName: 'Flotaryx QA Sandbox', role: 'owner', currency: 'GBP'),
     )));
     await tester.pumpAndSettle();
+    expect(find.text(storedCancellation ? 'Resume renewal' : 'Cancel renewal'),
+        findsOneWidget, reason: tester.widgetList<Text>(find.byType(Text))
+            .map((text) => text.data).join(' | '));
   }
 
   Future<void> cancel(WidgetTester tester) async {
