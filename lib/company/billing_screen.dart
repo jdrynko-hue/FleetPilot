@@ -296,6 +296,30 @@ class _BillingScreenState extends State<BillingScreen> {
       if (action == 'portal') {
         await _openStripeUri(result['url'] as String, portal: true);
       } else {
+        if (!mounted) return;
+        if (action == 'cancel' || action == 'resume') {
+          // Stripe has confirmed this state, but its webhook may not have
+          // reached Supabase yet. Update the displayed snapshot directly.
+          final cancellationScheduled = result['cancellation_scheduled'];
+          if (cancellationScheduled is! bool) {
+            throw StateError('Invalid renewal response');
+          }
+          final data = await _future;
+          if (!mounted) return;
+          setState(() {
+            _future = Future.value(_BillingData(
+              currency: data.currency,
+              vehicleCount: data.vehicleCount,
+              status: data.status,
+              prices: data.prices,
+              hasStripe: data.hasStripe,
+              cancellationScheduled: cancellationScheduled,
+              renewalAt: result['period_end']?.toString() ?? data.renewalAt,
+            ));
+          });
+        } else {
+          _reload();
+        }
         if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -304,7 +328,6 @@ class _BillingScreenState extends State<BillingScreen> {
               ),
             ),
           );
-        _reload();
       }
     } catch (error) {
       _showError(error);
