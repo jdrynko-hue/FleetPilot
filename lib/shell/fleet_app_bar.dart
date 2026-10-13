@@ -51,7 +51,7 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: DropdownButton<String>(
         key: const Key('fleet_company_selector'),
         value: selectedMembership.companyId,
-        isExpanded: compact,
+        isExpanded: true,
         dropdownColor: const Color(0xFF102A43),
         style: const TextStyle(color: Colors.white),
         iconEnabledColor: Colors.white,
@@ -114,7 +114,10 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
         if (!compact)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(child: _companySelector()),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: Center(child: _companySelector()),
+            ),
           ),
         businessReviewAlert,
         if (!compact && canManage)
