@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/localization.dart';
+import 'billing_markets.dart';
 
 import '../data/fleet_repository.dart';
 
+typedef FleetCreationHandler = Future<void> Function({
+  required String name,
+  required String country,
+  required String currency,
+});
+
 class CreateCompanyScreen extends StatefulWidget {
-  const CreateCompanyScreen({required this.onCreated, this.allowCancel = false, super.key});
+  const CreateCompanyScreen({required this.onCreated, this.allowCancel = false, this.createCompany, super.key});
 
   final VoidCallback onCreated;
   final bool allowCancel;
+  final FleetCreationHandler? createCompany;
 
   @override
   State<CreateCompanyScreen> createState() => _CreateCompanyScreenState();
 }
 
 class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
-  final _repository = FleetRepository();
   final _name = TextEditingController();
-  final _country = TextEditingController(text: 'GB');
+  String _country = 'GB';
   bool _busy = false;
   bool _b2bConfirmed = false;
 
-  // Supported billing markets: GBP (UK), PLN (Poland), EUR (euro-area).
-  static const _euroCountries = <String>{
-    'AT', 'BE', 'BG', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR',
-    'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES',
-  };
-
-  String? get _countryCurrency {
-    final code = _country.text.trim().toUpperCase();
-    if (code == 'GB') return 'GBP';
-    if (code == 'PL') return 'PLN';
-    if (_euroCountries.contains(code)) return 'EUR';
-    return null;
-  }
+  String? get _countryCurrency => currencyForFleetCountry(_country);
 
   bool get _canCreate =>
       !_busy && _b2bConfirmed && _name.text.trim().isNotEmpty &&
@@ -43,7 +37,6 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   @override
   void dispose() {
     _name.dispose();
-    _country.dispose();
     super.dispose();
   }
 
@@ -52,11 +45,19 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
     final currency = _countryCurrency!;
     setState(() => _busy = true);
     try {
-      await _repository.createCompany(
-        name: _name.text.trim(),
-        country: _country.text.trim().toUpperCase(),
-        currency: currency,
-      );
+      if (widget.createCompany != null) {
+        await widget.createCompany!(
+          name: _name.text.trim(),
+          country: _country,
+          currency: currency,
+        );
+      } else {
+        await FleetRepository().createCompany(
+          name: _name.text.trim(),
+          country: _country,
+          currency: currency,
+        );
+      }
       widget.onCreated();
     } catch (error) {
       if (!mounted) return;
@@ -99,21 +100,32 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    TextField(
-                      controller: _country,
-                      textCapitalization: TextCapitalization.characters,
-                      maxLength: 2,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]')),
-                      ],
-                      onChanged: (_) => setState(() {}),
+                    DropdownButtonFormField<String>(
+                      key: const Key('fleet_country_picker'),
+                      initialValue: _country,
+                      isExpanded: true,
                       decoration: InputDecoration(
-                        labelText: tr('country_code'),
-                        hintText: 'GB',
-                        helperText: AppLocale.language.value == 'pl'
-                            ? 'Obsługiwane: GB, PL i kraje strefy euro'
-                            : 'Supported: GB, PL and euro-area countries',
+                        labelText: AppLocale.language.value == 'pl'
+                            ? 'Kraj rejestracji firmy'
+                            : 'Company registration country',
+                        border: const OutlineInputBorder(),
                       ),
+                      items: supportedFleetCountries.keys
+                          .map((code) => DropdownMenuItem<String>(
+                                value: code,
+                                child: Text(
+                                  '${fleetCountryName(code, locale: AppLocale.language.value)} ($code)',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: _busy
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _country = value);
+                              }
+                            },
                     ),
                     SizedBox(height: 16),
                     InputDecorator(
