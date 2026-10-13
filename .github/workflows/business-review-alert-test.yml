@@ -1,0 +1,32 @@
+name: Business review operator alert regression tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/company/business_review_alert.dart'
+      - 'lib/shell/fleet_shell.dart'
+      - 'test/business_review_alert_test.dart'
+      - '.github/workflows/business-review-alert-test.yml'
+      - 'pubspec.*'
+  pull_request:
+    paths:
+      - 'lib/company/business_review_alert.dart'
+      - 'lib/shell/fleet_shell.dart'
+      - 'test/business_review_alert_test.dart'
+      - '.github/workflows/business-review-alert-test.yml'
+      - 'pubspec.*'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib/company/business_review_alert.dart lib/shell/fleet_shell.dart test/business_review_alert_test.dart
+      - run: flutter analyze lib/company/business_review_alert.dart lib/shell/fleet_shell.dart test/business_review_alert_test.dart --no-fatal-infos
+      - run: flutter test test/business_review_alert_test.dart
