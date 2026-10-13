@@ -7,11 +7,18 @@ import '../data/fleet_repository.dart';
 import 'company_gate.dart';
 import 'login_screen.dart';
 import 'password_recovery_screen.dart';
+import 'auth_link_error_screen.dart';
+import 'auth_redirect_error.dart';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key, this.recoveryLinkOnLaunch = false});
+  const AuthGate({
+    super.key,
+    this.recoveryLinkOnLaunch = false,
+    this.authLinkErrorOnLaunch = false,
+  });
 
   final bool recoveryLinkOnLaunch;
+  final bool authLinkErrorOnLaunch;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -22,17 +29,20 @@ class _AuthGateState extends State<AuthGate> {
   late final StreamSubscription<AuthState> _subscription;
   User? _user;
   bool _passwordRecovery = false;
+  bool _authLinkError = false;
 
   @override
   void initState() {
     super.initState();
     _user = _repository.currentUser;
+    _authLinkError = widget.authLinkErrorOnLaunch || hasAuthRedirectError(Uri.base);
     // The redirect may be consumed during Supabase.initialize, before the
     // listener is attached. Preserve the explicit URL recovery marker.
     _passwordRecovery =
-        widget.recoveryLinkOnLaunch ||
-        Uri.base.fragment.contains('type=recovery') ||
-        Uri.base.queryParameters['type'] == 'recovery';
+        !_authLinkError &&
+        (widget.recoveryLinkOnLaunch ||
+            Uri.base.fragment.contains('type=recovery') ||
+            Uri.base.queryParameters['type'] == 'recovery');
     _subscription = _repository.authChanges.listen((state) {
       if (!mounted) return;
       setState(() {
@@ -52,6 +62,11 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (_authLinkError) {
+      return AuthLinkErrorScreen(
+        onContinue: () => setState(() => _authLinkError = false),
+      );
+    }
     // Password-recovery sessions must never enter the fleet dashboard until
     // the password has been changed. Sign out after the successful update.
     if (_passwordRecovery && _user != null) {
