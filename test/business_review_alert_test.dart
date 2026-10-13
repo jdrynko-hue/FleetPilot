@@ -40,7 +40,7 @@ void main() {
     await openAlert(
       tester,
       loader: () async => 3,
-      openConsole: (_) async => opened++,
+      openConsole: (_) async { opened++; },
     );
     expect(find.byKey(const Key('business_review_alert')), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
