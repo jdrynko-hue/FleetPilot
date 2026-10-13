@@ -54,6 +54,26 @@ const missing = [ids.active, ids.expired, ids.canceled].filter(id =>
 assert.deepEqual(missing, [], 'QA test user must be explicitly granted owner membership in all synthetic QA fleets before running any write tests');
 console.log('Verified JWT and all three synthetic QA owner memberships.');
 
+
+const anonRead = await request('/rest/v1/drivers?select=id,name&company_id=eq.' + ids.expired);
+assert.ok(
+  anonRead.status === 401 || anonRead.status === 403 ||
+  (anonRead.status === 200 && Array.isArray(anonRead.data) && anonRead.data.length === 0),
+  'An unauthenticated request must never access an expired fleet driver record'
+);
+console.log('Unauthenticated fleet data visibility denied.');
+// A fleet owner is deliberately NOT authorized to change Stripe billing status via PostgREST.
+const billingTamper = await request('/rest/v1/company_subscriptions?company_id=eq.' + ids.expired, {
+  method: 'PATCH',
+  headers: { ...auth, Prefer: 'return=representation' },
+  body: JSON.stringify({ status: 'active' }),
+});
+assert.ok(
+  billingTamper.status === 401 || billingTamper.status === 403 || billingTamper.status === 405,
+  'A normal authenticated fleet owner must not be able to modify company_subscriptions'
+);
+console.log('Direct subscription tampering denied.');
+
 const readExpired=await request('/rest/v1/drivers?select=id,name,notes&company_id=eq.'+ids.expired,{headers:auth});
 requireStatus(readExpired,200,'read expired fleet');
 assert.equal(readExpired.data?.length,1,'Read of expired fleet should remain available');
@@ -88,9 +108,9 @@ try {
     method:'PATCH',headers:{...auth,Prefer:'return=representation'},
     body:JSON.stringify({notes:'qa-e2e-temporary-'+run}),
   });
+  didChangeActiveFixture = activeUpdate.status >= 200 && activeUpdate.status < 300;
   requireStatus(activeUpdate,200,'active fleet UPDATE');
   assert.equal(activeUpdate.data?.length,1);
-  didChangeActiveFixture = true;
 } finally {
   if (didChangeActiveFixture) {
     const restore=await request('/rest/v1/drivers?id=eq.'+readActive.data[0].id,{
@@ -101,5 +121,5 @@ try {
     assert.equal(restore.data?.length,1);
   }
 }
-console.log('PASS: real login/JWT, owner RLS, expired read, active read, expired insert, expired update, canceled read/update, active edit, fixture restoration.');
+console.log('PASS: real JWT login, owner RLS, anonymous data protection, subscription write protection, expired/canceled read-only fleet access, active fleet edit and fixture restoration.');
 console.log('QA credentials were supplied only at runtime; the test did not register any user.');
