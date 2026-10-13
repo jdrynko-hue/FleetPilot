@@ -49,6 +49,15 @@ void main() {
     expect(opened, 1);
   });
 
+  testWidgets('pending count above 100 is not truncated by review list limits',
+      (tester) async {
+    await openAlert(tester, loader: () async => 135);
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('business_review_alert')),
+    );
+    expect(button.tooltip, contains('135'));
+  });
+
   testWidgets('operators still have access when there are no pending reviews',
       (tester) async {
     await openAlert(tester, loader: () async => 0);
