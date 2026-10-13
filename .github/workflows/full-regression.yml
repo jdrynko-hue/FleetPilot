@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: '24'
       - name: Test current Sandbox backend sources without external services
-        run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs
+        run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs tests/webhook.test.mjs
 
   flutter:
     runs-on: ubuntu-latest
