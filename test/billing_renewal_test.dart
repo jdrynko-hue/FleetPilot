@@ -68,7 +68,7 @@ void main() {
             throw StateError('Unexpected request: ${request.url.path}');
         }
         return http.Response(jsonEncode(body), status,
-            headers: {'content-type': 'application/json'});
+            headers: {'content-type': 'application/json'}, request: request);
       }),
     );
   });
