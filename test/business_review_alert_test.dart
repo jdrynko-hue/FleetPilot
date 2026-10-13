@@ -65,6 +65,28 @@ void main() {
     expect(find.text('0'), findsNothing);
   });
 
+  testWidgets('revoked permissions hide a previously visible operator action',
+      (tester) async {
+    var calls = 0;
+    await openAlert(
+      tester,
+      loader: () async {
+        calls++;
+        if (calls == 1) return 4;
+        throw StateError('Operator access revoked');
+      },
+      openConsole: (_) async {},
+    );
+
+    expect(find.byKey(const Key('business_review_alert')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('business_review_alert')));
+    await tester.pumpAndSettle();
+
+    expect(calls, 2);
+    expect(find.byKey(const Key('business_review_alert')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a failed first load must not reveal the operator action',
       (tester) async {
     await openAlert(
