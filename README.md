@@ -1,36 +1,52 @@
 # Flotaryx — Smarter Fleet Management
 
-Flotaryx is a multi-company, multilingual fleet management web application built with Flutter and Supabase. It supports vehicle and driver records, daily walkaround checks, issues and defects, repairs and their costs, garages, documents, notifications and CSV exports, with different access for managers and drivers.
+Flotaryx is a multilingual multi-company fleet-management web application built with Flutter and Supabase.
 
-## Open the application
+## Public addresses
 
-- Temporary working URL: https://jdrynko-hue.github.io/FleetPilot/
-- Product website: https://jdrynko-hue.github.io/FleetPilot/start/
-- Installation guide: https://jdrynko-hue.github.io/FleetPilot/install/
-- Purchased product domain: `flotaryx.com` (requires DNS and GitHub Pages custom-domain setup before use)
+- Website: https://flotaryx.com/
+- Fleet manager and driver portal: https://flotaryx.com/app/
+- GitHub Actions status: https://github.com/jdrynko-hue/FleetPilot/actions
 
-The web app can be added to the home screen on supported iPhone and Android devices. It is **not** a native App Store or Google Play release.
+The portal can be added to the home screen of compatible phones as a PWA. It is **not** a native App Store or Google Play application.
 
-## Brand and application identity
+## Available features
 
-Customer-facing text, web page names, the app icon and website are branded Flotaryx. Technical identifiers such as the GitHub repository path, Flutter package name, Supabase project identifiers and database/RPC names remain stable to avoid breaking existing integrations. Do **not** rename them during a cosmetic branding change.
+- Company onboarding and tenant-isolated access for owners, managers and drivers
+- Vehicles, drivers, assignment history and vehicle-change requests
+- Daily checks, defects, repairs, garages and maintenance costs
+- Fleet documents, notifications, CSV reporting and multilingual interface
+- Business verification and role-limited access to company data
+- **Stripe Sandbox** test checkout, localized test price catalog, subscription and webhook reconciliation
 
-## Operational boundaries
+No GPS tracking, live telemetry, dispatch, or tachograph compliance is included. An internet connection is required.
 
-- Requires an internet connection.
-- No live GPS tracking, telemetry, dispatching, taxi dispatch or tachograph compliance.
-- Specialized integrations may be considered in future development; no launch date is guaranteed.
-- Email reminders currently have a test-only implementation and require production sender verification, scheduling and re-deployment before general customer use.
-- Billing and payment collection are not yet integrated; confirm production readiness before selling subscriptions.
+## Payment and safety boundaries
 
-## Deployment
+**Do not enable Stripe Live or paid third-party services without the owner's explicit approval.** Successful Sandbox checkout tests do not establish production billing, regional tax/VAT compliance, or live invoice readiness. The hosted Supabase project contains QA/development records; do not delete company or subscription records during release testing.
 
-The GitHub Pages workflow is `.github/workflows/deploy.yml`. It currently builds for the repository path `/FleetPilot/`. The purchased custom domain must be configured first; after DNS and HTTPS are confirmed, change the Flutter web build base href and PWA `start_url`/`id`/`scope` to `/`, then add the new origin to the Supabase Auth redirect allowlist.
+**Never run `supabase/migrations/001_fleetpilot.sql` on hosted data.** It is a destructive development-reset migration.
 
-## Supabase data
+## Release QA status (13 October 2026)
 
-The current hosted Supabase project contains development/test records. This rebranding does not drop tables, delete records or run migrations. Testing data may be cleared separately after confirming no live accounts are affected. The existing `supabase/migrations/001_fleetpilot.sql` is a destructive development reset — **do not run it on production data**.
+For commit `4e099794d3b8eb615da81fa22759d49d73d77249`:
 
-## Launch checklist
+- [Full Flutter and backend regression](https://github.com/jdrynko-hue/FleetPilot/actions/runs/38456869064): passed.
+- [GitHub Pages deployment and public URL smoke tests](https://github.com/jdrynko-hue/FleetPilot/actions/runs/38456869076): passed.
+- Public Supabase Auth probe: rejects an 11-character password for insufficient length.
+- [Administrative Auth policy check](https://github.com/jdrynko-hue/FleetPilot/actions/runs/38456869095): **blocked by HTTP 403** from the Supabase Management API. Therefore, the exact password-recovery redirect allowlist has **not** been confirmed. Public enforcement and admin configuration are separate checks.
 
-Before onboarding paying customers, validate password recovery and invitation links on the custom domain, data access controls, production email delivery, billing, privacy policy, terms, support address, backup/restore and a complete acceptance test with separate companies and user roles.
+The admin policy check remains manually runnable with appropriate Management API permissions; normal commits run the public enforcement probe and tests without falsely presenting the admin setting as verified.
+
+## Not ready for paid public release until independently verified
+
+1. Complete login, invitations, recovery, expired-link, and role-isolation journeys on a real mobile device and distinct companies.
+2. Confirm production email and recovery redirect behavior with valid user-owned test inboxes.
+3. Verify VAT/tax applicability, business eligibility, checkout currencies, payment receipts and subscription lifecycle in relevant regions.
+4. Test backup restore, privacy and terms compliance, customer support and production monitoring.
+5. Review externally callable `SECURITY DEFINER` RPCs with cross-company abuse tests and restrict unnecessary privileges.
+6. Keep test and production configurations appropriately isolated, then formally authorize launch.
+
+## Deploy and technical identities
+
+GitHub Pages deploys the marketing site at `/` and the Flutter portal at `/app/` through `.github/workflows/deploy.yml`. Customer-facing branding is Flotaryx, while existing repository, package, database and RPC identifiers may retain FleetPilot names for compatibility. Do not rename these identifiers for cosmetic reasons.
