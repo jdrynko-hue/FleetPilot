@@ -14,6 +14,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   bool storedCancellation = false;
   bool failMutation = false;
+  String countryCode = 'GB';
+  String storedStripeMode = 'test';
   int subscriptionReads = 0;
   final actions = <String>[];
 
@@ -35,7 +37,7 @@ void main() {
         int status = 200;
         switch (request.url.path) {
           case '/rest/v1/companies':
-            body = {'country': 'GB'};
+            body = {'country': countryCode};
           case '/rest/v1/rpc/get_company_entitlements':
             body = [{'subscription_status': 'active', 'vehicle_count': 0}];
           case '/rest/v1/company_subscriptions':
@@ -50,11 +52,12 @@ void main() {
             };
           case '/rest/v1/flotaryx_billing_prices':
             body = request.url.queryParameters['select'] == 'stripe_mode'
-                ? [{'stripe_mode': 'test'}]
+                ? [{'stripe_mode': storedStripeMode}]
                 : [{
                     'plan_code': 'pro', 'billing_interval': 'month',
                     'included_vehicles': 10, 'max_vehicles': 25,
-                    'base_amount_minor': 5900, 'extra_vehicle_amount_minor': 500,
+                    'base_amount_minor': countryCode == 'PL' ? 30900 : 5900,
+                    'extra_vehicle_amount_minor': 500,
                   }];
           case '/functions/v1/flotaryx-billing-manage':
             final action = (jsonDecode(request.body) as Map)['action'] as String;
@@ -76,6 +79,8 @@ void main() {
   setUp(() {
     storedCancellation = false;
     failMutation = false;
+    countryCode = 'GB';
+    storedStripeMode = 'test';
     subscriptionReads = 0;
     actions.clear();
   });
@@ -145,4 +150,49 @@ void main() {
     expect(actions, ['cancel']);
     expect(find.textContaining('Stripe temporarily unavailable'), findsOneWidget);
   });
+
+  testWidgets('Sandbox displays GBP and no-real-charge warning', (tester) async {
+    await openBilling(tester);
+    expect(find.text('SANDBOX — NO REAL CHARGES'), findsOneWidget);
+    expect(find.text('Currency: GBP'), findsOneWidget);
+    expect(find.text('£59.00'), findsOneWidget);
+    expect(actions, isEmpty);
+  });
+
+  testWidgets('Polish fleets display PLN instead of GBP', (tester) async {
+    countryCode = 'PL';
+    await openBilling(tester);
+    expect(find.text('SANDBOX — NO REAL CHARGES'), findsOneWidget);
+    expect(find.text('Currency: PLN'), findsOneWidget);
+    expect(find.text('309.00 zł'), findsOneWidget);
+    expect(find.text('£59.00'), findsNothing);
+    expect(actions, isEmpty);
+  });
+
+  testWidgets('Unknown Stripe price environment fails closed', (tester) async {
+    storedStripeMode = 'unexpected';
+    await tester.pumpWidget(MaterialApp(home: BillingScreen(
+      company: CompanyMembership(companyId: 'qa-company',
+          companyName: 'Flotaryx QA Sandbox', role: 'owner', currency: 'GBP'),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Existing subscription price has an unknown Stripe environment'),
+        findsOneWidget);
+    expect(find.text('Cancel renewal'), findsNothing);
+    expect(actions, isEmpty);
+  });
+
+  testWidgets('Unsupported country cannot open subscription purchase', (tester) async {
+    countryCode = 'US';
+    await tester.pumpWidget(MaterialApp(home: BillingScreen(
+      company: CompanyMembership(companyId: 'qa-company',
+          companyName: 'Flotaryx QA Sandbox', role: 'owner', currency: 'USD'),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Billing is not available in your company country yet.'),
+        findsOneWidget);
+    expect(find.text('Cancel renewal'), findsNothing);
+    expect(actions, isEmpty);
+  });
+
 }
