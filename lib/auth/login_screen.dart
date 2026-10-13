@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
+import 'forgot_password_screen.dart';
 import '../data/fleet_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -205,6 +206,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        if (!_registerMode)
+                          TextButton(
+                            key: const Key('forgot_password_button'),
+                            onPressed: _busy
+                                ? null
+                                : () => Navigator.of(context).push<void>(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ForgotPasswordScreen(),
+                                    ),
+                                  ),
+                            child: Text(
+                              AppLocale.language.value == 'pl'
+                                  ? 'Nie pamiętasz hasła?'
+                                  : 'Forgot password?',
+                            ),
+                          ),
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: _busy
