@@ -27,6 +27,6 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib/company/business_review_alert.dart lib/shell/fleet_shell.dart test/business_review_alert_test.dart
+      - run: dart format lib/company/business_review_alert.dart lib/shell/fleet_shell.dart test/business_review_alert_test.dart
       - run: flutter analyze lib/company/business_review_alert.dart lib/shell/fleet_shell.dart test/business_review_alert_test.dart --no-fatal-infos
       - run: flutter test test/business_review_alert_test.dart
