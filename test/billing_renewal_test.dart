@@ -91,11 +91,19 @@ void main() {
             .map((text) => text.data).join(' | '));
   }
 
+  Future<void> settleMutation(WidgetTester tester) async {
+    // FunctionsClient JSON serialization runs outside Flutter's fake clock.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+  }
+
   Future<void> cancel(WidgetTester tester) async {
     await tester.tap(find.text('Cancel renewal'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm'));
-    await tester.pumpAndSettle();
+    await settleMutation(tester);
   }
 
   testWidgets('cancel and resume update without waiting for the webhook', (tester) async {
@@ -108,7 +116,7 @@ void main() {
     // Supabase still says false: no webhook has arrived.
     expect(storedCancellation, isFalse);
     await tester.tap(find.text('Resume renewal'));
-    await tester.pumpAndSettle();
+    await settleMutation(tester);
     expect(find.text('Cancel renewal'), findsOneWidget,
         reason: tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ') + ' actions=$actions');
     expect(find.textContaining('Cancellation scheduled at period end.'), findsNothing);
@@ -132,5 +140,7 @@ void main() {
     await cancel(tester);
     expect(find.text('Cancel renewal'), findsOneWidget);
     expect(find.text('Resume renewal'), findsNothing);
+    expect(actions, ['cancel']);
+    expect(find.textContaining('Stripe temporarily unavailable'), findsOneWidget);
   });
 }
