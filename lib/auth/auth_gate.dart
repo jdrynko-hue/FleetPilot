@@ -9,7 +9,9 @@ import 'login_screen.dart';
 import 'password_recovery_screen.dart';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+  const AuthGate({super.key, this.recoveryLinkOnLaunch = false});
+
+  final bool recoveryLinkOnLaunch;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -28,6 +30,7 @@ class _AuthGateState extends State<AuthGate> {
     // The redirect may be consumed during Supabase.initialize, before the
     // listener is attached. Preserve the explicit URL recovery marker.
     _passwordRecovery =
+        widget.recoveryLinkOnLaunch ||
         Uri.base.fragment.contains('type=recovery') ||
         Uri.base.queryParameters['type'] == 'recovery';
     _subscription = _repository.authChanges.listen((state) {
