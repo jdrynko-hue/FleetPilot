@@ -80,8 +80,9 @@ class _BusinessReviewAlertState extends State<BusinessReviewAlert> {
           await (widget.loadPendingReviews?.call() ?? _loadFromSupabase());
       if (mounted) setState(() => _pending = pending);
     } catch (_) {
-      // Fail closed on the first load. A transient error later keeps the last
-      // count instead of accidentally showing an administrator link to users.
+      // A permission failure or expired session must not leave a stale
+      // operator shortcut on screen. The RPC also enforces authorization.
+      if (mounted) setState(() => _pending = null);
     } finally {
       _loading = false;
     }
