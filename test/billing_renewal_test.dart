@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -17,9 +18,14 @@ void main() {
   final actions = <String>[];
 
   setUpAll(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/shared_preferences'),
+      (call) async => call.method == 'getAll' ? <String, Object>{} : true,
+    );
     await Supabase.initialize(
       url: 'https://qa.example.com',
-      anonKey: 'qa-publishable-key',
+      publishableKey: 'qa-publishable-key',
       authOptions: const FlutterAuthClientOptions(
         autoRefreshToken: false,
         localStorage: EmptyLocalStorage(),
