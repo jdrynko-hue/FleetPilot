@@ -28,11 +28,11 @@ class RepairCostScenario {
       throw ArgumentError('Fleet repair request and repair scope are required');
     }
     if (daysOffRoad != null && daysOffRoad! < 0) {
-      throw RangeError.value(daysOffRoad, 'daysOffRoad', 'Cannot be negative');
+      throw RangeError.value(daysOffRoad!, 'daysOffRoad', 'Cannot be negative');
     }
     if (transferCostMinor != null && transferCostMinor! < 0) {
       throw RangeError.value(
-        transferCostMinor,
+        transferCostMinor!,
         'transferCostMinor',
         'Cannot be negative',
       );
