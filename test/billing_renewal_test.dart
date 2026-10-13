@@ -101,14 +101,16 @@ void main() {
   testWidgets('cancel and resume update without waiting for the webhook', (tester) async {
     await openBilling(tester);
     await cancel(tester);
-    expect(find.text('Resume renewal'), findsOneWidget);
+    expect(find.text('Resume renewal'), findsOneWidget,
+        reason: tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ') + ' actions=$actions');
     expect(find.textContaining('Cancellation scheduled at period end.'), findsOneWidget);
     expect(subscriptionReads, 1);
     // Supabase still says false: no webhook has arrived.
     expect(storedCancellation, isFalse);
     await tester.tap(find.text('Resume renewal'));
     await tester.pumpAndSettle();
-    expect(find.text('Cancel renewal'), findsOneWidget);
+    expect(find.text('Cancel renewal'), findsOneWidget,
+        reason: tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ') + ' actions=$actions');
     expect(find.textContaining('Cancellation scheduled at period end.'), findsNothing);
     expect(actions, ['cancel', 'resume']);
     expect(subscriptionReads, 1);
