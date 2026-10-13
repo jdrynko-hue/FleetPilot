@@ -76,9 +76,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('PLN — Polish złoty'), findsOneWidget);
 
-    await tester.tap(find.byType(CheckboxListTile));
+    final attestation = find.byType(CheckboxListTile);
+    await tester.ensureVisible(attestation);
+    await tester.pumpAndSettle();
+    await tester.tap(attestation);
     await tester.pump();
-    await tester.tap(find.byType(FilledButton));
+
+    final createButton = find.byType(FilledButton);
+    await tester.ensureVisible(createButton);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(createButton).onPressed, isNotNull);
+    await tester.tap(createButton);
     await tester.pumpAndSettle();
 
     expect(captured['name'], 'QA Business');
