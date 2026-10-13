@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../data/fleet_repository.dart';
 
 typedef PasswordResetRequester = Future<void> Function(String email);
 
@@ -36,10 +36,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (widget.requestReset != null) {
         await widget.requestReset!(_email.text.trim());
       } else {
-        await Supabase.instance.client.auth.resetPasswordForEmail(
-          _email.text.trim(),
-          redirectTo: 'https://flotaryx.com/app/',
-        );
+        await FleetRepository().sendPasswordReset(_email.text.trim());
       }
       if (mounted) setState(() => _submitted = true);
     } catch (_) {
