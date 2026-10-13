@@ -25,6 +25,11 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _user = _repository.currentUser;
+    // The redirect may be consumed during Supabase.initialize, before the
+    // listener is attached. Preserve the explicit URL recovery marker.
+    _passwordRecovery =
+        Uri.base.fragment.contains('type=recovery') ||
+        Uri.base.queryParameters['type'] == 'recovery';
     _subscription = _repository.authChanges.listen((state) {
       if (!mounted) return;
       setState(() {
@@ -46,7 +51,7 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     // Password-recovery sessions must never enter the fleet dashboard until
     // the password has been changed. Sign out after the successful update.
-    if (_passwordRecovery) {
+    if (_passwordRecovery && _user != null) {
       return PasswordRecoveryScreen(
         onCompleted: () async {
           await _repository.signOut();
