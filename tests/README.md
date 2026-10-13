@@ -1,11 +1,9 @@
-Mock backend tests were run using TypeScript (`tsc`) and Node.js. Tests do not contact Stripe or Supabase and do not charge any card.
+Mock backend tests run against the current TypeScript source using Node.js 24. Tests do not contact Stripe or Supabase and do not charge any card.
 
 Compile and test from the repository root:
 
 ```sh
-tsc --target es2022 --lib es2022,dom --skipLibCheck --outDir /tmp/flotaryx-tests tests/deno-test-globals.d.ts supabase/functions/flotaryx-billing-manage/index.ts
-cp /tmp/flotaryx-tests/index.js tests/billing-manage.compiled.mjs
-node tests/billing-manage.test.mjs
+node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs
 ```
 
-The packaged compiled test helper is included for a quick smoke test, but recompiling is recommended after code changes.
+The full-regression workflow runs these tests alongside Flutter analysis and tests. The legacy compiled helper is not used by the suite.
