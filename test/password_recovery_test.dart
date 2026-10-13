@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/auth/forgot_password_screen.dart';
 import 'package:fleetpilot/auth/password_recovery_screen.dart';
+import 'package:fleetpilot/core/localization.dart';
 
 void main() {
   testWidgets('invalid recovery email does not send a request', (tester) async {
@@ -33,6 +34,16 @@ void main() {
     expect(email, 'person@example.com');
     expect(find.byKey(const Key('reset_request_confirmation')), findsOneWidget);
     expect(find.textContaining('If an account exists'), findsOneWidget);
+  });
+
+  testWidgets('Polish-language recovery form is localized', (tester) async {
+    AppLocale.language.value = 'pl';
+    addTearDown(() => AppLocale.language.value = 'en');
+    await tester.pumpWidget(MaterialApp(
+      home: ForgotPasswordScreen(requestReset: (email) async {}),
+    ));
+    expect(find.text('Odzyskiwanie hasła'), findsOneWidget);
+    expect(find.text('Wyślij link do zmiany hasła'), findsOneWidget);
   });
 
   testWidgets('short password never updates the account', (tester) async {
