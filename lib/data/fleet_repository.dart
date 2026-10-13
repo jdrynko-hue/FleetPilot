@@ -30,6 +30,19 @@ class FleetRepository {
     return response.session != null;
   }
 
+  /// Sends a Supabase recovery link back to our hosted Flutter application.
+  Future<void> sendPasswordReset(String email) async {
+    await _client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'https://flotaryx.com/app/',
+    );
+  }
+
+  /// Called only after Supabase validates a password-recovery session.
+  Future<void> setNewPassword(String password) async {
+    await _client.auth.updateUser(UserAttributes(password: password));
+  }
+
   Future<void> signOut() => _client.auth.signOut();
 
   Future<List<CompanyMembership>> fetchMemberships() async {
