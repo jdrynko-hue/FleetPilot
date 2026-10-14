@@ -168,4 +168,26 @@ assert.ok(good(await rpc(customerC,'garage_booking_my_notifications'),
  'customer C confirmation notice').some(n=>n.event_action==='confirmed'));
 deny(await call('/rest/v1/garage_booking_notifications?select=*',customerA,
  undefined,'GET'),'raw notification table denied');
+
+// Race regression: independent requests for one bay at the same instant.
+// Both PostgREST transactions must not be able to confirm the same resource.
+const tomorrowSlot = new Date(start.getTime()+86400000).toISOString();
+const raceA = good(await book(customerA,'Concurrent Alice',tomorrowSlot),
+  'create concurrent A request');
+const raceB = good(await book(customerB,'Concurrent Bob',tomorrowSlot),
+  'create concurrent B request');
+const raced = await Promise.all([
+  rpc(owner,'garage_booking_confirm_slot',{p_booking:raceA,p_resource:bay2}),
+  rpc(owner,'garage_booking_confirm_slot',{p_booking:raceB,p_resource:bay2}),
+]);
+assert.equal(raced.filter(r=>r.ok).length,1,
+  'Exactly one concurrent confirmation may own a bay');
+assert.equal(raced.filter(r=>!r.ok).length,1,
+  'Overlapping concurrent requests must not both succeed');
+const raceCalendar=good(await rpc(owner,'garage_booking_calendar',{
+  p_shop:shop,p_from:new Date(start.getTime()+86400000-3600000).toISOString(),
+  p_until:new Date(start.getTime()+86400000+7200000).toISOString()
+}),'concurrent booking calendar');
+assert.equal(raceCalendar.filter(i=>i.resource_id===bay2).length,1,
+  'Only one confirmed booking exists for racing same resource');
 console.log('PASS local Supabase Garage calendar: working hours, capacity, shared mechanics, cancellation holds, user-scoped private notifications');
