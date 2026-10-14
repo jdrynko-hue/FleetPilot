@@ -257,14 +257,18 @@ class GarageRepairBridgeSnapshot {
 
   static String _uuidField(Map<dynamic,dynamic> data,String key) {
     final value = _requiredText(data,key);
-    GarageRepairBridgeRepository.requireId(value,key);
+    if (!GarageRepairBridgeRepository._uuid.hasMatch(value)) {
+      throw FormatException('Invalid $key');
+    }
     return value;
   }
   static String? _optionalUuid(Map<dynamic,dynamic> data,String key) {
     final value = data[key];
     if (value == null) return null;
     if (value is! String) throw FormatException('Invalid $key');
-    GarageRepairBridgeRepository.requireId(value,key);
+    if (!GarageRepairBridgeRepository._uuid.hasMatch(value)) {
+      throw FormatException('Invalid $key');
+    }
     return value;
   }
   static String _requiredText(Map<dynamic,dynamic> data,String key) {
