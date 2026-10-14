@@ -1,0 +1,42 @@
+name: Verify public HTML demo preview proxy
+
+on:
+  push:
+    branches:
+      - feat/staging-ecosystem-demo-mobile-20261014
+    paths:
+      - 'web/demo/index.html'
+      - 'web/demo/README.md'
+      - '.github/workflows/demo-cdn-probe.yml'
+  pull_request:
+    paths:
+      - 'web/demo/README.md'
+      - '.github/workflows/demo-cdn-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check-https:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check immutable CDN preview (no deployment)
+        env:
+          DEMO_URL: https://rawcdn.githack.com/jdrynko-hue/FleetPilot/cf84f1a12499cc925b08d35b99b9fef4fbbee71a/web/demo/index.html
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 2 --retry-delay 1 --retry-all-errors \
+            --connect-timeout 10 --max-time 35 -D /tmp/demo-headers \
+            "$DEMO_URL" -o /tmp/flotaryx-demo.html
+          grep -iq 'content-type: *text/html' /tmp/demo-headers
+          grep -q 'id="fleet"' /tmp/flotaryx-demo.html
+          grep -q 'id="garage"' /tmp/flotaryx-demo.html
+          grep -q 'id="mechanic"' /tmp/flotaryx-demo.html
+          grep -q 'id="customer"' /tmp/flotaryx-demo.html
+          grep -q 'noindex,nofollow' /tmp/flotaryx-demo.html
+          ! grep -q 'supabase.co' /tmp/flotaryx-demo.html
+          cmp web/demo/index.html /tmp/flotaryx-demo.html
+          echo "PASS verified immutable external demo preview URL"

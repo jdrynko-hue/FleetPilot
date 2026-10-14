@@ -1,0 +1,46 @@
+name: Flotaryx demo browser acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'web/demo/index.html'
+      - 'tests/ecosystem_demo_browser_test.mjs'
+      - '.github/workflows/ecosystem-demo-browser.yml'
+  push:
+    branches:
+      - feat/staging-ecosystem-demo-mobile-20261014
+    paths:
+      - 'web/demo/index.html'
+      - 'tests/ecosystem_demo_browser_test.mjs'
+      - '.github/workflows/ecosystem-demo-browser.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-webkit:
+    name: Offline Chrome + Safari engine smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated test-only browser tools
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Verify real browser navigation, repair journey and customer booking
+        run: node tests/ecosystem_demo_browser_test.mjs
+      - name: Upload fictional iPhone preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-demo-iphone-webkit-screens
+          path: artifacts/demo-mobile/*.png
+          retention-days: 7
+          if-no-files-found: warn

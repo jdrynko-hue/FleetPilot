@@ -1,0 +1,34 @@
+name: Flotaryx isolated interactive demo
+on:
+  pull_request:
+    paths:
+      - 'web/demo/index.html'
+      - 'tests/flotaryx_demo_markup_test.py'
+      - '.github/workflows/flotaryx-demo-preview.yml'
+  push:
+    branches:
+      - 'feat/staging-ecosystem-demo-mobile-20261014'
+    paths:
+      - 'web/demo/index.html'
+      - 'tests/flotaryx_demo_markup_test.py'
+      - '.github/workflows/flotaryx-demo-preview.yml'
+permissions:
+  contents: read
+jobs:
+  static-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify role navigation, demo safety and JavaScript syntax
+        run: python3 -m unittest discover -s tests -p flotaryx_demo_markup_test.py -v
+      - name: Attach the standalone demo for mobile testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-ecosystem-mobile-demo
+          path: web/demo/index.html
+          retention-days: 7
+          if-no-files-found: error
