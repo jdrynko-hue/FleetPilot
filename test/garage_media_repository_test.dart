@@ -72,14 +72,12 @@ void main() {
         throwsRangeError,
       );
     }
-    expect(
-      () => GarageMediaPaths.createUploadPath(
-        workspaceId: workspace, orderId: order,
-        category: GarageMediaCategory.photo,
-        mime: 'image/png', fileSize: 5 * 1024 * 1024,
-      ),
-      endsWith('.png'),
+    final largestAllowed = GarageMediaPaths.createUploadPath(
+      workspaceId: workspace, orderId: order,
+      category: GarageMediaCategory.photo,
+      mime: 'image/png', fileSize: 5 * 1024 * 1024,
     );
+    expect(largestAllowed, endsWith('.png'));
   });
 
   test('denies object names with traversal, customer PII and wrong extensions',
