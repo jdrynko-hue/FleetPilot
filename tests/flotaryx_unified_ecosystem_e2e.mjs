@@ -125,3 +125,9 @@ assert.equal(good(await rpc(mechanic,'garage_start_approved_repair',{
  p_workspace_id:garage,p_order_id:fleetOrder}),'start approved repair'),'in_progress');
 assert.equal(good(await rpc(owner,'garage_fleet_update_progress',{
  p_request:rid,p_status:'ready'}),'repair ready'),'ready');
+
+const final=good(await rpc(fleet,'garage_fleet_snapshot',{p_request:rid}),'repair history');
+assert.equal(final.quote.approved,true);
+assert.equal(final.work_order_status,'ready');
+assert.deepEqual(final.events.map(e=>e.action),[
+ 'request_sent','request_accepted','quote_approved','progress_updated']);
