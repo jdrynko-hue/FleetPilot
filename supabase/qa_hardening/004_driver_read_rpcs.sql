@@ -124,6 +124,9 @@ AS $fn$
  WHERE v.company_id=_company_id AND v.is_active
    AND v.status NOT IN ('sold','off_road','workshop','maintenance')
    AND fleet_qa_driver.linked_driver(_company_id) IS NOT NULL
+   -- Do not expose colleagues' assigned vehicles or registrations.
+   AND (v.current_driver_id IS NULL OR
+     v.current_driver_id=fleet_qa_driver.linked_driver(_company_id))
  ORDER BY v.registration LIMIT 300;
 $fn$;
 CREATE FUNCTION public.fleetpilot_list_vehicle_change_requests(_company_id uuid)
