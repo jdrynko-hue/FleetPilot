@@ -327,7 +327,7 @@ INSERT INTO public.garage_work_orders (
  '00000000-0000-4000-8000-000000000101',
  '00000000-0000-4000-8000-000000000301',
  '00000000-0000-4000-8000-000000000004',
- 'Inspect tyres in customer's chosen currency'
+ 'Inspect tyres in customer selected currency'
 );
 COMMIT;
 BEGIN;
