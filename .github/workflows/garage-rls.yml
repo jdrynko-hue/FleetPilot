@@ -92,6 +92,8 @@ jobs:
             supabase/migrations/20261014000300_garage_assignments.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" \
             supabase/migrations/20261014000400_garage_quotes.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" \
+            supabase/migrations/20261014000500_garage_private_media.sql
           # GoTrue signup on loopback must issue a session without contacting
           # external email providers. Never change this in hosted production.
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' \
