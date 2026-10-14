@@ -7,7 +7,7 @@ UPDATE auth.users SET email='verified-garage-a@example.test',
  email_confirmed_at=now()
 WHERE id='00000000-0000-4000-8000-000000000003';
 
-DO $
+DO $roster_acl$
 BEGIN
  IF (SELECT count(*) FROM pg_class WHERE oid=
   'public.garage_booking_resource_audit'::regclass AND relrowsecurity)<>1 THEN
@@ -17,7 +17,7 @@ BEGIN
    OR has_function_privilege('anon','public.garage_booking_mechanics(uuid)','EXECUTE')
    OR has_function_privilege('anon','public.garage_booking_assign_resource_mechanic(uuid,uuid,uuid)','EXECUTE')
  THEN RAISE EXCEPTION 'Unsafe Garage roster/audit privileges'; END IF;
-END $$;
+END $roster_acl$;
 
 -- Workshop B cannot discover Garage A mechanic emails, or mutate Garage A bays.
 BEGIN;
