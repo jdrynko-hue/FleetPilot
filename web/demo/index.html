@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#102b4a">
+<title>Flotaryx — Fleet + Garage | Interaktywne demo</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#173149;background:#f4f7fb;font-size:15px;line-height:1.5}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #3e97ee;outline-offset:3px}
+.wrap{max-width:1160px;margin:auto;padding:0 22px}.masthead{background:#102d4d;color:#fff;border-bottom:1px solid #24405e}.masthead>.wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:70px}.brand{display:flex;gap:12px;align-items:center;font-size:20px;font-weight:800;letter-spacing:-.6px}.brandmark{display:inline-grid;place-items:center;width:39px;height:39px;background:#2b80d7;border-radius:12px;color:white;font-size:14px}.masthead .small{font-size:12px;color:#bcd4ef;text-align:right}.notice{background:#e5f2ff;color:#254f79;border:1px solid #c5dffa;border-radius:11px;padding:12px 15px;margin:21px 0;font-size:13px}.layout{padding-bottom:60px}
+.role-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0 24px}.role-nav a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:53px;background:#fff;border:1px solid #dbe6f1;border-radius:13px;font-weight:700;font-size:14px}.role-nav a[aria-current="page"],.role-nav a:hover{border-color:#267ad0;background:#e7f3ff;color:#12508b}.eyebrow{font-size:11px;letter-spacing:1.3px;color:#1774c9;font-weight:800}.page-intro{margin-bottom:24px}.page-intro h1{font-size:clamp(26px,4vw,38px);line-height:1.2;letter-spacing:-1px;margin:6px 0 6px}.page-intro p{margin:0;color:#658095}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.metric{padding:18px;border:1px solid #dfe8f1;background:#fff;border-radius:14px}.metric small{display:block;color:#607990}.metric strong{font-size:28px;color:#153a60;letter-spacing:-.5px}
+.columns{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,1fr);gap:18px}.card{background:#fff;border:1px solid #dae5ef;border-radius:16px;padding:21px;margin-bottom:16px;box-shadow:0 8px 24px rgba(20,53,89,.035);min-width:0}.card h2{font-size:18px;margin:0 0 14px;letter-spacing:-.3px}.card h3{font-size:15px;margin:12px 0 7px}.muted{color:#637d93;font-size:13px}.line{border-top:1px solid #e6edf4;padding:12px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}.line>div{min-width:0}.line strong{display:block}.line small{display:block;color:#6b8298;margin-top:2px}.pill{font-weight:700;font-size:11px;border-radius:99px;padding:5px 10px;white-space:nowrap;color:#1d619e;background:#e7f2ff}.pill.ok{color:#136c49;background:#dff5e9}.pill.warn{color:#946013;background:#fff2d7}.pill.gray{color:#607487;background:#edf2f6}.btn{background:#267bcd;border:1px solid #267bcd;color:#fff;border-radius:10px;min-height:43px;padding:10px 16px;font-weight:750;font-size:13px;display:inline-flex;align-items:center;justify-content:center;text-align:center;gap:7px}.btn:hover{background:#155fa8}.btn.outline{background:#fff;color:#2363a0;border:1px solid #bad4eb}.btn.outline:hover{background:#eaf4ff}.btn:disabled{opacity:.45;cursor:not-allowed}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin:15px 0 0}.bluebox{background:#eef6ff;border:1px solid #d3e7fa;padding:13px;border-radius:12px;margin:12px 0;font-size:13px}.status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.stage{padding:10px 9px;border:1px solid #dde9f3;color:#7890a4;border-radius:9px;text-align:center;font-size:12px;font-weight:700}.stage.done{background:#def4e9;border-color:#bbebd0;color:#126744}.stage.current{background:#e7f2ff;border-color:#99c9f6;color:#155b9f}
+.formrow{margin:12px 0}.formrow label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:#506b83}.formrow input,.formrow select{width:100%;min-height:43px;padding:10px 12px;border:1px solid #c6d8e8;border-radius:9px;background:#fff;max-width:100%}.demo-table{width:100%;border-collapse:collapse;font-size:13px}.demo-table td,.demo-table th{padding:10px 4px;text-align:left;border-bottom:1px solid #e9f0f5}.demo-table th{color:#637d94;font-size:12px}.timeline{margin:0;padding-left:19px}.timeline li{margin:7px 0;color:#4c6882}.view{display:none}.view:first-of-type{display:block}
+body:has(.view:target) .view:first-of-type:not(:target){display:none}.view:target{display:block}body.js .view{display:none}body.js .view.active{display:block}
+[hidden]{display:none!important}.js-only{display:none}body.js .js-only{display:block}.empty{padding:22px 12px;text-align:center;background:#f8fafc;border:1px dashed #d2dfeb;border-radius:12px;color:#687e94;font-size:13px}.footer{padding:20px 0 28px;text-align:center;color:#758ba0;font-size:12px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#143c61;color:#fff;padding:12px 18px;border-radius:11px;box-shadow:0 8px 25px #13345230;max-width:calc(100% - 26px);z-index:5;font-size:13px}
+@media(max-width:800px){.columns{grid-template-columns:1fr}.metric{padding:15px}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.masthead>.wrap{min-height:62px}.wrap{padding:0 14px}.role-nav{gap:6px}.role-nav a{min-height:49px;padding:8px 3px;font-size:11px;gap:2px;flex-direction:column}.card{padding:16px}.metric strong{font-size:25px}.status-grid{grid-template-columns:1fr 1fr 1fr}.stage{font-size:11px;padding:9px 4px}.page-intro h1{font-size:26px}.masthead .small{font-size:11px;max-width:130px}}
+</style>
+<script>document.documentElement.classList.add('js');document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('js'))</script>
+</head>
+<body>
+<header class="masthead"><div class="wrap"><div class="brand"><span class="brandmark">FX</span><span>flotaryx<span style="color:#63afff">.</span></span></div><span class="small">Fleet + Garage<br>Wspólny podgląd mobilny</span></div></header>
+<main class="wrap layout">
+<div class="notice" role="note"><strong>Środowisko demonstracyjne.</strong> Wszystkie osoby, warsztaty, numery rejestracyjne i kwoty są fikcyjne. Przyciski nie wysyłają danych na serwer, nie tworzą płatności ani nie łączą się z bazą produkcyjną.</div>
+<nav class="role-nav" aria-label="Wybierz rolę">
+<a href="#fleet" data-role="fleet" aria-current="page"><span aria-hidden="true">▣</span> Fleet</a>
+<a href="#garage" data-role="garage"><span aria-hidden="true">▤</span> Garage</a>
+<a href="#mechanic" data-role="mechanic"><span aria-hidden="true">⚙</span> Mechanik</a>
+<a href="#customer" data-role="customer"><span aria-hidden="true">◉</span> Klient</a>
+</nav>
+<noscript><div class="notice">Przełączanie paneli działa bez JavaScript. Przyciski do zmiany statusu naprawy wymagają zwykłej przeglądarki z JavaScript.</div></noscript>
+<section class="view active" id="fleet" aria-labelledby="fleetTitle">
+<div class="page-intro"><span class="eyebrow">FLOTARYX FLEET</span><h1 id="fleetTitle">Centrum zarządzania flotą</h1><p>Zgłoszenia kierowców, koszty i historia napraw — połączone z Garage.</p></div>
+<div class="metrics"><div class="metric"><small>Pojazdy</small><strong>18</strong></div><div class="metric"><small>Kierowcy</small><strong>14</strong></div><div class="metric"><small>Otwarte usterki</small><strong id="fleetIssueCount">1</strong></div><div class="metric"><small>W Garage</small><strong id="fleetGarageCount">0</strong></div></div>
+<div class="columns"><div><article class="card"><h2>Usterka do naprawy</h2><div class="line"><div><strong>Mercedes Sprinter · QA21 DEM</strong><small>Hamulce: niepokojący dźwięk · zgłoszenie kierowcy</small></div><span class="pill warn" id="fleetStatus">Nowa usterka</span></div><div class="bluebox">Warsztat otrzymuje zgłoszenie dopiero po wybraniu akcji przez managera floty.</div><div class="status-grid"><span class="stage current" id="stage1">1. Zgłoszenie</span><span class="stage" id="stage2">2. Kosztorys</span><span class="stage" id="stage3">3. Naprawa</span></div><div class="buttons js-only"><button class="btn" data-action="send" data-show="reported">Wyślij usterkę do Garage →</button><button class="btn" data-action="approve" data-show="quoted">Zatwierdź kosztorys <span data-money>£240</span></button><span class="bluebox" data-show="sent">Zgłoszenie przekazano. Przełącz na Garage i przygotuj kosztorys.</span><span class="bluebox" data-show="approved|repairing">Zlecenie jest w trakcie realizacji w Garage.</span><span class="bluebox" data-show="completed">Naprawa zakończona. Historia pojazdu została zaktualizowana.</span></div></article><article class="card"><h2>Pojazdy</h2><div class="line"><div><strong>Mercedes Sprinter · QA21 DEM</strong><small>Jan Nowak · zgłoszenie hamulców</small></div><span class="pill warn">Usterka</span></div><div class="line"><div><strong>Ford Transit · QA70 ABC</strong><small>Anna Kowalska · kierowca</small></div><span class="pill ok">Sprawny</span></div><div class="line"><div><strong>Maxus Deliver 9 · QA23 XYZ</strong><small>Adam Lis · kierowca</small></div><span class="pill ok">Sprawny</span></div></article></div><div><article class="card"><h2>Historia serwisowa</h2><div id="historyList" class="empty">Historia tej naprawy pojawi się po zakończeniu zlecenia.</div></article><article class="card"><h2>Model współpracy</h2><ol class="timeline"><li>Kierowca zgłasza usterkę.</li><li>Manager wysyła ją do Garage.</li><li>Warsztat sporządza kosztorys.</li><li>Fleet zatwierdza naprawę.</li><li>Mechanik wykonuje pracę.</li><li>Historia trafia do obu paneli.</li></ol></article></div></div></section>
+<section class="view" id="garage" aria-labelledby="garageTitle">
+<div class="page-intro"><span class="eyebrow">FLOTARYX GARAGE</span><h1 id="garageTitle">Centrum warsztatu</h1><p>Floty i klienci indywidualni w jednym harmonogramie.</p></div>
+<div class="metrics"><div class="metric"><small>Stanowiska</small><strong>3</strong></div><div class="metric"><small>Mechanicy</small><strong>2</strong></div><div class="metric"><small>Zlecenia Fleet</small><strong id="garageFleetCount">0</strong></div><div class="metric"><small>Rezerwacje</small><strong id="garageBookingCount">0</strong></div></div>
+<div class="columns"><div><article class="card"><h2>Zlecenie od floty</h2><div class="line"><div><strong>Mercedes Sprinter · QA21 DEM</strong><small>Flotaryx Fleet · usterka hamulców</small></div><span id="garageStatus" class="pill gray">Brak zgłoszenia</span></div><div class="js-only"><div class="formrow" data-show="sent"><label for="estimate">Kosztorys (£)</label><input type="number" id="estimate" min="1" max="100000" step=".01" value="240"></div><div class="buttons"><button class="btn" data-action="quote" data-show="sent">Przygotuj i wyślij kosztorys →</button><span class="bluebox" data-show="quoted">Kosztorys wysłany. Oczekuje na zatwierdzenie przez Fleet.</span><span class="bluebox" data-show="approved|repairing|completed">Kosztorys zatwierdzony. Mechanik może przeprowadzić naprawę.</span></div></div></article><article class="card"><h2>Zapytania klientów prywatnych</h2><div class="line"><div><strong>Anna Kowalska · Ford Focus</strong><small>Diagnostyka hamulców · preferowany termin: 20 listopada, 10:00</small></div><span id="garageBookingStatus" class="pill gray">Brak zapytania</span></div><div class="buttons js-only"><button class="btn" data-action="confirm" data-booking="requested">Potwierdź wizytę →</button><span class="bluebox" data-booking="confirmed">Wizyta potwierdzona, klient widzi aktualny status.</span></div></article></div><div><article class="card"><h2>Kalendarz i stanowiska</h2><div class="line"><div><strong>Stanowisko 1</strong><small>Marek Nowak · mechanik</small></div><span class="pill" id="bayStatus">Dostępne</span></div><div class="line"><div><strong>Stanowisko 2</strong><small>Julia Adams · mechanik</small></div><span class="pill ok">Dostępne</span></div><div class="line"><div><strong>Stanowisko 3</strong><small>Diagnostyka</small></div><span class="pill ok">Dostępne</span></div></article><article class="card"><h2>Rejestr zdarzeń</h2><ul class="timeline" id="garageHistory"><li>Warsztat gotowy do odbierania zgłoszeń.</li></ul></article></div></div></section>
+<section class="view" id="mechanic" aria-labelledby="mechanicTitle">
+<div class="page-intro"><span class="eyebrow">FLOTARYX GARAGE · MECHANIK</span><h1 id="mechanicTitle">Moje zlecenia</h1><p>Prace z floty i rezerwacji klientów, tylko w ramach przydzielonego warsztatu.</p></div>
+<div class="metrics"><div class="metric"><small>Zlecenia</small><strong id="mechanicJobCount">0</strong></div><div class="metric"><small>Stanowisko</small><strong>01</strong></div><div class="metric"><small>Warsztat</small><strong>1</strong></div><div class="metric"><small>Ukończone</small><strong id="mechanicDone">0</strong></div></div>
+<div class="columns"><div><article class="card"><h2>Mercedes Sprinter · QA21 DEM</h2><div class="line"><div><strong>Wymiana części układu hamulcowego</strong><small>Zlecenie flotowe · przypisane do Marka Nowaka</small></div><span class="pill warn" id="mechanicStatus">Oczekuje</span></div><div class="bluebox">Prace można rozpocząć dopiero po zatwierdzeniu kosztorysu przez Fleet.</div><div class="buttons js-only"><button class="btn" data-action="start" data-show="approved">Rozpocznij naprawę →</button><button class="btn" data-action="complete" data-show="repairing">Zakończ naprawę ✓</button><span class="bluebox" data-show="completed">Naprawa zakończona i wpisana do historii serwisowej.</span></div></article><article class="card"><h2>Wizyta klienta prywatnego</h2><div class="line"><div><strong>Ford Focus · Anna Kowalska</strong><small>Diagnostyka hamulców · 20 listopada, 10:00</small></div><span class="pill gray" id="mechanicCustomerStatus">Czeka na przyjęcie</span></div></article></div><div><article class="card"><h2>Lista kontrolna</h2><div class="line"><div><strong>Diagnostyka hamulców</strong><small>Weryfikacja usterki</small></div><span class="pill gray" id="mechanicStep1">Oczekuje</span></div><div class="line"><div><strong>Naprawa</strong><small>Prace po akceptacji kosztorysu</small></div><span class="pill gray" id="mechanicStep2">Oczekuje</span></div></article></div></div></section>
+<section class="view" id="customer" aria-labelledby="customerTitle">
+<div class="page-intro"><span class="eyebrow">FLOTARYX · KLIENT PRYWATNY</span><h1 id="customerTitle">Znajdź mechanika</h1><p>Wyszukaj warsztat i poproś o dogodny termin. Zapytanie nie jest jeszcze rezerwacją.</p></div>
+<div class="metrics"><div class="metric"><small>Przykładowe warsztaty</small><strong>3</strong></div><div class="metric"><small>Moje wizyty</small><strong id="customerCount">0</strong></div><div class="metric"><small>Opłata Flotaryx</small><strong>£0</strong></div><div class="metric"><small>Obszar</small><strong>UK</strong></div></div>
+<div class="columns"><div><article class="card"><h2>Warsztat demonstracyjny</h2><div class="line"><div><strong>Northside Auto Garage</strong><small>Dunstable · diagnostyka, hamulce, naprawy</small></div><span class="pill ok">Przyjmuje zapytania</span></div><div class="js-only"><div class="formrow"><label for="service">Usługa</label><select id="service"><option>Diagnostyka hamulców</option><option>Serwis okresowy</option><option>Diagnostyka komputerowa</option></select></div><div class="formrow"><label for="slot">Preferowany termin</label><input type="datetime-local" id="slot" value="2026-11-20T10:00"></div><div class="buttons"><button class="btn" data-action="request" data-booking="none">Wyślij bezpłatną prośbę o termin →</button><span class="bluebox" data-booking="requested">Prośba wysłana. Warsztat musi jeszcze potwierdzić wizytę.</span><span class="bluebox" data-booking="confirmed">Termin potwierdzony przez warsztat (tylko w demo).</span></div></div></article></div><div><article class="card"><h2>Moje wizyty</h2><div class="line"><div><strong>Northside Auto Garage</strong><small id="visitDetails">Diagnostyka hamulców · 20 listopada 10:00</small></div><span class="pill gray" id="customerStatus">Nie wysłano</span></div><p class="muted">Warsztat widzi to samo zgłoszenie w panelu Garage. Brak prowizji od prośby o termin.</p></article><article class="card"><h2>Jak działa rezerwacja?</h2><ol class="timeline"><li>Wybierz warsztat i usługę.</li><li>Wyślij preferowany termin.</li><li>Warsztat potwierdza dostępność.</li><li>Przyjedź na umówioną wizytę.</li></ol></article></div></div></section>
+<div class="buttons js-only"><button class="btn outline" id="reset">↻ Resetuj całe demo</button></div>
+</main>
+<footer class="footer">Flotaryx Ecosystem — niezależny prototyp, nie wersja produkcyjna.</footer>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script>
+(function(){
+'use strict';
+const phases=['reported','sent','quoted','approved','repairing','completed'];
+const labels=['Nowa usterka','Przekazano do Garage','Kosztorys wysłany','Zatwierdzono','Naprawa trwa','Naprawa zakończona'];
+let phase=0, booking='none', estimate='240.00', service='Diagnostyka hamulców', slot='2026-11-20T10:00';
+const log=[];
+const byId=id=>document.getElementById(id);
+const set=(id,value)=>{const e=byId(id);if(e)e.textContent=value};
+function push(item){log.unshift(item);if(log.length>8)log.pop()}
+function money(){return '£'+Number(estimate).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function toast(s){const t=byId('toast');t.textContent=s;t.hidden=false;clearTimeout(window.__flotaryxToast);window.__flotaryxToast=setTimeout(()=>t.hidden=true,2800)}
+function switchRole(){
+ const hash=window.location.hash.slice(1);const role=['fleet','garage','mechanic','customer'].includes(hash)?hash:'fleet';
+ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===role));
+ document.querySelectorAll('[data-role]').forEach(a=>{if(a.dataset.role===role)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+}
+function render(){
+ set('fleetIssueCount',phase===5?'0':'1');set('fleetGarageCount',phase>=1&&phase<5?'1':'0');
+ set('fleetStatus',labels[phase]);set('garageStatus',phase===0?'Brak zgłoszenia':labels[phase]);
+ set('mechanicStatus',phase<3?'Wymaga zgody':labels[phase]);
+ set('garageFleetCount',phase>0?'1':'0');set('mechanicJobCount',String((phase>=3?1:0)+(booking==='confirmed'?1:0)));
+ set('mechanicDone',phase===5?'1':'0');set('mechanicStep1',phase>=4?'Gotowe':'Oczekuje');set('mechanicStep2',phase===5?'Gotowe':'Oczekuje');
+ set('garageBookingCount',booking==='none'?'0':'1');set('customerCount',booking==='none'?'0':'1');
+ set('garageBookingStatus',booking==='none'?'Brak zapytania':booking==='requested'?'Prośba o termin':'Potwierdzona');
+ set('customerStatus',booking==='none'?'Nie wysłano':booking==='requested'?'Oczekuje':'Potwierdzona');
+ set('mechanicCustomerStatus',booking==='confirmed'?'Wizyta potwierdzona':'Czeka na przyjęcie');
+ set('bayStatus',booking==='confirmed'?'Zajęte 10:00':'Dostępne');set('visitDetails',service+' · '+slot.replace('T',' '));
+ document.querySelectorAll('[data-money]').forEach(x=>x.textContent=money());
+ document.querySelectorAll('[data-show]').forEach(x=>x.hidden=!x.dataset.show.split('|').includes(phases[phase]));
+ document.querySelectorAll('[data-booking]').forEach(x=>x.hidden=x.dataset.booking!==booking);
+ for(let i=1;i<=3;i++){const node=byId('stage'+i);node.className='stage'+(phase>=(i===1?1:i===2?3:5)?' done':phase>=(i===1?0:i===2?2:4)?' current':'')}
+ byId('historyList').className=phase===5?'':'empty';
+ byId('historyList').textContent=phase===5?'Zakończono wymianę części hamulcowych · '+money()+' · mechanik Marek Nowak.':'Historia tej naprawy pojawi się po zakończeniu zlecenia.';
+ byId('garageHistory').replaceChildren(...(log.length?log:['Warsztat gotowy do odbierania zgłoszeń.']).map(s=>{const li=document.createElement('li');li.textContent=s;return li}));
+ switchRole();
+}
+function act(name){
+ switch(name){
+ case 'send':if(phase!==0)return;phase=1;push('Fleet wysłał usterkę do Garage.');break;
+ case 'quote':if(phase!==1)return;{const value=Number(byId('estimate').value);if(!Number.isFinite(value)||value<=0||value>100000){toast('Podaj prawidłową kwotę.');return}estimate=value.toFixed(2)}phase=2;push('Garage przygotował kosztorys '+money());break;
+ case 'approve':if(phase!==2)return;phase=3;push('Fleet zaakceptował kosztorys '+money());break;
+ case 'start':if(phase!==3)return;phase=4;push('Mechanik rozpoczął naprawę.');break;
+ case 'complete':if(phase!==4)return;phase=5;push('Zakończono naprawę, historia Fleet zaktualizowana.');break;
+ case 'request':if(booking!=='none')return;{const val=byId('slot').value;if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(val)){toast('Podaj termin wizyty.');return}slot=val;service=byId('service').value}booking='requested';push('Klient wysłał zapytanie o termin.');break;
+ case 'confirm':if(booking!=='requested')return;booking='confirmed';push('Garage potwierdził termin klienta.');break;
+ default:return;
+ }
+ render();toast('Status zmieniony. Sprawdź drugi panel.');
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)act(b.dataset.action)});
+byId('reset').addEventListener('click',()=>{phase=0;booking='none';estimate='240.00';service='Diagnostyka hamulców';slot='2026-11-20T10:00';log.length=0;render();toast('Przywrócono fikcyjne dane początkowe.')});
+window.addEventListener('hashchange',switchRole);
+render();
+})();
+</script>
+</body>
+</html>
