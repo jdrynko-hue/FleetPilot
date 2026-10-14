@@ -2,6 +2,7 @@
 // Runs in public GitHub Actions with local file:// content, never real APIs.
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { chromium, webkit } from 'playwright';
 
@@ -36,6 +37,8 @@ async function browserTest(engine,name,viewport) {
     if(/^https?:\/\//.test(r.url()))external.push(r.url());
   });
   const tag=name+' '+viewport.width;
+  const snapshots=name==='webkit' && viewport.width===390;
+  if(snapshots)mkdirSync('artifacts/demo-mobile',{recursive:true});
   try{
     await page.goto(demo);
     await page.locator('body.js').waitFor({timeout:15000});
@@ -49,12 +52,14 @@ async function browserTest(engine,name,viewport) {
     }
     await page.locator('[data-role="fleet"]').click();
     assert.equal((await page.locator('#fleetStatus').innerText()).trim(),'Nowa usterka');
+    if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/01-fleet.png',fullPage:true});
     assert.equal(await page.locator('[data-action="approve"]').isHidden(),true);
     await page.locator('[data-action="send"]').click();
     assert.equal((await page.locator('#fleetStatus').innerText()).trim(),'Przekazano do Garage');
     await page.locator('[data-role="garage"]').click();
     await page.locator('#estimate').fill('240.50');
     await page.locator('[data-action="quote"]').click();
+    if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/02-garage.png',fullPage:true});
     await page.locator('[data-role="fleet"]').click();
     assert.equal((await page.locator('#fleetStatus').innerText()).trim(),'Kosztorys wysłany');
     assert.match(await page.locator('[data-action="approve"]').innerText(),/240\.50/);
@@ -62,6 +67,7 @@ async function browserTest(engine,name,viewport) {
     await page.locator('[data-role="mechanic"]').click();
     await page.locator('[data-action="start"]').click();
     assert.equal((await page.locator('#mechanicStatus').innerText()).trim(),'Naprawa trwa');
+    if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/03-mechanic.png',fullPage:true});
     await page.locator('[data-action="complete"]').click();
     await page.locator('[data-role="fleet"]').click();
     assert.match(await page.locator('#historyList').innerText(),/240\.50/);
@@ -73,6 +79,7 @@ async function browserTest(engine,name,viewport) {
     await page.locator('[data-action="confirm"]').click();
     await page.locator('[data-role="customer"]').click();
     assert.equal((await page.locator('#customerStatus').innerText()).trim(),'Potwierdzona');
+    if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/04-customer.png',fullPage:true});
     await page.locator('[data-role="mechanic"]').click();
     assert.equal((await page.locator('#mechanicJobCount').innerText()).trim(),'2');
     await page.locator('#reset').click();
