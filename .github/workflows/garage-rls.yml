@@ -8,6 +8,9 @@ on:
       - 'tests/garage_invites_diagnosis.sql'
       - 'tests/garage_assignment_rls.sql'
       - 'tests/garage_quote_approval_rls.sql'
+      - 'tests/garage_repairbridge_rls.sql'
+      - 'tests/repairbridge_fleet_fixture.sql'
+      - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   push:
@@ -18,6 +21,9 @@ on:
       - 'tests/garage_invites_diagnosis.sql'
       - 'tests/garage_assignment_rls.sql'
       - 'tests/garage_quote_approval_rls.sql'
+      - 'tests/garage_repairbridge_rls.sql'
+      - 'tests/repairbridge_fleet_fixture.sql'
+      - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
@@ -62,7 +68,8 @@ jobs:
             -f tests/garage_rls_isolation.sql \
             -f tests/garage_invites_diagnosis.sql \
             -f tests/garage_assignment_rls.sql \
-            -f tests/garage_quote_approval_rls.sql
+            -f tests/garage_quote_approval_rls.sql \
+            -f tests/garage_repairbridge_rls.sql
 
   garage-supabase-e2e:
     runs-on: ubuntu-latest
@@ -94,6 +101,12 @@ jobs:
             supabase/migrations/20261014000400_garage_quotes.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" \
             supabase/migrations/20261014000500_garage_private_media.sql
+          # RepairBridge requires a minimal Fleet schema. This fixture exists ONLY
+          # inside disposable CI containers. Never copy the fixture to hosting.
+          cp "$GITHUB_WORKSPACE/tests/repairbridge_fleet_fixture.sql" \
+            supabase/migrations/20261014000590_local_fleet_fixture.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/006_fleet_garage_repair_bridge.sql" \
+            supabase/migrations/20261014000600_repairbridge.sql
           # GoTrue signup on loopback must issue a session without contacting
           # external email providers. Never change this in hosted production.
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' \
@@ -125,6 +138,7 @@ jobs:
           fi
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           node "$GITHUB_WORKSPACE/tests/garage_local_supabase_e2e.mjs"
+          node "$GITHUB_WORKSPACE/tests/garage_repairbridge_e2e.mjs"
       - name: Stop isolated Supabase services
         if: always()
         shell: bash
