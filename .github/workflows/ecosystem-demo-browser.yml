@@ -36,3 +36,11 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Verify real browser navigation, repair journey and customer booking
         run: node tests/ecosystem_demo_browser_test.mjs
+      - name: Upload fictional iPhone preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-demo-iphone-webkit-screens
+          path: artifacts/demo-mobile/*.png
+          retention-days: 7
+          if-no-files-found: warn
