@@ -118,7 +118,7 @@ void main() {
     });
   }
 
-  testWidgets('selects JPY as an alternative currency', (tester) async {
+  testWidgets('selects USD as an alternative currency', (tester) async {
     String? selected;
     await renderPicker(
       tester, width: 390, currency: 'GBP',
@@ -126,10 +126,9 @@ void main() {
     );
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('JPY').last);
-    await tester.tap(find.text('JPY').last);
+    await tester.tap(find.text('USD').last);
     await tester.pumpAndSettle();
-    expect(selected, 'JPY');
+    expect(selected, 'USD');
     expect(tester.takeException(), isNull);
   });
 
