@@ -316,7 +316,7 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
                            'Mechanic is no longer on staff'))),
               ],
             ),
-            trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[
+            trailing:Row(mainAxisSize:MainAxisSize.min,children:[
               if (widget.loadMechanics != null &&
                   widget.assignMechanic != null)
                 IconButton(
