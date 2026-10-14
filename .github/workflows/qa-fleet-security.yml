@@ -71,6 +71,41 @@ jobs:
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -f tests/qa_fleet_rls_isolation.sql
+      - name: Reject inconsistent legacy documents without partial DDL
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE fleet_security_bad'
+          psql -d fleet_security_bad -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql
+          # Synthetic Fleet A document referring to Fleet A's *other* vehicle.
+          psql -d fleet_security_bad -v ON_ERROR_STOP=1 -c "
+            INSERT INTO public.fleet_documents
+              (company_id,vehicle_id,issue_id,storage_path)
+            VALUES
+              ('20000000-0000-4000-8000-000000000001',
+               '30000000-0000-4000-8000-000000000001',
+               '50000000-0000-4000-8000-000000000002',
+               '20000000-0000-4000-8000-000000000001/30000000-0000-4000-8000-000000000001/legacy.pdf');
+          "
+          if psql -d fleet_security_bad -v ON_ERROR_STOP=1 \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
+            > "$RUNNER_TEMP/bad_qa_migration.log" 2>&1; then
+            echo 'ERROR: malformed legacy document did not block migration' >&2
+            exit 1
+          fi
+          grep -q 'Existing QA document relationship mismatch' "$RUNNER_TEMP/bad_qa_migration.log"
+          if [[ "$(psql -d fleet_security_bad -tAc \
+            "select count(*) from pg_class where oid in
+             ('public.fleet_documents'::regclass,'public.driver_vehicle_checks'::regclass,
+              'public.vehicle_change_requests'::regclass) and relrowsecurity")" != "0" ]]; then
+            echo 'ERROR: failed migration left a partially enabled schema' >&2
+            exit 1
+          fi
+          echo 'PASS: invalid legacy attachments fail closed; transaction rolled back'
       - name: Confirm migration is re-entrant only with explicit review
         shell: bash
         run: |
