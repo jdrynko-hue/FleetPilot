@@ -79,7 +79,7 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
                                         f"{name}: {tag} lacks {lang} copy")
                     self.assertTrue(attrs["data-en"].strip())
                     self.assertTrue(attrs["data-pl"].strip())
-                self.assertIn('document.querySelectorAll(\\'[data-en][data-pl]\\')', html)
+                self.assertIn("document.querySelectorAll('[data-en][data-pl]')", html)
 
     def test_source_remains_prelaunch_and_release_workflow_unchanged(self):
         workflow = (ROOT / ".github/workflows/flotaryx-homepage-release.yml").read_text()
@@ -88,7 +88,7 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
         self.assertIn("web / 'start' / 'index.html'", workflow)
         for name in ("web/start/index.html", "web/index.html"):
             content = (ROOT / name).read_text()
-            self.assertRegex(content, r'property="og:description"[^\\n]+upcoming Flotaryx Garage')
+            self.assertRegex(content, r'property="og:description"[^\n]+upcoming Flotaryx Garage')
             self.assertIn("Garage (coming soon)", content)
             self.assertIn('data-pl="Znajdź mechanika"', content)
 
