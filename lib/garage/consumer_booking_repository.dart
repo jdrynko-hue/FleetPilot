@@ -152,12 +152,8 @@ class GarageBookingRepository {
 
   static DateTime _date(Map row, String key) {
     final date = DateTime.tryParse(_text(row, key));
-    if (date == null || !date.isUtc && !date.timeZoneOffset.isNegative &&
-        date.timeZoneOffset.inMinutes != 0) {
-      // A valid timestamp from the server is required; do not fabricate a slot.
-      if (date == null) throw FormatException('Invalid booking $key');
-    }
-    return date!;
+    if (date == null) throw FormatException('Invalid booking $key');
+    return date;
   }
 
   static List<T> _rows<T>(Object? raw, T Function(Map<dynamic, dynamic>) parse) {
