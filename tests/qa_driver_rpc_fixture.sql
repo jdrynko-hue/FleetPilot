@@ -85,3 +85,17 @@ INSERT INTO public.company_members(company_id,user_id,role) VALUES
 -- Old unrelated synthetic request must not consume the new pending slot.
 UPDATE public.vehicle_change_requests SET status='cancelled'
 WHERE id='90000000-0000-4000-8000-000000000001';
+
+-- A colleague in Fleet A holds a separate active vehicle; it must NEVER be
+-- listed in Driver A's change options despite belonging to the same fleet.
+INSERT INTO auth.users(id,email) VALUES
+ ('10000000-0000-4000-8000-000000000007','driver-c@local.test');
+INSERT INTO public.drivers(id,company_id,name,email) VALUES
+ ('40000000-0000-4000-8000-000000000003',
+ '20000000-0000-4000-8000-000000000001','Synthetic colleague','driver-c@local.test');
+INSERT INTO public.company_members(company_id,user_id,role) VALUES
+ ('20000000-0000-4000-8000-000000000001',
+ '10000000-0000-4000-8000-000000000007','driver');
+INSERT INTO public.vehicles(id,company_id,registration) VALUES
+ ('30000000-0000-4000-8000-000000000004',
+ '20000000-0000-4000-8000-000000000001','TEST-A3');
