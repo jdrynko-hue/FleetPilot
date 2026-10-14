@@ -287,6 +287,14 @@ BEGIN
 END;
 $fn$;
 
+-- CRITICAL: The legacy direct company_members INSERT/UPDATE grants let Fleet
+-- admins change their own role to 'owner' or insert arbitrary role='owner'
+-- without going through vetted membership RPCs. Remove them now.
+-- create_company_for_current_user() is SECURITY DEFINER and still works.
+-- All subsequent invitations/role changes happen exclusively through RPC.
+REVOKE INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER,REFERENCES
+ ON public.company_members FROM PUBLIC,anon,authenticated;
+
 -- PostgreSQL grants EXECUTE to PUBLIC on new functions by default.
 -- Explicitly remove it; there are no Data API grants on the private table.
 REVOKE ALL ON FUNCTION
@@ -310,7 +318,10 @@ TO authenticated;
 
 DO $verify$
 BEGIN
- IF has_table_privilege('authenticated','public.company_invites','SELECT')
+ IF has_table_privilege('authenticated','public.company_members','INSERT')
+  OR has_table_privilege('authenticated','public.company_members','UPDATE')
+  OR has_table_privilege('authenticated','public.company_members','DELETE')
+  OR has_table_privilege('authenticated','public.company_invites','SELECT')
   OR has_table_privilege('authenticated','public.company_invites','INSERT')
   OR has_table_privilege('anon','public.company_invites','SELECT')
   OR NOT (SELECT relrowsecurity FROM pg_class
