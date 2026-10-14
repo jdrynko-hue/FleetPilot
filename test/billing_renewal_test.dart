@@ -25,6 +25,15 @@ void main() {
       const MethodChannel('plugins.flutter.io/shared_preferences'),
       (call) async => call.method == 'getAll' ? <String, Object>{} : true,
     );
+    // Supabase.initialize can subscribe to app_links on non-web platforms.
+    // Widget tests do not have a native plugin implementation, so mock the
+    // EventChannel's listen/cancel MethodChannel to prevent an asynchronous
+    // MissingPluginException from escaping into an unrelated test case.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.app_links/events'),
+      (call) async => null,
+    );
     await Supabase.initialize(
       url: 'https://qa.example.com',
       publishableKey: 'qa-publishable-key',
