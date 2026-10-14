@@ -76,6 +76,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
       ));
     if (!mounted || accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
+    var failed = false;
     try {
       if (type == 'cancel') {
         await widget.confirmCancellation(entry.id);
@@ -88,11 +89,16 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
         }
       }
     } catch (_) {
-      if (mounted) setState(() => error = tr(
-        'Nie potwierdzono zmiany. Odśwież i sprawdź status.',
-        'Change not confirmed. Refresh and check the status.'));
+      failed = true;
     } finally {
-      if (mounted) await refresh();
+      if (mounted) {
+        await refresh();
+        if (mounted && failed) {
+          setState(() => error = tr(
+            'Nie potwierdzono zmiany. Sprawdź aktualny status przed próbą.',
+            'Action unconfirmed. Check the current status before retrying.'));
+        }
+      }
     }
   }
 
@@ -222,6 +228,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
         ]));
     if (!mounted || accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
+    var failed = false;
     try {
       final result = await widget.cancel(entry.id);
       if (result != GarageBookingStatus.withdrawn &&
@@ -229,11 +236,16 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
         throw const FormatException('Unexpected cancellation state');
       }
     } catch (_) {
-      if (mounted) setState(() => error = tr(
-        'Nie można potwierdzić anulowania. Odśwież status.',
-        'Cancellation unconfirmed. Refresh the status.'));
+      failed = true;
     } finally {
-      if (mounted) await refresh();
+      if (mounted) {
+        await refresh();
+        if (mounted && failed) {
+          setState(() => error = tr(
+            'Nie potwierdzono anulowania. Sprawdź aktualny status.',
+            'Cancellation unconfirmed. Check the current status.'));
+        }
+      }
     }
   }
 
