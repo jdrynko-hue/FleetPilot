@@ -97,3 +97,31 @@ assert.equal(fault.issue_title,'Fleet brake defect');
 assert.equal(fault.shared_registration,null);
 assert.equal(fault.shared_description,null);
 deny(await rpc(customer,'garage_fleet_snapshot',{p_request:rid}),'consumer Fleet access');
+
+deny(await rpc(foreignOwner,'garage_fleet_snapshot',{p_request:rid}),'other Garage access');
+const fleetOrder=good(await rpc(owner,'garage_fleet_accept_request',{p_request:rid}),'accept Fleet repair');
+assert.notEqual(fleetOrder,consumerOrder);
+good(await rpc(owner,'garage_assign_mechanic',{
+ p_workspace_id:garage,p_order_id:fleetOrder,p_mechanic_user_id:mechanic.id
+}),'assign repair');
+good(await rpc(owner,'garage_begin_diagnosis',{
+ p_workspace_id:garage,p_order_id:fleetOrder
+}),'diagnose repair');
+assert.equal(good(await rpc(owner,'garage_publish_quote',{
+ p_workspace_id:garage,p_order_id:fleetOrder,
+ p_lines:[{type:'labour',description:'Fleet brake work',
+ quantity:2,unit_price_minor:4500,tax_minor:1800}]
+}),'publish quote'),1);
+const estimate=good(await rpc(fleet,'garage_fleet_snapshot',{p_request:rid}),'Fleet quote');
+assert.equal(estimate.quote.total_minor,10800);
+assert.equal(estimate.quote.approved,false);
+deny(await rpc(owner,'garage_fleet_approve_quote',{
+ p_request:rid,p_revision:1}),'shop quote approval');
+deny(await rpc(mechanic,'garage_start_approved_repair',{
+ p_workspace_id:garage,p_order_id:fleetOrder}),'premature repair');
+assert.equal(good(await rpc(fleet,'garage_fleet_approve_quote',{
+ p_request:rid,p_revision:1}),'approve estimate revision'),1);
+assert.equal(good(await rpc(mechanic,'garage_start_approved_repair',{
+ p_workspace_id:garage,p_order_id:fleetOrder}),'start approved repair'),'in_progress');
+assert.equal(good(await rpc(owner,'garage_fleet_update_progress',{
+ p_request:rid,p_status:'ready'}),'repair ready'),'ready');
