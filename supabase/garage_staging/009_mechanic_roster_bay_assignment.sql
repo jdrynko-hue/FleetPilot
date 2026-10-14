@@ -32,10 +32,11 @@ BEGIN
  IF auth.uid() IS NULL OR NOT garage_private.has_role(p_shop,ARRAY['owner']) THEN
   RAISE EXCEPTION 'Workshop owner required' USING ERRCODE='42501';
  END IF;
- RETURN QUERY SELECT m.user_id,u.email
+ RETURN QUERY SELECT m.user_id,u.email::text
  FROM public.garage_members m
  JOIN auth.users u ON u.id=m.user_id
  WHERE m.workspace_id=p_shop AND m.role='mechanic'
+   AND u.email IS NOT NULL AND u.email_confirmed_at IS NOT NULL
  ORDER BY lower(u.email),m.user_id LIMIT 150;
 END $$;
 
