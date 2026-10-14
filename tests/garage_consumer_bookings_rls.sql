@@ -215,7 +215,7 @@ END $$;
 COMMIT;
 
 -- CI test administrator alone inspects immutable audit events; not a client grant.
-DO $
+DO $$
 BEGIN
  IF (SELECT count(*) FROM public.garage_booking_events
  WHERE booking_id=current_setting('booking.qa.a')::uuid)<>4 THEN
@@ -223,5 +223,5 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM public.garage_booking_requests
  WHERE id=current_setting('booking.qa.a')::uuid AND status='cancelled') THEN
   RAISE EXCEPTION 'Cancellation not persisted'; END IF;
-END $;
+END $$;
 SELECT 'Garage consumer booking consent, isolation, collision and cancellation: PASS' AS result;
