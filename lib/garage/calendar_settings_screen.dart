@@ -143,14 +143,14 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
 
   Future<void> _newResource() async {
     if (_busy) return;
+    var enteredName = '';
     final name = await showDialog<String>(context:context,
       builder:(context) {
-        final input = TextEditingController();
         return AlertDialog(
           title:Text(tr('Dodaj stanowisko','Add workshop bay')),
           content:TextField(
             key:const Key('garage_resource_name'),
-            controller:input,maxLength:70,
+            onChanged:(value)=>enteredName=value,maxLength:70,
             decoration:InputDecoration(labelText:tr('Nazwa stanowiska','Bay name')),
           ),
           actions:[
@@ -158,7 +158,7 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
               child:Text(tr('Wróć','Back'))),
             FilledButton(
               key:const Key('garage_resource_save'),
-              onPressed:()=>Navigator.pop(context,input.text.trim()),
+              onPressed:()=>Navigator.pop(context,enteredName.trim()),
               child:Text(tr('Dodaj','Add'))),
           ],
         );
