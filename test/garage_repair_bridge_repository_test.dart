@@ -22,7 +22,13 @@ Map<String,Object?> quote({int revision=1,bool approved=false}) => {
 };
 
 Map<String,Object?> event(String action,String time) => {
-  'action':action,'details':<String,Object?>{},'at':time,
+  'action':action,
+  'details': action == 'quote_approved'
+      ? <String,Object?>{'revision':1}
+      : action == 'progress_updated'
+          ? <String,Object?>{'from':'in_progress','to':'ready'}
+          : <String,Object?>{},
+  'at':time,
 };
 
 Map<String,Object?> snapshot({
@@ -94,6 +100,9 @@ void main() {
     expect(data.needsFleetApproval,false);
     expect(data.events.length,4);
     expect(data.events.last.action,'progress_updated');
+    expect(data.events.last.details['to'],'ready');
+    expect(data.events[2].details['revision'],1);
+    expect(()=>data.events.last.details['to']='forged',throwsUnsupportedError);
   });
 
   test('rejects stale or forged inconsistencies rather than trusting UI',(){
@@ -113,6 +122,9 @@ void main() {
       {...snapshot(),'events':[]},
       {...snapshot(),'events':[event('wrong','2026-10-14T09:00:00Z')]},
       {...snapshot(),'events':[event('request_sent','not-a-date')]},
+      {...snapshot(),'events':[{
+        'action':'progress_updated','details':<String,Object?>{},'at':'2026-10-14T09:03:00Z',
+      }]},
       {...snapshot(),'events':[event('request_sent','2026-10-14T09:02:00Z'),
                               event('request_accepted','2026-10-14T09:01:00Z')]},
     ]){
