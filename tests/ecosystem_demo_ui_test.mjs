@@ -40,6 +40,7 @@ class TestElement {
  setAttribute(k,v){this.attrs[k]=v}
  removeAttribute(k){delete this.attrs[k]}
  replaceChildren(...children){this.children=children}
+ scrollIntoView(){this.scrolls=(this.scrolls||0)+1}
  closest(selector){return selector==='[data-action]'?this:null}
 }
 
@@ -51,6 +52,9 @@ for(const id of [
  'garageBookingStatus','customerStatus','mechanicCustomerStatus','bayStatus',
  'visitDetails','stage1','stage2','stage3','historyList','garageHistory',
  'toast','estimate','service','slot','reset',
+ 'demoGuide','demoGuideStep','demoGuideProgress','demoGuideTitle',
+ 'demoGuideHint','demoGuideGo',
+ 'fleet','garage','mechanic','customer',
 ])ids.set(id,new TestElement(id));
 ids.get('estimate').value='240';
 ids.get('service').value='Diagnostyka hamulców';
@@ -105,23 +109,37 @@ function buttonVisible(action,state){
 for(const role of ['fleet','garage','mechanic','customer'])switchTo(role);
 switchTo('fleet');
 check('fleetStatus','Nowa usterka');check('fleetGarageCount','0');
+check('demoGuideTitle','Zgłoś usterkę we Fleet');
+check('demoGuideStep','Krok 1 z 7');
+assert.equal(ids.get('demoGuideProgress').value,0);
 tap('approve');check('fleetStatus','Nowa usterka'); // no approval without quote
 tap('send');check('fleetStatus','Przekazano do Garage');
+check('demoGuideTitle','Przygotuj kosztorys w Garage');
+assert.equal(ids.get('demoGuideProgress').value,1);
+ids.get('demoGuideGo').handlers.click();
+assert.equal(window.location.hash,'#garage');
+assert.ok(ids.get('garage').scrolls>0);
 check('fleetGarageCount','1');switchTo('garage');shown('sent');
 ids.get('estimate').value='240';
 tap('quote');check('fleetStatus','Kosztorys wysłany');shown('quoted');
+check('demoGuideTitle','Zatwierdź kosztorys');
 tap('start');check('fleetStatus','Kosztorys wysłany'); // cannot start without approval
 switchTo('fleet');tap('approve');check('fleetStatus','Zatwierdzono');
 switchTo('mechanic');tap('start');check('fleetStatus','Naprawa trwa');
 tap('complete');check('fleetStatus','Naprawa zakończona');
+check('demoGuideTitle','Wyślij zapytanie jako klient');
 check('fleetIssueCount','0');check('mechanicDone','1');
 assert.match(ids.get('historyList').textContent,/240\.00/);
 assert.ok(ids.get('garageHistory').children.length>=5);
 switchTo('customer');
 tap('confirm');check('customerStatus','Nie wysłano'); // no phantom booking
 tap('request');check('customerStatus','Oczekuje');
+check('demoGuideTitle','Potwierdź wizytę w Garage');
 switchTo('garage');tap('confirm');check('garageBookingStatus','Potwierdzona');
 switchTo('customer');check('customerStatus','Potwierdzona');
+check('demoGuideTitle','Scenariusz ukończony');
+check('demoGuideStep','Gotowe');
+assert.equal(ids.get('demoGuideProgress').value,7);
 check('mechanicJobCount','2'); // two work orders, Fleet and private client
 assert.equal(booking.some(v=>v.dataset.booking==='confirmed'&&!v.hidden),true);
 listeners.get('hashchange')();
@@ -130,5 +148,7 @@ check('fleetStatus','Nowa usterka');
 check('fleetIssueCount','1');
 check('customerStatus','Nie wysłano');
 check('garageBookingStatus','Brak zapytania');
+check('demoGuideTitle','Zgłoś usterkę we Fleet');
+assert.equal(ids.get('demoGuideProgress').value,0);
 assert.equal(ids.get('toast').hidden,false);
 console.log('PASS: demo role switching, Fleet quote approvals, repair completion and private booking status sync');
