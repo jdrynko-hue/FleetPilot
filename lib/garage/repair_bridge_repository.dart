@@ -138,10 +138,13 @@ class GarageRepairBridgeRepository {
 }
 
 class GarageRepairBridgeEvent {
-  const GarageRepairBridgeEvent(this.action, this.occurredAt);
+  GarageRepairBridgeEvent(this.action, this.occurredAt, Map<String, Object?> details)
+      : details = Map.unmodifiable(details);
 
   final String action;
   final DateTime occurredAt;
+  /// Only allowed audit keys are copied; unknown data is never displayed.
+  final Map<String, Object?> details;
 }
 
 class GarageRepairBridgeSnapshot {
@@ -233,8 +236,37 @@ class GarageRepairBridgeSnapshot {
       if (previous != null && instant.isBefore(previous)) {
         throw const FormatException('Unordered repair history');
       }
+      final rawDetails = item['details'];
+      if (rawDetails is! Map) {
+        throw const FormatException('Invalid repair event details');
+      }
+      final details = <String, Object?>{};
+      if (action == 'quote_approved') {
+        final revision = rawDetails['revision'];
+        if (revision is! int || revision < 1) {
+          throw const FormatException('Invalid approved quote revision event');
+        }
+        details['revision'] = revision;
+      }
+      if (action == 'progress_updated') {
+        final from = rawDetails['from'];
+        final to = rawDetails['to'];
+        if (from is! String || to is! String ||
+            !const {
+              'received','diagnosing','awaiting_approval','awaiting_parts',
+              'in_progress','ready','collected','cancelled'
+            }.contains(from) ||
+            !const {
+              'received','diagnosing','awaiting_approval','awaiting_parts',
+              'in_progress','ready','collected','cancelled'
+            }.contains(to)) {
+          throw const FormatException('Invalid repair progress event');
+        }
+        details['from'] = from;
+        details['to'] = to;
+      }
       previous = instant;
-      events.add(GarageRepairBridgeEvent(action, instant));
+      events.add(GarageRepairBridgeEvent(action, instant, details));
     }
     if (events.first.action != 'request_sent') {
       throw const FormatException('Missing RepairBridge request event');
