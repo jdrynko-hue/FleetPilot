@@ -269,9 +269,11 @@ BEGIN
   RAISE EXCEPTION 'Workshop adviser required' USING ERRCODE='42501'; END IF;
  IF v.status<>'requested' THEN RAISE EXCEPTION 'Request already handled'; END IF;
  IF p_confirm THEN
-  SELECT count(*),min(id) INTO v_count,v_id FROM public.garage_booking_resources
+  SELECT count(*) INTO v_count FROM public.garage_booking_resources
    WHERE workspace_id=v.workspace_id AND active;
   IF v_count<>1 THEN RAISE EXCEPTION 'Select a workshop resource explicitly'; END IF;
+  SELECT id INTO v_id FROM public.garage_booking_resources
+   WHERE workspace_id=v.workspace_id AND active LIMIT 1;
   RETURN public.garage_booking_confirm_slot(p_booking,v_id);
  END IF;
  UPDATE public.garage_booking_requests
