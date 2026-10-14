@@ -286,8 +286,9 @@ BEGIN
   END IF;
   PERFORM 1 FROM public.drivers d JOIN public.company_members cm
     ON cm.company_id=d.company_id AND cm.user_id=d.user_id AND cm.role='driver'
-  WHERE d.company_id=v_company AND d.id=v_req.driver_id AND d.is_active;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Driver membership revoked'; END IF;
+  WHERE d.company_id=v_company AND d.id=v_req.driver_id AND d.is_active
+    AND cm.user_id=v_req.requested_by;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Requester no longer matches linked driver'; END IF;
   SELECT * INTO v_target FROM public.vehicles
   WHERE id=v_req.to_vehicle_id AND company_id=v_company FOR UPDATE;
   IF NOT FOUND OR NOT v_target.is_active OR
