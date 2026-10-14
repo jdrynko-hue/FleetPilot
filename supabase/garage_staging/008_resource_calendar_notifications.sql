@@ -84,7 +84,7 @@ CREATE TRIGGER garage_booking_notify_event
  FOR EACH ROW EXECUTE FUNCTION garage_private.booking_notify();
 
 CREATE FUNCTION public.garage_booking_set_hours(
- p_shop uuid,p_day smallint,p_opens time,p_closes time,p_enabled boolean
+ p_shop uuid,p_day integer,p_opens time,p_closes time,p_enabled boolean
 ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $$
 BEGIN
@@ -359,7 +359,7 @@ DO $$
 DECLARE sig text;
 BEGIN
  FOREACH sig IN ARRAY ARRAY[
-  'garage_booking_set_hours(uuid,smallint,time without time zone,time without time zone,boolean)',
+  'garage_booking_set_hours(uuid,integer,time without time zone,time without time zone,boolean)',
   'garage_booking_add_resource(uuid,text,uuid)',
   'garage_booking_resource_active(uuid,uuid,boolean)',
   'garage_booking_resource_list(uuid)',
