@@ -179,20 +179,16 @@ END;
 $driver_a$;
 COMMIT;
 
--- Resolve the synthetic request id with the trusted test bootstrap, not
--- through the restricted change-request Data API.
-SELECT set_config('test.driver_request_id',(
- SELECT id::text FROM public.vehicle_change_requests
- WHERE company_id='20000000-0000-4000-8000-000000000001' AND status='pending'
- LIMIT 1),false);
-
 -- Manager from another fleet cannot approve Fleet A's new request.
 BEGIN;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000005',true);
-SELECT public.fleetpilot_request_vehicle_change(
+-- Capture the server-generated ID from the trusted RPC result itself.
+SELECT set_config('test.driver_request_id',
+ public.fleetpilot_request_vehicle_change(
  '20000000-0000-4000-8000-000000000001',
- '30000000-0000-4000-8000-000000000002','Please move me to second van');
+ '30000000-0000-4000-8000-000000000002','Please move me to second van')::text,
+ false);
 COMMIT;
 
 BEGIN;
