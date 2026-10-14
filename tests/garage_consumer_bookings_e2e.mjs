@@ -64,6 +64,20 @@ const listing=good(await rpc(null,'garage_booking_discover',{p_city:'Dunstable'}
 assert.equal(listing.length,1);
 assert.equal(listing[0].workspace_id,shopA);
 assert.ok(!('customer_email' in listing[0]));
+
+ // Stage 008 preserves the 007 compatibility RPC only for one active bay
+ // AND when the time falls within configured opening hours.
+ for (let day=1;day<=7;day++) {
+   good(await rpc(ownerA,'garage_booking_set_hours',{
+     p_shop:shopA,p_day:day,p_opens:'00:00:00',
+     p_closes:'23:59:59',p_enabled:true
+   }),'add opening hours '+day);
+ }
+ const legacyBay=good(await rpc(ownerA,'garage_booking_add_resource',{
+   p_shop:shopA,p_label:'Single intake bay',p_mechanic:null
+ }),'create single capacity bay');
+ assert.match(legacyBay,/^[0-9a-f-]{36}$/);
+
 denied(await rpc(alice,'garage_booking_request',{
  p_workspace:shopB,p_name:'Alice Example',p_make:'Ford',p_model:'Focus',
  p_registration:null,p_service:'brakes',p_concern:'Brake noise',
