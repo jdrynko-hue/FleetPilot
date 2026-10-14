@@ -87,9 +87,9 @@ assert.ok(signed.signedURL||signed.signedUrl,'Expected signed Storage URL');
 deny(await sign(b,pa),'B cannot sign A URL');
 deny(await sign(outsider,pa),'outsider cannot sign');
 deny(await sign(null,pa),'anon cannot sign');
-const listA=pass(await list(a,ca+'/'),'A lists own files');
+const listA=pass(await list(a,ca+'/'+va.id+'/'),'A lists own vehicle files');
 assert.ok(listA.some(x=>x.name===pa.split('/').at(-1)),'A file missing from listing');
-const listB=await list(b,ca+'/');
+const listB=await list(b,ca+'/'+va.id+'/');
 if(listB.ok)assert.deepEqual(listB.value,[]);
 else deny(listB,'B cannot list A');
 const docsB=pass(await call('/rest/v1/fleet_documents?select=id',{jwt:b.jwt}),
