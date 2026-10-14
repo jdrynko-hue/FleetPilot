@@ -139,6 +139,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('successful RPC blocks duplicate approval even if read is stale',
+      (tester) async {
+    var approvals = 0;
+    await display(
+      tester,
+      width: 375,
+      load: () async => quote(approved: false),
+      approve: (revision) async {
+        approvals++;
+        return revision;
+      },
+    );
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pumpAndSettle();
+    expect(approvals, 1);
+    await tester.tap(find.byKey(const Key('garage_quote_refresh')));
+    await tester.pumpAndSettle();
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('garage_quote_approve')),
+    );
+    expect(button.onPressed, isNull);
+    expect(approvals, 1);
+  });
+
   testWidgets('failed approval does not leave a stale actionable estimate',
       (tester) async {
     await display(
