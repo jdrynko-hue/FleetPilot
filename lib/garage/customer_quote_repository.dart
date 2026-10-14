@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'garage_currencies.dart';
+
 /// Minimal, independently authorized private-customer quote projection.
 ///
 /// The server checks the signed-in user's verified email against the
@@ -43,27 +45,13 @@ class GarageCustomerQuote {
   final bool approved;
   final List<GarageCustomerQuoteLine> lines;
 
-  /// This UI supports the Fleet launch currencies that have 2 decimal
-  /// minor units. Never silently format other currencies as cents.
-  static const supportedCurrencies = {'GBP', 'EUR', 'PLN'};
+  /// Every amount is an integer of the selected ISO currency's minor unit.
+  /// Sterling/cents/grosz are 2 digits; JPY is 0, KWD is 3.
+  static final supportedCurrencies =
+      Set<String>.unmodifiable(GarageCurrencies.fractionDigits.keys);
 
-  String formatMinor(int minor) {
-    if (!supportedCurrencies.contains(currency) || minor < 0) {
-      throw const FormatException('Unsupported quote currency or amount');
-    }
-    final major = (minor ~/ 100).toString();
-    final cents = (minor % 100).toString().padLeft(2, '0');
-    switch (currency) {
-      case 'GBP':
-        return '£$major.$cents';
-      case 'EUR':
-        return '€$major.$cents';
-      case 'PLN':
-        return '$major,$cents zł';
-      default:
-        throw const FormatException('Unsupported currency');
-    }
-  }
+  String formatMinor(int minor) =>
+      GarageCurrencies.formatMinor(currency, minor);
 }
 
 class GarageCustomerQuoteRepository {
