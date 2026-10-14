@@ -24,7 +24,8 @@ Future<void> mount(WidgetTester tester,Widget screen,
 Future<void> findBay(WidgetTester tester) async {
  await tester.scrollUntilVisible(
    find.byKey(const Key('garage_settings_assign_'+bayId)),
-   140,scrollable:find.byType(Scrollable).first,alignment:0.4);
+   140,scrollable:find.byType(Scrollable).first);
+ await tester.drag(find.byType(ListView).first,const Offset(0,-140));
  await tester.pumpAndSettle();
 }
 
