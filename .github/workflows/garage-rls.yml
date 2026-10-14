@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      GARAGE_QA_DIR: ${{ runner.temp }}/flotaryx-garage-e2e
+      GARAGE_QA_DIR: /tmp/flotaryx-garage-e2e
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
