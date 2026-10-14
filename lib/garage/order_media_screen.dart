@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'media_repository.dart';
+import 'pdf_saver.dart';
 
 /// Locally selected bytes: the original name never becomes a Storage path.
 class GarageSelectedMedia {
@@ -55,7 +56,7 @@ class GarageOrderMediaScreen extends StatefulWidget {
     required GarageMediaRepository repository,
     required String workspaceId,
     required String orderId,
-    required GaragePdfSave savePdf,
+    GaragePdfSave? savePdf,
     bool showDocuments = false,
     bool canUploadPhotos = true,
     bool canUploadDocuments = false,
@@ -75,7 +76,7 @@ class GarageOrderMediaScreen extends StatefulWidget {
         category: category, mime: mime, data: data,
       ),
       pickFile: pickGarageFile,
-      savePdf: savePdf,
+      savePdf: savePdf ?? saveGaragePdfToDevice,
       showDocuments: showDocuments,
       canUploadPhotos: canUploadPhotos,
       canUploadDocuments: canUploadDocuments,
@@ -221,7 +222,36 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
       final bytes = await widget.readFile(category, fileName);
       if (!mounted || category != _category) return;
       if (category == GarageMediaCategory.document) {
-        await widget.savePdf(fileName, bytes);
+        // Fetch privately first; Safari requires the final download action to
+        // run in a *new* explicit user gesture, not after a network await.
+        // Alert that a downloaded copy is no longer subject to Garage RLS.
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(_tr('Zapisz PDF', 'Save PDF')),
+            content: Text(_tr(
+              'Plik zostanie zapisany na tym urządzeniu. '
+                  'Po pobraniu dostęp do tej kopii nie jest już kontrolowany '
+                  'przez uprawnienia warsztatu.',
+              'This will save a copy on your device. After downloading, '
+                  'the workshop can no longer revoke access to that copy.',
+            )),
+            actions: [
+              TextButton(
+                key: const Key('garage_media_cancel_pdf'),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(_tr('Anuluj', 'Cancel')),
+              ),
+              FilledButton(
+                key: const Key('garage_media_save_pdf'),
+                onPressed: () => _savePdfAndClose(
+                  dialogContext, fileName, bytes,
+                ),
+                child: Text(_tr('Zapisz PDF', 'Save PDF')),
+              ),
+            ],
+          ),
+        );
       } else {
         await showDialog<void>(
           context: context,
@@ -265,6 +295,28 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
       });
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _savePdfAndClose(
+    BuildContext dialogContext,
+    String fileName,
+    Uint8List bytes,
+  ) async {
+    try {
+      // Invoke the save operation directly from the user button callback.
+      await widget.savePdf(fileName, bytes);
+      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+    } catch (_) {
+      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+      if (mounted) {
+        setState(() {
+          _error = _tr(
+            'Zapis PDF nie powiódł się. Spróbuj ponownie.',
+            'Could not save the PDF. Please retry.',
+          );
+        });
+      }
     }
   }
 
