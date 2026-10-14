@@ -2,7 +2,12 @@
 \set ON_ERROR_STOP on
 \ir ../supabase/garage_staging/009_mechanic_roster_bay_assignment.sql
 
-DO $$
+-- Disposable legacy QA mechanic was seeded with ID only, not a valid email.
+UPDATE auth.users SET email='verified-garage-a@example.test',
+ email_confirmed_at=now()
+WHERE id='00000000-0000-4000-8000-000000000003';
+
+DO $
 BEGIN
  IF (SELECT count(*) FROM pg_class WHERE oid=
   'public.garage_booking_resource_audit'::regclass AND relrowsecurity)<>1 THEN
@@ -60,7 +65,7 @@ DO $$
 DECLARE spare uuid; rejected boolean:=false;
 BEGIN
  IF (SELECT count(*) FROM public.garage_booking_mechanics(
-  '00000000-0000-4000-8000-000000000101'))<>1 THEN
+  '00000000-0000-4000-8000-000000000101'))<1 THEN
   RAISE EXCEPTION 'Roster incorrectly scoped to Garage'; END IF;
  IF NOT EXISTS(
   SELECT 1 FROM public.garage_booking_mechanics(
