@@ -381,6 +381,18 @@ mustPass(await download(mechanic, photoPath),
   'assigned mechanic reads photo');
 mustPass(await download(ownerA, documentPath),
   'owner reads workshop document');
+storageDenied(await storageCall(ownerA,
+  'object/sign/' + mediaBucket + '/' + photoPath, {
+    method: 'POST', mime: 'application/json',
+    body: JSON.stringify({expiresIn: 3600}),
+  }),
+  'workshop staff must not issue signed evidence URLs');
+storageDenied(await storageCall(mechanic,
+  'object/sign/' + mediaBucket + '/' + photoPath, {
+    method: 'POST', mime: 'application/json',
+    body: JSON.stringify({expiresIn: 3600}),
+  }),
+  'assigned mechanic must not issue signed evidence URLs');
 storageDenied(await download(mechanic, documentPath),
   'mechanic cannot read financial PDF');
 storageDenied(await download(ownerB, documentPath),
@@ -436,6 +448,9 @@ assert.equal(mustPass(await rpc(ownerA, 'garage_assign_mechanic', {
 }), 'transfer repair job to replacement'),replacement.id);
 storageDenied(await download(mechanic, photoPath),
   'previous mechanic immediately loses repair photo access');
+const oldMechanicListing = await listStorage(mechanic, mediaFolder + 'photos/');
+if (oldMechanicListing.ok) assert.equal(oldMechanicListing.value.length, 0);
+else storageDenied(oldMechanicListing, 'prior mechanic cannot list transferred images');
 mustPass(await download(replacement, photoPath),
   'replacement mechanic can view assigned repair photo');
 storageDenied(await download(replacement, documentPath),

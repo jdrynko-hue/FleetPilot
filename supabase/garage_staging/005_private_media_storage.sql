@@ -114,6 +114,11 @@ CREATE POLICY garage_private_media_read
   ON storage.objects FOR SELECT TO authenticated
   USING (
     bucket_id='flotaryx-garage-private'
+    -- Signed URLs can outlive assignment changes. Limit reads to
+    -- authenticated downloads and scoped listings, NOT URL-signing.
+    AND storage.allow_any_operation(ARRAY[
+      'object.list','storage.object.get_authenticated'
+    ])
     AND garage_private.media_path_allowed(name,false)
   );
 CREATE POLICY garage_private_media_insert
