@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'media_repository.dart';
+import 'pdf_saver.dart';
 
 /// Locally selected bytes: the original name never becomes a Storage path.
 class GarageSelectedMedia {
@@ -55,7 +56,7 @@ class GarageOrderMediaScreen extends StatefulWidget {
     required GarageMediaRepository repository,
     required String workspaceId,
     required String orderId,
-    required GaragePdfSave savePdf,
+    GaragePdfSave? savePdf,
     bool showDocuments = false,
     bool canUploadPhotos = true,
     bool canUploadDocuments = false,
@@ -75,7 +76,7 @@ class GarageOrderMediaScreen extends StatefulWidget {
         category: category, mime: mime, data: data,
       ),
       pickFile: pickGarageFile,
-      savePdf: savePdf,
+      savePdf: savePdf ?? saveGaragePdfToDevice,
       showDocuments: showDocuments,
       canUploadPhotos: canUploadPhotos,
       canUploadDocuments: canUploadDocuments,
