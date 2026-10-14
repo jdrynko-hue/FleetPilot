@@ -5,6 +5,7 @@ on:
     branches:
       - feat/staging-ecosystem-demo-mobile-20261014
     paths:
+      - 'web/demo/index.html'
       - 'web/demo/README.md'
       - '.github/workflows/demo-cdn-probe.yml'
   pull_request:
@@ -23,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check immutable CDN preview (no deployment)
         env:
-          DEMO_URL: https://rawcdn.githack.com/jdrynko-hue/FleetPilot/507c6fc70c0c56fc02b45807f1ef8a04edbe7137/web/demo/index.html
+          DEMO_URL: https://rawcdn.githack.com/jdrynko-hue/FleetPilot/cf84f1a12499cc925b08d35b99b9fef4fbbee71a/web/demo/index.html
         shell: bash
         run: |
           set -euo pipefail
