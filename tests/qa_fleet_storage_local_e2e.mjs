@@ -132,7 +132,7 @@ assert.equal(stillPresent.length,1);
 pass(await download(a,pa),'object remains after viewer delete');
 const crossDelete=await remove(b,pa);
 if(crossDelete.ok)assert.deepEqual(crossDelete.value,[],
- 'Foreign Fleet cannot remove original owner's Storage object');
+ "Foreign Fleet cannot remove the original owner\'s Storage object");
 else deny(crossDelete,'foreign Fleet cannot delete Storage');
 pass(await download(a,pa),'object remains after foreign Fleet delete');
 pass(await remove(a,pa),'owner deletes object');
