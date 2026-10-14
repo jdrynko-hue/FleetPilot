@@ -36,6 +36,7 @@ class TestElement {
    add:(key)=>{this.className=key;},
   };
  }
+ addEventListener(event,cb){this.handlers??={};this.handlers[event]=cb}
  setAttribute(k,v){this.attrs[k]=v}
  removeAttribute(k){delete this.attrs[k]}
  replaceChildren(...children){this.children=children}
