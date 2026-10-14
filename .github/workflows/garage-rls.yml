@@ -1,0 +1,53 @@
+name: Garage isolated PostgreSQL RLS
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/garage_staging/**'
+      - 'tests/garage_rls_isolation.sql'
+      - '.github/workflows/garage-rls.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/garage_staging/**'
+      - 'tests/garage_rls_isolation.sql'
+      - '.github/workflows/garage-rls.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  garage-rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: temporary-garage-qa-only
+          POSTGRES_DB: garage_qa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d garage_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: temporary-garage-qa-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use PostgreSQL client
+        shell: bash
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+      - name: Test Garage tenant boundaries in disposable PostgreSQL
+        shell: bash
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d garage_qa \
+            -v ON_ERROR_STOP=1 -f tests/garage_rls_isolation.sql
