@@ -157,8 +157,55 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('PDF document 1'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('garage_media_save_pdf')), findsOneWidget);
+    expect(savedName, isNull, reason: 'Saving requires a fresh user tap');
+    await tester.tap(find.byKey(const Key('garage_media_save_pdf')));
+    await tester.pumpAndSettle();
     expect(savedName, pdf);
     expect(savedBytes, [37,80,68,70]);
+  });
+
+  testWidgets('canceling PDF export retains private bytes', (tester) async {
+    var saves = 0;
+    await display(tester,
+      width: 375,
+      showDocuments: true,
+      loadFiles: (category) async =>
+          category == GarageMediaCategory.document ? [pdf] : [],
+      readFile: (_, __) async =>
+          Uint8List.fromList([37, 80, 68, 70, 45]),
+      savePdf: (_, __) async => saves++,
+    );
+    await tester.tap(find.text('PDFs'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PDF document 1'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('revoke access to that copy'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garage_media_cancel_pdf')));
+    await tester.pumpAndSettle();
+    expect(saves, 0);
+    expect(find.text('PDF document 1'), findsOneWidget);
+  });
+
+  testWidgets('failed PDF export is handled without an unhandled exception',
+      (tester) async {
+    await display(tester,
+      width: 375,
+      showDocuments: true,
+      loadFiles: (category) async =>
+          category == GarageMediaCategory.document ? [pdf] : [],
+      readFile: (_, __) async =>
+          Uint8List.fromList([37, 80, 68, 70, 45]),
+      savePdf: (_, __) async => throw StateError('Save cancelled by platform'),
+    );
+    await tester.tap(find.text('PDFs'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PDF document 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_media_save_pdf')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('garage_media_error')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('failed list and failed read show actionable errors', (tester) async {
