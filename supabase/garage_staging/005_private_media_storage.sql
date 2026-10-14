@@ -64,6 +64,16 @@ BEGIN
     RETURN false;
   END IF;
 
+  -- Never add fresh evidence or invoices to finalized/cancelled work
+  -- orders without a future separately audited reopen flow.
+  IF p_is_write AND EXISTS (
+    SELECT 1 FROM public.garage_work_orders wo
+    WHERE wo.workspace_id=v_workspace AND wo.id=v_job
+      AND wo.status IN ('collected','cancelled')
+  ) THEN
+    RETURN false;
+  END IF;
+
   IF garage_private.has_role(v_workspace,ARRAY['owner','service_adviser']) THEN
     RETURN true;
   END IF;
