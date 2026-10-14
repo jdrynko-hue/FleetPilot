@@ -1,0 +1,87 @@
+name: QA Fleet private Storage - disposable Supabase E2E
+
+on:
+  push:
+    branches: [security/qa-fleet-storage-private-20261014]
+    paths:
+      - '.github/workflows/qa-fleet-storage.yml'
+      - 'supabase/qa_hardening/**'
+      - 'tests/qa_fleet_storage_*'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+  pull_request:
+    paths:
+      - '.github/workflows/qa-fleet-storage.yml'
+      - 'supabase/qa_hardening/**'
+      - 'tests/qa_fleet_storage_*'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  storage-local-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      QA_LOCAL_DIR: /tmp/flotaryx-fleet-storage-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Create a disposable unlinked Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$QA_LOCAL_DIR"
+          cd "$QA_LOCAL_DIR"
+          supabase init --yes
+          mkdir -p supabase/migrations
+          cp "$GITHUB_WORKSPACE/supabase/migrations/001_fleetpilot.sql" \
+            supabase/migrations/20261014000100_fleet_base.sql
+          cp "$GITHUB_WORKSPACE/supabase/migrations/002_saas_foundation.sql" \
+            supabase/migrations/20261014000200_fleet_saas.sql
+          cp "$GITHUB_WORKSPACE/tests/qa_fleet_storage_local_tables.sql" \
+            supabase/migrations/20261014000300_synthetic_qa_tables.sql
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql" \
+            supabase/migrations/20261014000400_fleet_rls.sql
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/002_private_fleet_storage.sql" \
+            supabase/migrations/20261014000500_fleet_private_storage.sql
+          # GoTrue issues local JWT without external email delivery.
+          sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
+          grep -q '^enable_confirmations = false$' supabase/config.toml
+          # This workflow never links to a hosted project; no remote credentials.
+      - name: Launch disposable Auth, PostgREST, Storage and Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_LOCAL_DIR"
+          supabase start -x studio,analytics,imgproxy
+      - name: Test real Storage HTTP with four synthetic authenticated identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_LOCAL_DIR"
+          supabase status -o env > "$RUNNER_TEMP/storage_local_env"
+          get_local_setting() {
+            sed -n "s/^$1=//p" "$RUNNER_TEMP/storage_local_env" | head -1 | tr -d '"'
+          }
+          export FLEET_STORAGE_TEST_API_URL="$(get_local_setting API_URL)"
+          export FLEET_STORAGE_TEST_ANON_KEY="$(get_local_setting ANON_KEY)"
+          if [[ -z "$FLEET_STORAGE_TEST_ANON_KEY" ]] || \
+             [[ ! "$FLEET_STORAGE_TEST_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]; then
+            echo 'Must use ephemeral loopback-only API URL and key' >&2
+            exit 1
+          fi
+          echo "::add-mask::$FLEET_STORAGE_TEST_ANON_KEY"
+          node "$GITHUB_WORKSPACE/tests/qa_fleet_storage_local_e2e.mjs"
+      - name: Shut down and discard local database
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$QA_LOCAL_DIR/supabase" ]]; then
+            cd "$QA_LOCAL_DIR"
+            supabase stop --no-backup || true
+          fi
