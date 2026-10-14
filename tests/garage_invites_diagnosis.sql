@@ -56,7 +56,7 @@ BEGIN
       '00000000-0000-4000-8000-000000000101',
       'adviser@example.test','service_adviser'),false);
 
-END $;
+END $$;
 COMMIT;
 
 -- Owner's invite metadata is inaccessible even though the invitation RPC works.
