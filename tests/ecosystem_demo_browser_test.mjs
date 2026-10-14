@@ -53,7 +53,7 @@ async function browserTest(engine,name,viewport) {
     await page.locator('[data-role="fleet"]').click();
     assert.equal((await page.locator('#fleetStatus').innerText()).trim(),'Nowa usterka');
     assert.equal((await page.locator('#demoGuideStep').innerText()).trim(),'Krok 1 z 7');
-    assert.equal(await page.locator('#demoGuideProgress').inputValue(),'0');
+    assert.equal(await page.locator('#demoGuideProgress').evaluate(node=>String(node.value)),'0');
     if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/01-fleet.png',fullPage:true});
     assert.equal(await page.locator('[data-action="approve"]').isHidden(),true);
     await page.locator('[data-action="send"]').click();
@@ -95,7 +95,7 @@ async function browserTest(engine,name,viewport) {
     await page.locator('[data-role="customer"]').click();
     assert.equal((await page.locator('#customerStatus').innerText()).trim(),'Potwierdzona');
     assert.equal((await page.locator('#demoGuideStep').innerText()).trim(),'Gotowe');
-    assert.equal(await page.locator('#demoGuideProgress').inputValue(),'7');
+    assert.equal(await page.locator('#demoGuideProgress').evaluate(node=>String(node.value)),'7');
     if(snapshots)await page.screenshot({path:'artifacts/demo-mobile/04-customer.png',fullPage:true});
     await page.locator('[data-role="mechanic"]').click();
     assert.equal((await page.locator('#mechanicJobCount').innerText()).trim(),'2');
