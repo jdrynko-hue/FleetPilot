@@ -66,6 +66,9 @@ void main(){
     await tester.scrollUntilVisible(
       find.byKey(const Key('garage_settings_add_bay')), 100,
       scrollable: find.byType(Scrollable).first);
+    // Being barely visible at y=height is not tappable; scroll it well inside.
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('garage_settings_add_bay')));
     await tester.pumpAndSettle();
     expect(created,0);
