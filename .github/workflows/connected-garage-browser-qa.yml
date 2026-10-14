@@ -100,6 +100,22 @@ jobs:
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
           node tests/connected_garage_browser_e2e.mjs
+      - name: Verify API-connected iPhone screenshots contain only fictional UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          for role in 01-fleet 02-garage 03-mechanic 04-customer; do
+            test -s "artifacts/connected-iphone-qa/${role}-connected.png"
+          done
+          echo 'PASS: four WebKit browser screenshots after real local API operations'
+      - name: Upload safe fictional connected-iPhone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-connected-iphone-four-role-screens
+          path: artifacts/connected-iphone-qa/*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Destroy ephemeral Supabase containers and discard state
         if: always()
         shell: bash
