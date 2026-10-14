@@ -341,7 +341,7 @@ COMMIT;
 BEGIN;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
-DO $
+DO $$
 DECLARE
   rejected boolean:=false;
   v_lines jsonb:=jsonb_build_array(jsonb_build_object(
@@ -385,7 +385,7 @@ BEGIN
   IF NOT rejected THEN
     RAISE EXCEPTION 'Unsupported currency allowed';
   END IF;
-END $;
+END $$;
 COMMIT;
 
 SELECT 'Garage quote approvals and revisions: PASS' AS result;
