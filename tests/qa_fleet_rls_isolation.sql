@@ -8,6 +8,10 @@ begin
     where c.oid=('public.'||t)::regclass) then
     raise exception 'RLS OFF: %',t;
   end if;
+  if not has_table_privilege('service_role','public.'||t,'SELECT')
+    or not has_table_privilege('service_role','public.'||t,'INSERT') then
+    raise exception 'Service role table privilege regression: %',t;
+  end if;
   if has_table_privilege('anon','public.'||t,'SELECT')
     or has_table_privilege('anon','public.'||t,'INSERT')
     or has_table_privilege('anon','public.'||t,'DELETE') then
