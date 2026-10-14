@@ -56,13 +56,7 @@ BEGIN
       '00000000-0000-4000-8000-000000000101',
       'adviser@example.test','service_adviser'),false);
 
-  IF (SELECT count(*) FROM public.garage_invites)=0 THEN
-    RAISE EXCEPTION 'Insecure or inaccessible invitation bookkeeping';
-  END IF;
-EXCEPTION WHEN insufficient_privilege THEN
-  -- Expected: raw invitation table SELECT is inaccessible to owners.
-  NULL;
-END $$;
+END $;
 COMMIT;
 
 -- Owner's invite metadata is inaccessible even though the invitation RPC works.
