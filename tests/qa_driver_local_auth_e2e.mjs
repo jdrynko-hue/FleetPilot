@@ -116,8 +116,8 @@ pass(await rpc(driverA,'fleetpilot_submit_driver_check',{
 const generatedIssues=pass(await call('/rest/v1/issues?select=id&company_id=eq.'+a,mgrA),
  'manager inspection-created issues');
 assert.equal(generatedIssues.length,2,'check defect should generate exactly one issue');
-deny(await call('/rest/v1/driver_vehicle_checks?select=id',outsider),
- 'outsider cannot read driver checks');
+assert.deepEqual(pass(await call('/rest/v1/driver_vehicle_checks?select=id',outsider),
+ 'outsider inspection query'),[],'outsider must see zero inspection records');
 deny(await call('/rest/v1/driver_vehicle_checks',driverA,'POST',{
  company_id:a,vehicle_id:a1.id,driver_id:dA.id,created_by:driverA.id,
  result:'pass',check_type:'pre_trip',checks:allPass}),'driver cannot insert raw inspection');
