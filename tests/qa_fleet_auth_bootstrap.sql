@@ -1,8 +1,19 @@
 -- Disposable PostgreSQL only. No customer data, no hosted QA/production connections.
 \set ON_ERROR_STOP on
-CREATE ROLE anon NOLOGIN;
-CREATE ROLE authenticated NOLOGIN;
-CREATE ROLE service_role NOLOGIN;
+-- PostgreSQL roles are cluster-scoped, unlike the per-database auth schema.
+do $bootstrap$
+begin
+  if not exists (select 1 from pg_roles where rolname='anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname='authenticated') then
+    create role authenticated nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname='service_role') then
+    create role service_role nologin;
+  end if;
+end;
+$bootstrap$;
 CREATE SCHEMA auth;
 CREATE TABLE auth.users(id uuid primary key);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE
