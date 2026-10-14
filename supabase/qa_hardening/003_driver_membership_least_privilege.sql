@@ -102,6 +102,101 @@ GRANT UPDATE(
 ) ON public.drivers TO authenticated;
 GRANT SELECT ON public.vehicle_assignments TO authenticated;
 
+-- The legacy SECURITY DEFINER entitlements RPC used is_company_member(),
+-- which would expose staff billing, limits and counts to a new driver role.
+-- Keep this endpoint staff-only while driver feature access gets separate RPCs.
+create or replace function public.get_company_entitlements(
+  _company_id uuid
+)
+returns table (
+  plan_code text,
+  plan_name text,
+  subscription_status text,
+  trial_ends_at timestamptz,
+  trial_days_remaining integer,
+  is_access_active boolean,
+  vehicle_limit integer,
+  vehicle_count bigint,
+  can_add_vehicle boolean,
+  member_limit integer,
+  member_count bigint,
+  can_add_member boolean,
+  features jsonb
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $
+begin
+  if not public.has_company_role(_company_id, array['owner','admin','manager','viewer']) then
+    raise exception 'Access denied';
+  end if;
+
+  return query
+  select
+    s.plan_code,
+    p.name,
+    s.status,
+    s.trial_ends_at,
+    case
+      when s.status = 'trialing'
+       and s.trial_ends_at is not null
+      then greatest(
+        0,
+        ceil(
+          extract(epoch from (s.trial_ends_at - now()))
+          / 86400.0
+        )::integer
+      )
+      else null
+    end,
+    case
+      when s.status = 'active' then true
+      when s.status = 'trialing'
+       and s.trial_ends_at is not null
+       and s.trial_ends_at > now()
+      then true
+      else false
+    end,
+    p.vehicle_limit,
+    (
+      select count(*)
+      from public.vehicles v
+      where v.company_id = _company_id
+        and v.is_active = true
+    ),
+    (
+      p.vehicle_limit is null
+      or (
+        select count(*)
+        from public.vehicles v
+        where v.company_id = _company_id
+          and v.is_active = true
+      ) < p.vehicle_limit
+    ),
+    p.member_limit,
+    (
+      select count(*)
+      from public.company_members cm
+      where cm.company_id = _company_id
+    ),
+    (
+      p.member_limit is null
+      or (
+        select count(*)
+        from public.company_members cm
+        where cm.company_id = _company_id
+      ) < p.member_limit
+    ),
+    p.features
+  from public.company_subscriptions s
+  join public.saas_plans p
+    on p.code = s.plan_code
+  where s.company_id = _company_id;
+end;
+$;
+
 -- Membership owners/admins may invite a user into the driver role, but
 -- that user cannot use legacy Fleet table reads or any new driver RPC yet.
 ALTER TABLE public.company_members DROP CONSTRAINT company_members_role_check;
