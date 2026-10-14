@@ -7,6 +7,7 @@ on:
       - 'tests/garage_rls_isolation.sql'
       - 'tests/garage_invites_diagnosis.sql'
       - 'tests/garage_assignment_rls.sql'
+      - 'tests/garage_quote_approval_rls.sql'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   push:
@@ -16,6 +17,7 @@ on:
       - 'tests/garage_rls_isolation.sql'
       - 'tests/garage_invites_diagnosis.sql'
       - 'tests/garage_assignment_rls.sql'
+      - 'tests/garage_quote_approval_rls.sql'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
@@ -59,7 +61,8 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -f tests/garage_rls_isolation.sql \
             -f tests/garage_invites_diagnosis.sql \
-            -f tests/garage_assignment_rls.sql
+            -f tests/garage_assignment_rls.sql \
+            -f tests/garage_quote_approval_rls.sql
 
   garage-supabase-e2e:
     runs-on: ubuntu-latest
@@ -87,6 +90,8 @@ jobs:
             supabase/migrations/20261014000200_garage_invites.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" \
             supabase/migrations/20261014000300_garage_assignments.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" \
+            supabase/migrations/20261014000400_garage_quotes.sql
           # GoTrue signup on loopback must issue a session without contacting
           # external email providers. Never change this in hosted production.
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' \

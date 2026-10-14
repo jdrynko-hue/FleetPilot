@@ -75,6 +75,7 @@ const ownerA = await signup('owner-a');
 const ownerB = await signup('owner-b');
 const mechanic = await signup('mechanic-a');
 const outsider = await signup('outsider');
+const privateCustomer = await signup('private-customer');
 
 const shopA = await createWorkspace(ownerA, 'Garage E2E Alpha');
 const shopB = await createWorkspace(ownerB, 'Garage E2E Beta');
@@ -92,7 +93,7 @@ assert.deepEqual(shopsOutsider, []);
 const customer = onlyOne(mustPass(await http('/rest/v1/garage_customers?select=id', {
   method: 'POST', jwt: ownerA.jwt, prefer: 'return=representation',
   body: { workspace_id: shopA, customer_type: 'individual',
-          display_name: 'Local Customer A', email: 'private@example.test' },
+          display_name: 'Local Customer A', email: privateCustomer.email },
 }), 'create customer'), 'one customer');
 
 const vehicle = onlyOne(mustPass(await http('/rest/v1/garage_vehicles?select=id', {
@@ -173,4 +174,96 @@ const ownerBOrders = mustPass(await http('/rest/v1/garage_work_orders?select=id'
   jwt: ownerB.jwt,
 }), 'owner B sees own orders');
 assert.deepEqual(ownerBOrders, [], 'owner B cannot see shop A jobs');
-console.log('PASS local Supabase Auth + PostgREST: two garages, four users, invites, RLS, mechanic assignments, diagnosis audit');
+// Workshop creates quote revision 1, but cannot self-authorize the repair.
+const quote1 = [{
+  type: 'labour', description: 'Brake diagnostics, two hours',
+  quantity: 2, unit_price_minor: 3000, tax_minor: 1200,
+}];
+assert.equal(mustPass(await rpc(ownerA, 'garage_publish_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_lines: quote1,
+}), 'publish first quote'), 1);
+mustDeny(await rpc(mechanic, 'garage_start_approved_repair', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'cannot start repair without verified customer approval');
+mustDeny(await rpc(ownerA, 'garage_customer_approve_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_revision: 1,
+}), 'workshop cannot self-approve');
+
+const privateQuote = mustPass(await rpc(
+  privateCustomer, 'garage_customer_current_quote',
+  { p_workspace_id: shopA, p_order_id: order.id },
+), 'verified private customer reads quote');
+assert.equal(privateQuote.revision, 1);
+assert.equal(privateQuote.currency, 'GBP');
+assert.equal(privateQuote.total_minor, 7200);
+assert.equal(privateQuote.approved, false);
+assert.equal(privateQuote.lines.length, 1);
+mustDeny(await rpc(outsider, 'garage_customer_current_quote', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'unrelated email cannot view quote');
+mustDeny(await rpc(ownerB, 'garage_customer_current_quote', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'other garage cannot read private quote');
+assert.deepEqual(mustPass(await http('/rest/v1/garage_quote_revisions?select=*', {
+  jwt: mechanic.jwt,
+}), 'mechanic cannot see pricing'), []);
+
+assert.equal(mustPass(await rpc(privateCustomer, 'garage_customer_approve_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_revision: 1,
+}), 'private customer approves first estimate'), 1);
+mustDeny(await rpc(privateCustomer, 'garage_customer_approve_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_revision: 1,
+}), 'approval is single-use for each revision');
+
+const quote2 = [{
+  type: 'part', description: 'Replacement brake discs',
+  quantity: 1, unit_price_minor: 8500, tax_minor: 1700,
+}];
+assert.equal(mustPass(await rpc(ownerA, 'garage_publish_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_lines: quote2,
+}), 'publish second revision'), 2);
+mustDeny(await rpc(mechanic, 'garage_start_approved_repair', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'old approval does not authorize a new revision');
+mustDeny(await rpc(privateCustomer, 'garage_customer_approve_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_revision: 1,
+}), 'stale approval revision rejected');
+mustDeny(await http(`/rest/v1/garage_customers?id=eq.${customer.id}`, {
+  method: 'PATCH', jwt: ownerA.jwt,
+  body: { email: ownerA.email },
+}), 'cannot redirect established approval to workshop email');
+const updatedQuote = mustPass(await rpc(
+  privateCustomer, 'garage_customer_current_quote',
+  { p_workspace_id: shopA, p_order_id: order.id },
+), 'customer reads revised quote');
+assert.equal(updatedQuote.revision, 2);
+assert.equal(updatedQuote.total_minor, 10200);
+assert.equal(updatedQuote.approved, false);
+
+assert.equal(mustPass(await rpc(privateCustomer, 'garage_customer_approve_quote', {
+  p_workspace_id: shopA, p_order_id: order.id, p_revision: 2,
+}), 'approve exact revision 2'), 2);
+assert.equal(mustPass(await rpc(mechanic, 'garage_start_approved_repair', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'assigned mechanic begins approved work'), 'in_progress');
+mustDeny(await rpc(mechanic, 'garage_start_approved_repair', {
+  p_workspace_id: shopA, p_order_id: order.id,
+}), 'cannot start repair twice');
+const updatedOrders = mustPass(await http(
+  `/rest/v1/garage_work_orders?id=eq.${order.id}&select=id,status`,
+  { jwt: ownerA.jwt },
+), 'work order after quote approval');
+assert.equal(onlyOne(updatedOrders, 'approved work order').status, 'in_progress');
+
+const approvalAudit = mustPass(await http(
+  `/rest/v1/garage_order_events?order_id=eq.${order.id}&select=action`,
+  { jwt: ownerA.jwt },
+), 'approval event audit');
+assert.equal(approvalAudit.filter(x => x.action === 'publish_quote').length, 2);
+assert.equal(approvalAudit.filter(x => x.action === 'customer_approve_quote').length, 2);
+assert.equal(approvalAudit.filter(x => x.action === 'start_approved_repair').length, 1);
+assert.deepEqual(mustPass(await http('/rest/v1/garage_quote_approvals?select=*', {
+  jwt: outsider.jwt,
+}), 'outsider cannot query raw approved estimates'), []);
+console.log('PASS local Supabase Auth + PostgREST: two garages, five users, invites, RLS, mechanic assignment, verified quote revisions and repair-start approval');
+
