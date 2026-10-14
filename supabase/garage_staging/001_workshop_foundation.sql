@@ -122,8 +122,15 @@ ALTER TABLE public.garage_customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.garage_vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.garage_work_orders ENABLE ROW LEVEL SECURITY;
 
+-- SELECT must also allow the creator during INSERT ... RETURNING. The
+-- owner membership is created by an AFTER INSERT trigger; its row may not
+-- yet be visible while PostgREST checks RETURNING against SELECT RLS.
+-- owner_user_id is fixed at creation: client has no UPDATE privilege on it.
 CREATE POLICY garage_workspace_read ON public.garage_workspaces
-  FOR SELECT TO authenticated USING (garage_private.has_role(id));
+  FOR SELECT TO authenticated USING (
+    owner_user_id=(SELECT auth.uid())
+    OR garage_private.has_role(id)
+  );
 CREATE POLICY garage_workspace_insert ON public.garage_workspaces
   FOR INSERT TO authenticated
   WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND owner_user_id=(SELECT auth.uid()));
