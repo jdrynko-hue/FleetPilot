@@ -115,6 +115,16 @@ BEGIN
    SET assigned_user_id=v_mechanic
    WHERE o.workspace_id=NEW.workspace_id AND o.id=NEW.work_order_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Booking work order unavailable'; END IF;
+  -- One auditable assignment event, visible under existing workshop/order RLS.
+  IF v_mechanic IS NOT NULL THEN
+   INSERT INTO public.garage_order_events(
+      workspace_id,order_id,actor_user_id,action,
+      previous_status,next_status,old_assigned_user_id,new_assigned_user_id)
+   SELECT o.workspace_id,o.id,auth.uid(),'assign_mechanic',
+     o.status,o.status,NULL,v_mechanic
+   FROM public.garage_work_orders o
+   WHERE o.workspace_id=NEW.workspace_id AND o.id=NEW.work_order_id;
+  END IF;
  END IF;
  RETURN NEW;
 END $$;
