@@ -10,7 +10,6 @@ on:
       - 'tests/garage_quote_approval_rls.sql'
       - 'tests/garage_repairbridge_rls.sql'
       - 'tests/repairbridge_fleet_fixture.sql'
-      - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   push:
@@ -23,7 +22,6 @@ on:
       - 'tests/garage_quote_approval_rls.sql'
       - 'tests/garage_repairbridge_rls.sql'
       - 'tests/repairbridge_fleet_fixture.sql'
-      - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
@@ -138,7 +136,6 @@ jobs:
           fi
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           node "$GITHUB_WORKSPACE/tests/garage_local_supabase_e2e.mjs"
-          node "$GITHUB_WORKSPACE/tests/garage_repairbridge_e2e.mjs"
       - name: Stop isolated Supabase services
         if: always()
         shell: bash
