@@ -38,7 +38,7 @@ CREATE TABLE public.vehicle_change_requests (
 );
 -- Mimic confirmed hosted QA's unsafe Data API grants.
 GRANT ALL ON public.fleet_documents, public.driver_vehicle_checks,
- public.vehicle_change_requests TO anon,authenticated;
+ public.vehicle_change_requests TO anon,authenticated,service_role;
 
 INSERT INTO public.companies(id,name) VALUES
  ('20000000-0000-4000-8000-000000000001','Synthetic Fleet A'),
