@@ -1,7 +1,7 @@
 // Local-only browser acceptance against disposable Supabase Auth/PostgREST.
 // No hosted Supabase, production data, Stripe, credentials in code or screenshots.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, mkdirSync} from 'node:fs';
 import {createServer} from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {chromium,webkit} from 'playwright';
@@ -159,6 +159,21 @@ async function checkBrowser(browserType,label){
   assert.ok(size.page<=size.window+2,'horizontal overflow '+JSON.stringify(size));
   assert.deepEqual(errors,[],label+' JS errors');
   assert.deepEqual(unexpected,[],label+' unexpectedly contacted remote network');
+  if(label==='WebKit'){
+   // Actual API-backed browser results with *synthetic* records only.
+   // Screenshots do not include the token-bearing config script or network logs.
+   const dir='artifacts/connected-iphone-qa';
+   mkdirSync(dir,{recursive:true});
+   for(const [roleName,index] of [['fleet','01'],['garage','02'],
+                                  ['mechanic','03'],['customer','04']]){
+    await role(roleName);
+    await page.screenshot({
+     path:dir+'/'+index+'-'+roleName+'-connected.png',fullPage:true,
+     animations:'disabled'
+    });
+   }
+   console.log('PASS WebKit: captured four real API-connected fictional iPhone screens');
+  }
   console.log('PASS '+label+' real localhost Supabase, 4 roles, quote approval, repair history, consumer booking, RLS');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
