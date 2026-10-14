@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 // True local Supabase integration smoke tests: GoTrue + PostgREST + RLS.
 // Only run against ephemeral Supabase CLI containers, NEVER linked/hosted.
 // No service-role key is used: real test users authorize every API request.
@@ -266,4 +267,125 @@ assert.deepEqual(mustPass(await http('/rest/v1/garage_quote_approvals?select=*',
   jwt: outsider.jwt,
 }), 'outsider cannot query raw approved estimates'), []);
 console.log('PASS local Supabase Auth + PostgREST: two garages, five users, invites, RLS, mechanic assignment, verified quote revisions and repair-start approval');
+
+// Actual Storage endpoints, not direct database writes. JWT roles exercise
+// Storage's underlying storage.objects RLS and dedicated private bucket.
+const mediaBucket = 'flotaryx-garage-private';
+const mediaFolder = shopA + '/' + order.id + '/';
+const photoPath = mediaFolder + 'photos/' + randomUUID() + '.png';
+const documentPath = mediaFolder + 'documents/' + randomUUID() + '.pdf';
+const onePixelPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==',
+  'base64',
+);
+const documentBytes = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
+
+async function storageCall(user, path, options = {}) {
+  const headers = {
+    apikey: anon,
+    authorization: 'Bearer ' + user.jwt,
+    ...(options.mime ? {'content-type': options.mime} : {}),
+    ...(options.headers ?? {}),
+  };
+  const response = await fetch(url + '/storage/v1/' + path, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body,
+  });
+  const data = await response.text();
+  let value = data;
+  try { value = data ? JSON.parse(data) : null; } catch {}
+  return { status: response.status, ok: response.ok, value };
+}
+function storageDenied(response, scenario) {
+  assert.equal(response.ok, false, scenario + ' should be denied');
+  assert.ok([400,401,403,404,409,413,415,422].includes(response.status),
+    scenario + ': HTTP ' + response.status);
+}
+function upload(user, path, bytes, mime = 'image/png', headers) {
+  return storageCall(user, 'object/' + mediaBucket + '/' + path, {
+    method: 'POST', body: bytes, mime, headers,
+  });
+}
+function download(user, path, isPublic = false) {
+  return storageCall(user,
+    'object/' + (isPublic ? 'public/' : 'authenticated/') + mediaBucket + '/' + path);
+}
+function listStorage(user, prefix) {
+  return storageCall(user, 'object/list/' + mediaBucket, {
+    method: 'POST', mime: 'application/json',
+    body: JSON.stringify({ prefix, limit: 100, offset: 0 }),
+  });
+}
+
+mustPass(await upload(mechanic, photoPath, onePixelPng),
+  'assigned mechanic can upload photo');
+mustPass(await upload(ownerA, documentPath, documentBytes, 'application/pdf'),
+  'owner uploads invoice PDF');
+mustPass(await download(mechanic, photoPath),
+  'assigned mechanic reads photo');
+mustPass(await download(ownerA, documentPath),
+  'owner reads workshop document');
+storageDenied(await download(mechanic, documentPath),
+  'mechanic cannot read financial PDF');
+storageDenied(await download(ownerB, documentPath),
+  'other garage cannot read document');
+storageDenied(await download(outsider, photoPath),
+  'outsider cannot read photo');
+storageDenied(await download(privateCustomer, photoPath),
+  'customer cannot read internal repair evidence');
+storageDenied(await download(ownerA, photoPath, true),
+  'private bucket is never publicly downloadable');
+storageDenied(await upload(ownerB, mediaFolder + 'photos/' + randomUUID() + '.png', onePixelPng),
+  'other garage cannot upload to Garage A');
+storageDenied(await upload(outsider, mediaFolder + 'photos/' + randomUUID() + '.png', onePixelPng),
+  'stranger cannot upload repair photo');
+storageDenied(await upload(mechanic, mediaFolder + 'documents/' + randomUUID() + '.pdf',
+  documentBytes, 'application/pdf'), 'mechanic cannot upload financial PDF');
+storageDenied(await upload(ownerA, mediaFolder + 'photos/hack.png', onePixelPng),
+  'non-random filenames rejected');
+storageDenied(await upload(ownerA, mediaFolder + 'photos/' + randomUUID() + '.svg',
+  Buffer.from('<svg/>'), 'image/svg+xml'), 'SVG type rejected');
+storageDenied(await upload(ownerA, mediaFolder + 'documents/' + randomUUID() + '.html',
+  Buffer.from('<script/>'), 'text/html'), 'HTML type rejected');
+storageDenied(await upload(ownerA, mediaFolder + 'photos/' + randomUUID() + '.png',
+  Buffer.alloc(5242881), 'image/png'), '5 MB limit enforced');
+storageDenied(await upload(ownerA, photoPath, onePixelPng),
+  'existing evidence cannot be overwritten');
+storageDenied(await upload(ownerA, photoPath, onePixelPng,
+  'image/png', {'x-upsert':'true'}), 'upsert requires forbidden update privilege');
+
+const photosOwner = mustPass(await listStorage(ownerA, mediaFolder + 'photos/'),
+  'owner lists garage photos');
+assert.equal(photosOwner.length,1);
+const photosMechanic = mustPass(await listStorage(mechanic, mediaFolder + 'photos/'),
+  'mechanic lists only assigned photos');
+assert.equal(photosMechanic.length,1);
+const financeMechanic = await listStorage(mechanic, mediaFolder + 'documents/');
+if (financeMechanic.ok) assert.equal(financeMechanic.value.length,0);
+else storageDenied(financeMechanic,'mechanic lists financial documents');
+const anotherGaragePhotos = await listStorage(ownerB, mediaFolder + 'photos/');
+if (anotherGaragePhotos.ok) assert.equal(anotherGaragePhotos.value.length,0);
+else storageDenied(anotherGaragePhotos,'other garage lists photos');
+
+const replacement = await signup('replacement-mechanic');
+const tokenReplacement = mustPass(await rpc(ownerA, 'garage_issue_staff_invite', {
+  p_workspace_id: shopA, p_email: replacement.email, p_role: 'mechanic',
+}), 'invite replacement mechanic');
+assert.equal(mustPass(await rpc(replacement, 'garage_accept_staff_invite', {
+  p_token:tokenReplacement,
+}), 'replacement accepts invite'),shopA);
+assert.equal(mustPass(await rpc(ownerA, 'garage_assign_mechanic', {
+  p_workspace_id: shopA, p_order_id: order.id,
+  p_mechanic_user_id: replacement.id,
+}), 'transfer repair job to replacement'),replacement.id);
+storageDenied(await download(mechanic, photoPath),
+  'previous mechanic immediately loses repair photo access');
+mustPass(await download(replacement, photoPath),
+  'replacement mechanic can view assigned repair photo');
+storageDenied(await download(replacement, documentPath),
+  'replacement mechanic cannot view financial document');
+
+console.log('PASS Garage private Storage access, tenant separation, evidence integrity and mechanic reassignment');
+
 
