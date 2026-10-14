@@ -87,8 +87,23 @@ BEGIN
      p_role IS NULL OR
      v_email IS NULL OR
      length(v_email) NOT BETWEEN 3 AND 254 OR
-     position('@' IN v_email) <= 1 THEN
+     position('@' IN v_email) <= 1 OR
+     v_email ~ '[[:space:]]' OR
+     length(v_email)-length(replace(v_email,'@',''))<>1 OR
+     position('.' IN split_part(v_email,'@',2))<=1 THEN
     RAISE EXCEPTION 'Invalid staff invitation';
+  END IF;
+
+  -- Lock the workspace row before counting invitations. Otherwise two
+  -- simultaneous owner requests could both bypass the active-invite cap.
+  PERFORM 1 FROM public.garage_workspaces
+    WHERE id=p_workspace_id FOR UPDATE;
+  IF (SELECT count(*) FROM public.garage_invites i
+      WHERE i.workspace_id=p_workspace_id
+        AND i.used_at IS NULL
+        AND i.revoked_at IS NULL
+        AND i.expires_at>now()) >= 10 THEN
+    RAISE EXCEPTION 'Too many outstanding workshop invitations';
   END IF;
 
   INSERT INTO public.garage_invites(
