@@ -179,6 +179,13 @@ END;
 $driver_a$;
 COMMIT;
 
+-- Resolve the synthetic request id with the trusted test bootstrap, not
+-- through the restricted change-request Data API.
+SELECT set_config('test.driver_request_id',(
+ SELECT id::text FROM public.vehicle_change_requests
+ WHERE company_id='20000000-0000-4000-8000-000000000001' AND status='pending'
+ LIMIT 1),false);
+
 -- Manager from another fleet cannot approve Fleet A's new request.
 BEGIN;
 SET LOCAL ROLE authenticated;
@@ -194,8 +201,7 @@ SELECT set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003'
 DO $other_manager$
 DECLARE request_id uuid;denied boolean:=false;
 BEGIN
- SELECT r.id INTO request_id FROM public.vehicle_change_requests r
- WHERE r.company_id='20000000-0000-4000-8000-000000000001' AND r.status='pending';
+ request_id:=current_setting('test.driver_request_id')::uuid;
  BEGIN
   PERFORM public.fleetpilot_review_vehicle_change(request_id,true,'Foreign manager');
  EXCEPTION WHEN others THEN denied:=true; END;
@@ -210,8 +216,7 @@ SELECT set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001'
 DO $approve$
 DECLARE request_id uuid;n int;denied boolean:=false;
 BEGIN
- SELECT r.id INTO request_id FROM public.vehicle_change_requests r
- WHERE r.company_id='20000000-0000-4000-8000-000000000001' AND r.status='pending';
+ request_id:=current_setting('test.driver_request_id')::uuid;
  IF public.fleetpilot_review_vehicle_change(request_id,true,'Approved synthetic')<>'approved'
  THEN RAISE EXCEPTION 'Manager approval failed'; END IF;
  SELECT count(*) INTO n FROM public.vehicles WHERE company_id=
