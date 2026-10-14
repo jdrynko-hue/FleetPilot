@@ -131,3 +131,10 @@ assert.equal(final.quote.approved,true);
 assert.equal(final.work_order_status,'ready');
 assert.deepEqual(final.events.map(e=>e.action),[
  'request_sent','request_accepted','quote_approved','progress_updated']);
+
+const jobs=good(await rpc(mechanic,'garage_my_assigned_jobs',{
+ p_workspace_id:garage}),'combined mechanic jobs');
+assert.deepEqual(new Set(jobs.map(j=>j.id)),new Set([consumerOrder,fleetOrder]));
+assert.deepEqual(good(await rpc(mechanic,'garage_my_assigned_jobs',{
+ p_workspace_id:otherGarage}),'other Garage queue'),[]);
+deny(await rpc(outsider,'garage_fleet_snapshot',{p_request:rid}),'foreign Fleet history');
