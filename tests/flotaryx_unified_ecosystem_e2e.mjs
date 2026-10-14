@@ -138,3 +138,11 @@ assert.deepEqual(new Set(jobs.map(j=>j.id)),new Set([consumerOrder,fleetOrder]))
 assert.deepEqual(good(await rpc(mechanic,'garage_my_assigned_jobs',{
  p_workspace_id:otherGarage}),'other Garage queue'),[]);
 deny(await rpc(outsider,'garage_fleet_snapshot',{p_request:rid}),'foreign Fleet history');
+
+assert.equal(good(await rpc(owner,'garage_fleet_revoke_connection',{
+ p_company:f1.company_id,p_shop:garage}),'revoke sharing'),true);
+deny(await rpc(fleet,'garage_fleet_snapshot',{p_request:rid}),'revoked Fleet');
+deny(await rpc(owner,'garage_fleet_snapshot',{p_request:rid}),'revoked Garage');
+assert.equal(good(await rpc(customer,'garage_booking_my_requests'),
+ 'private booking unaffected')[0].status,'confirmed');
+console.log('PASS disposable integrated Fleet, Garage and private booking E2E');
