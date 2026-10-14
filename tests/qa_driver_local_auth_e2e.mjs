@@ -45,16 +45,20 @@ async function add(u,table,row){
 }
 const mgrA=await signup('manager-a'),driverA=await signup('driver-a');
 const mgrB=await signup('manager-b'),driverB=await signup('driver-b');
+const colleague=await signup('driver-colleague');
 const outsider=await signup('outsider'),viewer=await signup('viewer-a');
 const a=await company(mgrA),b=await company(mgrB);
 const dA=await add(mgrA,'drivers',{company_id:a,name:'Synthetic Driver A',email:driverA.email});
 const dB=await add(mgrB,'drivers',{company_id:b,name:'Synthetic Driver B',email:driverB.email});
+const dC=await add(mgrA,'drivers',{company_id:a,name:'Synthetic Colleague',email:colleague.email});
 await add(mgrA,'company_members',{company_id:a,user_id:driverA.id,role:'driver'});
 await add(mgrB,'company_members',{company_id:b,user_id:driverB.id,role:'driver'});
+await add(mgrA,'company_members',{company_id:a,user_id:colleague.id,role:'driver'});
 await add(mgrA,'company_members',{company_id:a,user_id:viewer.id,role:'viewer'});
 const a1=await add(mgrA,'vehicles',{company_id:a,registration:'QA-A1-'+Date.now()});
 const a2=await add(mgrA,'vehicles',{company_id:a,registration:'QA-A2-'+Date.now()});
 const b1=await add(mgrB,'vehicles',{company_id:b,registration:'QA-B1-'+Date.now()});
+const a3=await add(mgrA,'vehicles',{company_id:a,registration:'QA-A3-'+Date.now()});
 const featureA=pass(await rpc(driverA,'fleetpilot_driver_feature_enabled',{_company_id:a}),
  'driver feature');assert.equal(featureA,true);
 let profile=pass(await rpc(driverA,'fleetpilot_my_driver_profile',{_company_id:a}),
@@ -66,10 +70,14 @@ pass(await rpc(mgrA,'fleetpilot_link_driver_account',{
  _company_id:a,_driver_id:dA.id,_user_id:driverA.id}),'manager links Driver A');
 pass(await rpc(mgrB,'fleetpilot_link_driver_account',{
  _company_id:b,_driver_id:dB.id,_user_id:driverB.id}),'manager links Driver B');
+pass(await rpc(mgrA,'fleetpilot_link_driver_account',{
+ _company_id:a,_driver_id:dC.id,_user_id:colleague.id}),'manager links colleague');
 pass(await rpc(mgrA,'fleetpilot_manager_assign_vehicle',{
  _company_id:a,_driver_id:dA.id,_vehicle_id:a1.id}),'assign A1');
 pass(await rpc(mgrB,'fleetpilot_manager_assign_vehicle',{
  _company_id:b,_driver_id:dB.id,_vehicle_id:b1.id}),'assign B1');
+pass(await rpc(mgrA,'fleetpilot_manager_assign_vehicle',{
+ _company_id:a,_driver_id:dC.id,_vehicle_id:a3.id}),'assign occupied colleague van');
 
 profile=pass(await rpc(driverA,'fleetpilot_my_driver_profile',{_company_id:a}),
  'driver A own profile');assert.equal(profile.length,1);
@@ -125,6 +133,7 @@ deny(await call('/rest/v1/driver_vehicle_checks',driverA,'POST',{
 const options=pass(await rpc(driverA,'fleetpilot_vehicle_change_options',{
  _company_id:a}),'own fleet change options');
 assert.equal(options.length,2);assert.ok(options.find(v=>v.id===a2.id)?.is_available);
+assert.ok(!options.some(v=>v.id===a3.id),'Occupied colleague vehicle leaked into options');
 assert.deepEqual(pass(await rpc(driverA,'fleetpilot_vehicle_change_options',{
  _company_id:b}),'other fleet options'),[]);
 deny(await rpc(driverA,'fleetpilot_request_vehicle_change',{
