@@ -152,6 +152,12 @@ BEGIN
  IF (SELECT count(*) FROM public.garage_booking_resource_audit
   WHERE resource_id=current_setting('roster.qa.resource')::uuid)<>1 THEN
   RAISE EXCEPTION 'Resource reassignment audit missing or duplicated'; END IF;
+ IF (SELECT count(*) FROM public.garage_order_events
+  WHERE workspace_id='00000000-0000-4000-8000-000000000101'
+   AND order_id=v_order AND action='assign_mechanic'
+   AND old_assigned_user_id IS NULL
+   AND new_assigned_user_id='00000000-0000-4000-8000-000000000003')<>1 THEN
+  RAISE EXCEPTION 'Automatically assigned job has no audit event'; END IF;
 END $$;
 
 SELECT 'Garage 009 mechanic roster, assignment, role isolation and order sync: PASS' AS result;
