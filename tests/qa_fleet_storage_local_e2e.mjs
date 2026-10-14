@@ -84,6 +84,16 @@ deny(await download(null,pa),'anon cannot download');
 deny(await download(null,pa,true),'no public object URL');
 const signed=pass(await sign(viewer,pa),'viewer signs 120s URL');
 assert.ok(signed.signedURL||signed.signedUrl,'Expected signed Storage URL');
+const relativeSign=String(signed.signedURL||signed.signedUrl);
+const resolvedSign=relativeSign.startsWith('http')?new URL(relativeSign):
+  new URL((relativeSign.startsWith('/storage/v1/')?'':'/storage/v1')+
+    (relativeSign.startsWith('/')?'':'/')+relativeSign,root);
+assert.equal(resolvedSign.origin,new URL(root).origin,
+ 'Signed URL must point to ephemeral local Storage only');
+const signedDownload=await fetch(resolvedSign);
+assert.equal(signedDownload.status,200,'Signed URL must serve authenticated PDF');
+assert.deepEqual(Buffer.from(await signedDownload.arrayBuffer()),pdf,
+ 'Signed URL returns the same uploaded PDF');
 deny(await sign(b,pa),'B cannot sign A URL');
 deny(await sign(outsider,pa),'outsider cannot sign');
 deny(await sign(null,pa),'anon cannot sign');
@@ -120,6 +130,11 @@ const stillPresent=pass(await call('/rest/v1/fleet_documents?id=eq.'+da.id+
  '&select=id',{jwt:a.jwt}),'metadata retained after viewer delete');
 assert.equal(stillPresent.length,1);
 pass(await download(a,pa),'object remains after viewer delete');
+const crossDelete=await remove(b,pa);
+if(crossDelete.ok)assert.deepEqual(crossDelete.value,[],
+ 'Foreign Fleet cannot remove original owner's Storage object');
+else deny(crossDelete,'foreign Fleet cannot delete Storage');
+pass(await download(a,pa),'object remains after foreign Fleet delete');
 pass(await remove(a,pa),'owner deletes object');
 deny(await download(a,pa),'deleted object cannot be read');
 console.log('PASS real local Supabase Auth/PostgREST/Storage with 2 synthetic fleets, viewer, anon, outsider, tenant isolation, 120s URL and upload/delete');
