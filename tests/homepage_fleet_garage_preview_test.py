@@ -44,7 +44,7 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
                                 html.index('id="industries"'))
                 self.assertEqual(html.count('class="ecosystem-card"'), 3)
                 self.assertEqual(html.count('class="ecosystem-bridge"'), 1)
-                self.assertIn('class="ecosystem-status"', html)
+                self.assertIn('class="notice ecosystem-status"', html)
                 self.assertIn("Garage, marketplace bookings", html)
                 self.assertIn("Garage, rezerwacje dla klientów", html)
                 self.assertIn("in development", html)
