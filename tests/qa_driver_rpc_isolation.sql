@@ -48,6 +48,15 @@ BEGIN
    '40000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000001')<>'TEST-A1'
  THEN RAISE EXCEPTION 'Manager assignment failed'; END IF;
+ PERFORM public.fleetpilot_link_driver_account(
+   '20000000-0000-4000-8000-000000000001',
+   '40000000-0000-4000-8000-000000000003',
+   '10000000-0000-4000-8000-000000000007');
+ IF public.fleetpilot_manager_assign_vehicle(
+   '20000000-0000-4000-8000-000000000001',
+   '40000000-0000-4000-8000-000000000003',
+   '30000000-0000-4000-8000-000000000004')<>'TEST-A3'
+ THEN RAISE EXCEPTION 'Colleague assignment failed'; END IF;
  v_denied:=false;
  BEGIN
   PERFORM public.fleetpilot_manager_assign_vehicle(
@@ -107,6 +116,10 @@ BEGIN
  SELECT count(*) INTO n FROM public.fleetpilot_vehicle_change_options(
   '20000000-0000-4000-8000-000000000001') WHERE is_available;
  IF n<>1 THEN RAISE EXCEPTION 'Vehicle availability calculation wrong'; END IF;
+ SELECT count(*) INTO n FROM public.fleetpilot_vehicle_change_options(
+  '20000000-0000-4000-8000-000000000001')
+  WHERE id='30000000-0000-4000-8000-000000000004';
+ IF n<>0 THEN RAISE EXCEPTION 'Colleague occupied van leaked via options'; END IF;
 
  SELECT public.fleetpilot_report_driver_issue(
   '20000000-0000-4000-8000-000000000001',
