@@ -117,6 +117,24 @@ WITH status_checks AS (
  SELECT '17_active_subscription_write_compatibility','independent_review','REVIEW'
  UNION ALL
  SELECT '18_authenticated_storage_and_safari_e2e','independent_review','REVIEW'
+ UNION ALL
+ SELECT '19_anonymous_definer_execution','remediation',
+   CASE WHEN NOT EXISTS (
+     SELECT 1 FROM pg_catalog.pg_proc p
+     JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+     WHERE n.nspname='public' AND p.prosecdef
+       AND has_function_privilege('anon',p.oid,'EXECUTE')
+   ) THEN 'PASS' ELSE 'HOLD' END
+ UNION ALL
+ SELECT '20_definer_search_path','prerequisite',
+   CASE WHEN NOT EXISTS (
+     SELECT 1 FROM pg_catalog.pg_proc p
+     JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+     WHERE n.nspname='public' AND p.prosecdef
+       AND NOT EXISTS (
+         SELECT 1 FROM unnest(p.proconfig) cfg WHERE cfg LIKE 'search_path=%'
+       )
+   ) THEN 'PASS' ELSE 'HOLD' END
 )
 SELECT check_id,phase,result FROM status_checks ORDER BY check_id;
 
