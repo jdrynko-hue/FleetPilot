@@ -29,6 +29,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
   bool _loading = true;
   bool _approving = false;
   bool _approvalSucceeded = false;
+  int? _approvedRevision;
   String? _notice;
 
   bool get _polish => AppLocale.language.value == 'pl';
@@ -52,13 +53,12 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
       if (!mounted) return;
       setState(() {
         _quote = quote;
-        // Server is authoritative. If it says approved, no further approval.
-        // After a successful RPC, keep approvals blocked until server state
-        // confirms the latest revision or a different revision is fetched.
-        if (quote?.approved == true) _approvalSucceeded = true;
-        if (quote != null && quote.approved == false) {
-          _approvalSucceeded = false;
-        }
+        // If the approval RPC already succeeded, do not allow an immediate
+        // duplicate submission just because a later read is temporarily
+        // stale. A *new* quote revision is independently approvable.
+        if (quote?.approved == true) _approvedRevision = quote!.revision;
+        _approvalSucceeded = quote != null &&
+            (quote.approved || quote.revision == _approvedRevision);
       });
     } catch (_) {
       if (!mounted) return;
@@ -157,6 +157,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
       }
       setState(() {
         _approvalSucceeded = true;
+        _approvedRevision = selected.revision;
         _notice = _tr(
           'Zgoda została zapisana. Odśwież, aby potwierdzić status.',
           'Approval recorded. Refresh to verify the current status.',
