@@ -20,6 +20,9 @@ begin
     or has_table_privilege('authenticated','public.vehicle_change_requests','DELETE') then
     raise exception 'Direct change request API access';
  end if;
+ if not has_function_privilege('service_role','public.sync_vehicle_assignment()','EXECUTE') then
+   raise exception 'Trusted service_role lost trigger helper EXECUTE';
+ end if;
  if has_function_privilege('anon',
     'public.create_company_for_current_user(text,text,text)','EXECUTE')
     or has_function_privilege('anon','public.has_company_role(uuid,text[])','EXECUTE')
@@ -211,4 +214,21 @@ begin
  end;
 end;
 $check$;
+-- Existing account onboarding RPC must remain usable for authenticated users.
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000004',true);
+do $regression$
+declare v_company uuid; n int;
+begin
+ select public.create_company_for_current_user('Fresh Synthetic QA Fleet','GB','GBP') into v_company;
+ if v_company is null or not public.has_company_role(v_company,array['owner']) then
+   raise exception 'New Fleet owner bootstrap regression';
+ end if;
+ select count(*) into n from public.get_company_entitlements(v_company);
+ if n<>1 then raise exception 'New Fleet subscription entitlement regression'; end if;
+end;
+$regression$;
+commit;
+
 select 'PASS: synthetic QA Fleet RLS, grants and tenant-integrity tests' as test_result;
