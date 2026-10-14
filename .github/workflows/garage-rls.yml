@@ -17,6 +17,7 @@ on:
       - 'tests/garage_resource_calendar_e2e.mjs'
       - 'tests/garage_mechanic_roster_rls.sql'
       - 'tests/garage_mechanic_roster_e2e.mjs'
+      - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   push:
@@ -36,6 +37,7 @@ on:
       - 'tests/garage_resource_calendar_e2e.mjs'
       - 'tests/garage_mechanic_roster_rls.sql'
       - 'tests/garage_mechanic_roster_e2e.mjs'
+      - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
@@ -163,6 +165,7 @@ jobs:
           node "$GITHUB_WORKSPACE/tests/garage_consumer_bookings_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_resource_calendar_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_mechanic_roster_e2e.mjs"
+          node "$GITHUB_WORKSPACE/tests/flotaryx_unified_ecosystem_e2e.mjs"
       - name: Stop isolated Supabase services
         if: always()
         shell: bash
