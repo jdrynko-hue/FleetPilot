@@ -459,3 +459,120 @@ storageDenied(await download(replacement, documentPath),
 console.log('PASS Garage private Storage access, tenant separation, evidence integrity and mechanic reassignment');
 
 
+
+
+// RepairBridge: real Auth/PostgREST requests against this disposable local API.
+// The Fleet fixture is installed in the local CI database only.
+const fleetA = mustPass(await rpc(outsider, 'repairbridge_test_create_fleet', {
+  p_registration: 'BRIDGE-A', p_title: 'Brake fault'
+}), 'create isolated Fleet A');
+const fleetB = mustPass(await rpc(privateCustomer, 'repairbridge_test_create_fleet', {
+  p_registration: 'BRIDGE-B', p_title: 'Other company fault'
+}), 'create isolated Fleet B');
+
+mustDeny(await rpc(outsider,'garage_fleet_send_request',{
+  p_company:fleetA.company_id,p_shop:shopA,p_issue:fleetA.issue_id
+}), 'request before bilateral consent');
+mustDeny(await rpc(privateCustomer,'garage_fleet_request_connection',{
+  p_company:fleetA.company_id,p_shop:shopA
+}), 'Fleet B identity mismatch');
+mustPass(await rpc(outsider,'garage_fleet_request_connection',{
+  p_company:fleetA.company_id,p_shop:shopA
+}), 'request consent');
+mustDeny(await rpc(ownerB,'garage_fleet_accept_connection',{
+  p_company:fleetA.company_id,p_shop:shopA
+}), 'wrong workshop accepts consent');
+const pending = mustPass(await rpc(ownerA,'garage_fleet_connections_for_me',{}),
+ 'workshop pending connections');
+assert.ok(pending.some(x=>x.company_id===fleetA.company_id && x.status==='pending'));
+mustPass(await rpc(ownerA,'garage_fleet_accept_connection',{
+  p_company:fleetA.company_id,p_shop:shopA
+}), 'owner approves bilateral connection');
+
+mustDeny(await rpc(outsider,'garage_fleet_send_request',{
+  p_company:fleetB.company_id,p_shop:shopA,p_issue:fleetB.issue_id
+}), 'cross-Fleet issue access');
+const bridgeRequest = mustPass(await rpc(outsider,'garage_fleet_send_request',{
+  p_company:fleetA.company_id,p_shop:shopA,p_issue:fleetA.issue_id
+}), 'send minimally disclosed issue');
+const pendingBridge = mustPass(await rpc(outsider,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'Fleet pending snapshot');
+assert.equal(pendingBridge.issue_title,'Brake fault');
+assert.equal(pendingBridge.shared_description,null);
+assert.equal(pendingBridge.shared_registration,null);
+assert.equal(pendingBridge.events.length,1);
+mustDeny(await rpc(privateCustomer,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'unrelated Fleet reads private quote');
+mustDeny(await rpc(ownerB,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'unrelated workshop reads private quote');
+mustDeny(await http('/rest/v1/garage_fleet_requests?select=*', {
+  jwt:outsider.jwt
+}), 'direct bridge table reads denied');
+
+const bridgeOrder = mustPass(await rpc(ownerA,'garage_fleet_accept_request',{
+  p_request:bridgeRequest
+}), 'garage accepts request');
+mustDeny(await rpc(ownerA,'garage_fleet_accept_request',{
+  p_request:bridgeRequest
+}), 'duplicate request acceptance');
+mustPass(await rpc(ownerA,'garage_begin_diagnosis',{
+  p_workspace_id:shopA,p_order_id:bridgeOrder
+}), 'Garage diagnosis');
+mustPass(await rpc(ownerA,'garage_assign_mechanic',{
+  p_workspace_id:shopA,p_order_id:bridgeOrder,p_mechanic_user_id:mechanic.id
+}), 'assign Garage mechanic');
+assert.equal(mustPass(await rpc(ownerA,'garage_publish_quote',{
+  p_workspace_id:shopA,p_order_id:bridgeOrder,
+  p_lines:[{type:'labour',description:'Brake service',
+    quantity:2,unit_price_minor:3000,tax_minor:1200}]
+}), 'publish business quote'),1);
+const bridgeQuote = mustPass(await rpc(outsider,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'Fleet sees quoted revision');
+assert.equal(bridgeQuote.quote.revision,1);
+assert.equal(bridgeQuote.quote.total_minor,7200);
+assert.equal(bridgeQuote.quote.approved,false);
+mustDeny(await rpc(ownerA,'garage_fleet_approve_quote',{
+  p_request:bridgeRequest,p_revision:1
+}), 'workshop cannot self approve');
+mustDeny(await rpc(outsider,'garage_fleet_approve_quote',{
+  p_request:bridgeRequest,p_revision:2
+}), 'stale or future revision');
+mustDeny(await rpc(mechanic,'garage_start_approved_repair',{
+  p_workspace_id:shopA,p_order_id:bridgeOrder
+}), 'start before Fleet approval');
+assert.equal(mustPass(await rpc(outsider,'garage_fleet_approve_quote',{
+  p_request:bridgeRequest,p_revision:1
+}), 'Fleet manager exact revision approval'),1);
+assert.equal(mustPass(await rpc(mechanic,'garage_start_approved_repair',{
+  p_workspace_id:shopA,p_order_id:bridgeOrder
+}), 'start approved Fleet repair'),'in_progress');
+assert.equal(mustPass(await rpc(ownerA,'garage_fleet_update_progress',{
+  p_request:bridgeRequest,p_status:'ready'
+}), 'workshop publishes completion'),'ready');
+const bridgeFinished = mustPass(await rpc(outsider,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'Fleet synchronized repair status');
+assert.equal(bridgeFinished.work_order_status,'ready');
+assert.equal(bridgeFinished.quote.approved,true);
+assert.deepEqual(bridgeFinished.events.map(e=>e.action),[
+ 'request_sent','request_accepted','quote_approved','progress_updated'
+]);
+assert.equal(mustPass(await rpc(ownerA,'garage_fleet_revoke_connection',{
+  p_company:fleetA.company_id,p_shop:shopA
+}), 'revoke Garage/Fleet link'),true);
+mustDeny(await rpc(outsider,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'Fleet data revoked');
+mustDeny(await rpc(ownerA,'garage_fleet_snapshot',{
+  p_request:bridgeRequest
+}), 'Garage shared data revoked');
+mustDeny(await rpc(ownerA,'garage_fleet_update_progress',{
+  p_request:bridgeRequest,p_status:'collected'
+}), 'revoked workshop cannot push updates');
+assert.deepEqual(mustPass(await rpc(outsider,'garage_fleet_requests_for_me',{}),
+  'revoked request listing'),[]);
+console.log('PASS RepairBridge local Supabase bilateral consent, scoped quote, repair progress and revocation');
