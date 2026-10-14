@@ -35,6 +35,9 @@ void main(){
       ),width:width);
       expect(find.text('Monday'),findsOneWidget);
       expect(find.text('Existing Bay'),findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('garage_settings_add_bay')), 100,
+        scrollable: find.byType(Scrollable).first);
       expect(find.byKey(const Key('garage_settings_add_bay')),findsOneWidget);
       expect(tester.takeException(),isNull);
     });
@@ -60,7 +63,9 @@ void main(){
       },
       setResourceActive:(id,active) async=>true,
     ));
-    await tester.ensureVisible(find.byKey(const Key('garage_settings_add_bay')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('garage_settings_add_bay')), 100,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('garage_settings_add_bay')));
     await tester.pumpAndSettle();
     expect(created,0);
