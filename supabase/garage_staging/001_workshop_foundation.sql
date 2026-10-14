@@ -150,9 +150,22 @@ CREATE POLICY garage_customers_update ON public.garage_customers
   USING (garage_private.has_role(workspace_id,ARRAY['owner','service_adviser']))
   WITH CHECK (garage_private.has_role(workspace_id,ARRAY['owner','service_adviser']));
 
+-- Service advisers can browse all of their garage's vehicles. Mechanics
+-- see only vehicles attached to work orders personally assigned to them.
 CREATE POLICY garage_vehicles_read ON public.garage_vehicles
   FOR SELECT TO authenticated
-  USING (garage_private.has_role(workspace_id));
+  USING (
+    garage_private.has_role(workspace_id,ARRAY['owner','service_adviser'])
+    OR (
+      garage_private.has_role(workspace_id,ARRAY['mechanic'])
+      AND EXISTS (
+        SELECT 1 FROM public.garage_work_orders wo
+        WHERE wo.workspace_id=garage_vehicles.workspace_id
+          AND wo.vehicle_id=garage_vehicles.id
+          AND wo.assigned_user_id=(SELECT auth.uid())
+      )
+    )
+  );
 CREATE POLICY garage_vehicles_insert ON public.garage_vehicles
   FOR INSERT TO authenticated
   WITH CHECK (garage_private.has_role(workspace_id,ARRAY['owner','service_adviser']));
