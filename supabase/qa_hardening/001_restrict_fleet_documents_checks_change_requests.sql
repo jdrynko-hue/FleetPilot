@@ -134,6 +134,12 @@ begin
  loop
    execute format('revoke all on function %s from public,anon,authenticated',
                   f.oid::regprocedure);
+   -- Preserve explicit privileged backend execution even when access was
+   -- previously inherited only from PUBLIC. Never grant to anon here.
+   if exists (select 1 from pg_roles where rolname='service_role') then
+     execute format('grant execute on function %s to service_role',
+                    f.oid::regprocedure);
+   end if;
  end loop;
 end;
 $acl$;
