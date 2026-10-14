@@ -72,3 +72,28 @@ assert.ok(consumerOrder,'consumer booking must create separate work order');
 assert.deepEqual(good(await rpc(otherCustomer,'garage_booking_my_requests'),'other visits'),[]);
 assert.ok(good(await rpc(customer,'garage_booking_my_notifications'),'my alerts')
  .some(n=>n.booking_id===booking&&n.event_action==='confirmed'));
+
+const firstJobs=good(await rpc(mechanic,'garage_my_assigned_jobs',{p_workspace_id:garage}),'private mechanic jobs');
+assert.ok(firstJobs.some(j=>j.id===consumerOrder));
+deny(await rpc(fleet,'garage_booking_cancel',{p_booking:booking}),'other customer cancellation');
+const f1=good(await rpc(fleet,'repairbridge_test_create_fleet',{
+ p_registration:'QA-FLT-1',p_title:'Fleet brake defect'}),'Fleet fixture');
+const f2=good(await rpc(outsider,'repairbridge_test_create_fleet',{
+ p_registration:'QA-FLT-2',p_title:'Foreign company fault'}),'foreign Fleet');
+deny(await rpc(fleet,'garage_fleet_send_request',{
+ p_company:f1.company_id,p_shop:garage,p_issue:f1.issue_id}),'no consent');
+deny(await rpc(outsider,'garage_fleet_request_connection',{
+ p_company:f1.company_id,p_shop:garage}),'other Fleet connection');
+good(await rpc(fleet,'garage_fleet_request_connection',{
+ p_company:f1.company_id,p_shop:garage}),'Fleet requests connection');
+good(await rpc(owner,'garage_fleet_accept_connection',{
+ p_company:f1.company_id,p_shop:garage}),'Garage consents');
+deny(await rpc(fleet,'garage_fleet_send_request',{
+ p_company:f2.company_id,p_shop:garage,p_issue:f2.issue_id}),'wrong Fleet defect');
+const rid=good(await rpc(fleet,'garage_fleet_send_request',{
+ p_company:f1.company_id,p_shop:garage,p_issue:f1.issue_id}),'send defect');
+const fault=good(await rpc(fleet,'garage_fleet_snapshot',{p_request:rid}),'defect status');
+assert.equal(fault.issue_title,'Fleet brake defect');
+assert.equal(fault.shared_registration,null);
+assert.equal(fault.shared_description,null);
+deny(await rpc(customer,'garage_fleet_snapshot',{p_request:rid}),'consumer Fleet access');
