@@ -12,6 +12,8 @@ class GarageCalendarSettingsScreen extends StatefulWidget {
     required this.setHours,
     required this.addResource,
     required this.setResourceActive,
+    this.loadMechanics,
+    this.assignMechanic,
     super.key,
   });
 
@@ -30,6 +32,9 @@ class GarageCalendarSettingsScreen extends StatefulWidget {
       shopId: workspaceId, name: name),
     setResourceActive: (id, active) => repository.setResourceActive(
       shopId: workspaceId, resourceId: id, active: active),
+    loadMechanics: () => repository.mechanics(workspaceId),
+    assignMechanic: (id, mechanic) => repository.assignResourceMechanic(
+      shopId: workspaceId, resourceId: id, mechanicUserId: mechanic),
   );
 
   final Future<List<GarageOpeningHours>> Function() loadHours;
@@ -38,6 +43,10 @@ class GarageCalendarSettingsScreen extends StatefulWidget {
       bool enabled) setHours;
   final Future<String> Function(String name) addResource;
   final Future<bool> Function(String id, bool active) setResourceActive;
+  /// Optional during staged rollout; only Garage owner can view staff emails.
+  final Future<List<GarageRosterMechanic>> Function()? loadMechanics;
+  final Future<bool> Function(String resourceId, String? mechanicUserId)?
+      assignMechanic;
 
   @override
   State<GarageCalendarSettingsScreen> createState() =>
@@ -47,6 +56,7 @@ class GarageCalendarSettingsScreen extends StatefulWidget {
 class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
   List<GarageOpeningHours> _hours = const [];
   List<GarageCalendarResource> _resources = const [];
+  List<GarageRosterMechanic> _mechanics = const [];
   bool _busy = true;
   String? _notice;
   int _version = 0;
@@ -68,15 +78,19 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
     final version = ++_version;
     setState(() {
       _busy = true; _notice = null;
-      _hours = const []; _resources = const [];
+      _hours = const []; _resources = const []; _mechanics = const [];
     });
     try {
       final hours = await widget.loadHours();
       final resources = await widget.loadResources();
+      final mechanics = widget.loadMechanics == null
+          ? <GarageRosterMechanic>[]
+          : await widget.loadMechanics!();
       if (!mounted || version != _version) return;
       setState(() {
         _hours = List.unmodifiable(hours);
         _resources = List.unmodifiable(resources);
+        _mechanics = List.unmodifiable(mechanics);
       });
     } catch (_) {
       if (mounted && version == _version) {
@@ -194,10 +208,55 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
     await _mutate(()=>widget.setResourceActive(resource.id,!resource.active));
   }
 
+  /// Staff list stays restricted to owners; confirmation is rechecked by SQL.
+  Future<void> _chooseMechanic(GarageCalendarResource resource) async {
+    if (_busy || widget.assignMechanic == null) return;
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('Mechanik stanowiska', 'Assign bay mechanic')),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 320,
+          child: ListView(children: [
+            Text(tr('Nie można zmienić mechanika, gdy stanowisko ma '
+                'trwającą lub przyszłą potwierdzoną wizytę.',
+                'Reassignment is blocked while a confirmed booking '
+                'is active or scheduled.')),
+            ListTile(
+              key: const Key('garage_mechanic_unassign'),
+              title: Text(tr('Bez przypisania', 'Unassigned')),
+              selected: resource.mechanicUserId == null,
+              onTap: () => Navigator.pop(context, '__unassigned__'),
+            ),
+            for (final mechanic in _mechanics)
+              ListTile(
+                key: Key('garage_mechanic_pick_' + mechanic.userId),
+                title: Text(mechanic.email),
+                selected: mechanic.userId == resource.mechanicUserId,
+                onTap: () => Navigator.pop(context, mechanic.userId),
+              ),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(tr('Wróć', 'Back')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null || _busy) return;
+    final mechanicId = selected == '__unassigned__' ? null : selected;
+    if (resource.mechanicUserId == mechanicId) return;
+    await _mutate(() => widget.assignMechanic!(resource.id, mechanicId));
+  }
+
   Future<void> _mutate(Future<bool> Function() write) async {
     if (_busy) return;
     setState(() {
-      _busy=true; _notice=null; _resources=const []; _hours=const [];
+      _busy=true; _notice=null; _resources=const [];
+      _hours=const []; _mechanics=const [];
     });
     var failed=false;
     try {
@@ -242,13 +301,35 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
         for(final resource in _resources)
           ListTile(key:Key('garage_settings_bay_' + resource.id),
             title:Text(resource.name),
-            subtitle:Text(resource.active
-              ? tr('Aktywne','Active') : tr('Nieaktywne','Inactive')),
-            trailing:IconButton(
-              key:Key('garage_settings_toggle_' + resource.id),
-              onPressed:()=>_toggle(resource),
-              icon:Icon(resource.active ? Icons.pause_circle_outline
-                : Icons.play_circle_outline))),
+            subtitle:Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(resource.active
+                  ? tr('Aktywne','Active') : tr('Nieaktywne','Inactive')),
+                if (widget.loadMechanics != null)
+                  Text(resource.mechanicUserId == null
+                    ? tr('Mechanik: brak', 'Mechanic: unassigned')
+                    : (_mechanics.where(
+                        (m) => m.userId == resource.mechanicUserId)
+                        .firstOrNull?.email ??
+                        tr('Mechanik nie jest już w zespole',
+                           'Mechanic is no longer on staff'))),
+              ],
+            ),
+            trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+              if (widget.loadMechanics != null &&
+                  widget.assignMechanic != null)
+                IconButton(
+                  key:Key('garage_settings_assign_' + resource.id),
+                  tooltip:tr('Przypisz mechanika','Assign mechanic'),
+                  onPressed:()=>_chooseMechanic(resource),
+                  icon:const Icon(Icons.person_outline)),
+              IconButton(
+                key:Key('garage_settings_toggle_' + resource.id),
+                onPressed:()=>_toggle(resource),
+                icon:Icon(resource.active ? Icons.pause_circle_outline
+                  : Icons.play_circle_outline)),
+            ])),
         FilledButton.icon(key:const Key('garage_settings_add_bay'),
           onPressed:_newResource,icon:const Icon(Icons.add),
           label:Text(tr('Dodaj stanowisko', 'Add bay'))),

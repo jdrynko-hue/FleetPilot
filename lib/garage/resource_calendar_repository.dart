@@ -142,6 +142,45 @@ class GarageResourceCalendarRepository {
         );
       }, max: 50);
 
+  /// Owner-only current mechanic list. Not a marketplace/customer listing.
+  static List<GarageRosterMechanic> parseMechanics(Object? data) =>
+      _list(data, (row) {
+        final email = _text(row, 'staff_email');
+        if (email.length > 320 || !email.contains('@')) {
+          throw const FormatException('Invalid mechanic roster contact');
+        }
+        return GarageRosterMechanic(
+          userId: _rowId(row, 'user_id'),
+          email: email,
+        );
+      }, max: 150);
+
+  Future<List<GarageRosterMechanic>> mechanics(String shopId) async {
+    _signedIn();
+    return parseMechanics(await client.rpc('garage_booking_mechanics',
+      params: {'p_shop': validatedId(shopId)}));
+  }
+
+  Future<bool> assignResourceMechanic({
+    required String shopId,
+    required String resourceId,
+    required String? mechanicUserId,
+  }) async {
+    _signedIn();
+    final response = await client.rpc(
+      'garage_booking_assign_resource_mechanic', params: {
+        'p_shop': validatedId(shopId),
+        'p_resource': validatedId(resourceId),
+        'p_mechanic': mechanicUserId == null
+            ? null : validatedId(mechanicUserId),
+      },
+    );
+    if (response != true) {
+      throw const FormatException('Mechanic assignment not confirmed');
+    }
+    return true;
+  }
+
   Future<List<GarageCalendarResource>> resources(String shopId) async {
     _signedIn();
     return parseResources(await client.rpc('garage_booking_resource_list',
@@ -259,6 +298,13 @@ class GarageResourceCalendarRepository {
     }
     return true;
   }
+}
+
+/// Staff identity visible only in the authenticated owner's roster.
+class GarageRosterMechanic {
+  const GarageRosterMechanic({required this.userId, required this.email});
+  final String userId;
+  final String email;
 }
 
 class GarageCalendarResource {
