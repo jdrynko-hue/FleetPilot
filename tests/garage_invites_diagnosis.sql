@@ -356,4 +356,42 @@ BEGIN
 END $$;
 COMMIT;
 
+-- Active-invite cap must not be bypassed with repeated calls. Existing
+-- unconsumed invite to adviser@example.test occupies one of ten slots.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+DO $$
+DECLARE
+  i integer;
+  rejected boolean:=false;
+BEGIN
+  FOR i IN 1..9 LOOP
+    PERFORM public.garage_issue_staff_invite(
+      '00000000-0000-4000-8000-000000000101',
+      format('limit%s@example.test',i),'mechanic');
+  END LOOP;
+  BEGIN
+    PERFORM public.garage_issue_staff_invite(
+      '00000000-0000-4000-8000-000000000101',
+      'eleventh@example.test','mechanic');
+  EXCEPTION WHEN OTHERS THEN rejected:=true;
+  END;
+  IF NOT rejected THEN
+    RAISE EXCEPTION 'More than ten outstanding invites allowed';
+  END IF;
+END $$;
+COMMIT;
+
+-- Token bytes must not be present in the database, only a nonreversible digest.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.garage_invites
+    WHERE token_sha256=current_setting('garage.qa.mechanic')
+  ) THEN
+    RAISE EXCEPTION 'Raw invite token persisted';
+  END IF;
+END $$;
+
 SELECT 'Garage staff invites and audited diagnosis: PASS' AS result;
