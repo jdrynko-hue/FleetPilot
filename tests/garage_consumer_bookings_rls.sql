@@ -170,10 +170,10 @@ BEGIN
   RAISE EXCEPTION 'Garage inbox did not show both requests'; END IF;
  IF public.garage_booking_respond(current_setting('booking.qa.a')::uuid,true)
   <>'confirmed' THEN RAISE EXCEPTION 'First appointment not confirmed'; END IF;
- SELECT work_order_id INTO o FROM public.garage_booking_requests
-  WHERE id=current_setting('booking.qa.a')::uuid;
- IF o IS NULL OR NOT EXISTS (
-  SELECT 1 FROM public.garage_work_orders WHERE id=o AND status='received'
+ IF NOT EXISTS (
+  SELECT 1 FROM public.garage_work_orders
+  WHERE workspace_id='00000000-0000-4000-8000-000000000101'
+    AND complaint='Grinding brakes' AND status='received'
  ) THEN RAISE EXCEPTION 'Confirmed booking did not create job'; END IF;
  BEGIN
   PERFORM public.garage_booking_respond(current_setting('booking.qa.b')::uuid,true);
@@ -207,14 +207,21 @@ DO $$
 BEGIN
  IF public.garage_booking_confirm_cancellation(current_setting('booking.qa.a')::uuid)
   <>'cancelled' THEN RAISE EXCEPTION 'Cancellation not accepted'; END IF;
- IF NOT EXISTS (
-  SELECT 1 FROM public.garage_booking_requests WHERE
-   id=current_setting('booking.qa.a')::uuid AND status='cancelled'
- ) THEN RAISE EXCEPTION 'Cancellation not persisted'; END IF;
- IF (SELECT count(*) FROM public.garage_booking_events WHERE
-  booking_id=current_setting('booking.qa.a')::uuid)<>4 THEN
-   RAISE EXCEPTION 'Incomplete booking audit events'; END IF;
+ IF EXISTS (
+  SELECT 1 FROM public.garage_booking_shop_inbox(
+   '00000000-0000-4000-8000-000000000101') WHERE status='cancellation_requested'
+ ) THEN RAISE EXCEPTION 'Processed cancellation remained in active inbox'; END IF;
 END $$;
 COMMIT;
 
+-- CI test administrator alone inspects immutable audit events; not a client grant.
+DO $
+BEGIN
+ IF (SELECT count(*) FROM public.garage_booking_events
+ WHERE booking_id=current_setting('booking.qa.a')::uuid)<>4 THEN
+  RAISE EXCEPTION 'Incomplete booking audit events'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.garage_booking_requests
+ WHERE id=current_setting('booking.qa.a')::uuid AND status='cancelled') THEN
+  RAISE EXCEPTION 'Cancellation not persisted'; END IF;
+END $;
 SELECT 'Garage consumer booking consent, isolation, collision and cancellation: PASS' AS result;
