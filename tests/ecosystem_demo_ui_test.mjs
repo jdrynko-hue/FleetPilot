@@ -121,9 +121,13 @@ tap('confirm');check('customerStatus','Nie wysłano'); // no phantom booking
 tap('request');check('customerStatus','Oczekuje');
 switchTo('garage');tap('confirm');check('garageBookingStatus','Potwierdzona');
 switchTo('customer');check('customerStatus','Potwierdzona');
-check('mechanicJobCount','1'); // customer job only after finished Fleet job
+check('mechanicJobCount','2'); // two work orders, Fleet and private client
 assert.equal(booking.some(v=>v.dataset.booking==='confirmed'&&!v.hidden),true);
 listeners.get('hashchange')();
-ids.get('reset') // reset is a separate, user-triggered button
+ids.get('reset').handlers.click();
+check('fleetStatus','Nowa usterka');
+check('fleetIssueCount','1');
+check('customerStatus','Nie wysłano');
+check('garageBookingStatus','Brak zapytania');
 assert.equal(ids.get('toast').hidden,false);
 console.log('PASS: demo role switching, Fleet quote approvals, repair completion and private booking status sync');
