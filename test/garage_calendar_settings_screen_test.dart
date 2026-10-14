@@ -96,7 +96,7 @@ void main(){
     await tester.tap(find.byKey(const Key('garage_hours_close_day')));
     await tester.pumpAndSettle();
     expect(changes,1);
-    expect(find.text('Closed'),findWidgets);
+    expect(find.text('Closed'),findsWidgets);
     expect(tester.takeException(),isNull);
   });
 
