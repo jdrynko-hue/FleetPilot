@@ -60,7 +60,7 @@ void main() {
   test('empty response is a safe empty assignment list', () {
     final rows = GarageMechanicJobsRepository.parseMyAssignments([]);
     expect(rows, isEmpty);
-    expect(() => rows.add(rows.first), throwsRangeError);
+    expect(() => rows.clear(), throwsUnsupportedError);
   });
 
   test('invalid RPC payload fails closed instead of displaying stale data', () {
@@ -103,7 +103,7 @@ void main() {
         () => GarageMechanicJobsRepository.parseMyAssignments([missing]),
         throwsFormatException,
       );
-      final blank = {...valid, field: '   '};
+      final blank = {...valid}..[field] = '   ';
       expect(
         () => GarageMechanicJobsRepository.parseMyAssignments([blank]),
         throwsFormatException,
