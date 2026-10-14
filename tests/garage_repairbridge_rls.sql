@@ -117,7 +117,7 @@ BEGIN
   jsonb_array_length(info->'events')<>1 THEN
   RAISE EXCEPTION 'Default sharing not minimal or request audit absent: %',info;
  END IF;
-END $;
+END $$;
 COMMIT;
 
 -- An unrelated Fleet manager and unrelated workshop cannot read A's request.
