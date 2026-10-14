@@ -36,6 +36,7 @@ void main() {
         loadJobs: loadJobs,
         evidenceScreen: evidenceScreen ??
             (orderId) => Scaffold(
+              appBar: AppBar(title: const Text('Repair evidence')),
               body: Text('Private evidence for $orderId'),
             ),
       ),
