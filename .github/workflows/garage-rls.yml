@@ -5,12 +5,14 @@ on:
     paths:
       - 'supabase/garage_staging/**'
       - 'tests/garage_rls_isolation.sql'
+      - 'tests/garage_invites_diagnosis.sql'
       - '.github/workflows/garage-rls.yml'
   push:
     branches: [main]
     paths:
       - 'supabase/garage_staging/**'
       - 'tests/garage_rls_isolation.sql'
+      - 'tests/garage_invites_diagnosis.sql'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
 
@@ -50,4 +52,6 @@ jobs:
         shell: bash
         run: |
           psql -h 127.0.0.1 -p 5432 -U postgres -d garage_qa \
-            -v ON_ERROR_STOP=1 -f tests/garage_rls_isolation.sql
+            -v ON_ERROR_STOP=1 \
+            -f tests/garage_rls_isolation.sql \
+            -f tests/garage_invites_diagnosis.sql
