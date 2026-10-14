@@ -1,6 +1,6 @@
 -- Isolated local Supabase driver QA schema parity; no fake Auth users added.
 -- Apply AFTER Fleet base fixture and 003 driver role firewall, BEFORE 004/005.
-ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email text;
+-- Local GoTrue already owns auth.users.email; never ALTER auth-owned tables.
 ALTER TABLE public.driver_vehicle_checks
  ADD COLUMN check_type text NOT NULL DEFAULT 'pre_trip',
  ADD COLUMN odometer bigint;
