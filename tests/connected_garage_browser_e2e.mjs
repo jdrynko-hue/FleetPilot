@@ -80,11 +80,19 @@ async function serve(fixture) {
   const host=req.headers.host||'';
   if(!/^127\.0\.0\.1:\d+$/.test(host)){res.writeHead(403);res.end();return;}
   if(req.url==='/qa-config.js'){
+   // Cross-origin <script> tags otherwise reveal bearer tokens even without CORS!
+   const site=req.headers['sec-fetch-site'];
+   if(site&&site!=='same-origin'){res.writeHead(403);res.end();return;}
    res.writeHead(200,{'content-type':'application/javascript; charset=utf-8',
-    'cache-control':'no-store','x-content-type-options':'nosniff'});
+    'cache-control':'no-store','x-content-type-options':'nosniff',
+    'cross-origin-resource-policy':'same-origin',
+    'referrer-policy':'no-referrer'});
    res.end(config);
   }else if(req.url==='/'||req.url==='/index.html'){
-   res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'});
+   res.writeHead(200,{'content-type':'text/html; charset=utf-8',
+    'cache-control':'no-store','x-content-type-options':'nosniff',
+    'referrer-policy':'no-referrer',
+    'content-security-policy':"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src "+api+"; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"});
    res.end(html);
   }else{res.writeHead(404);res.end();}
  });
@@ -94,6 +102,11 @@ async function serve(fixture) {
 async function checkBrowser(browserType,label){
  const fixture=await createFixture();
  const {server,url}=await serve(fixture);
+ // A simulated third-party origin must not be given token-bearing JS.
+ const malicious=await fetch(url.replace('/index.html','/qa-config.js'),{
+  headers:{'sec-fetch-site':'cross-site'}
+ });
+ assert.equal(malicious.status,403,'no cross-site token-bearing script');
  const browser=await browserType.launch({headless:true});
  const ctx=await browser.newContext({
   viewport:{width:390,height:844},isMobile:true,
