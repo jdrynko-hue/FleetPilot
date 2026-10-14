@@ -6,13 +6,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0a2340">
-<meta name="description" content="Flotaryx is a flexible fleet management platform for cars, vans, trucks, taxis and mixed business fleets. Manage vehicle checks, defects, repairs, drivers and costs in one place.">
+<meta name="description" content="Flotaryx Fleet helps teams manage vehicles, drivers, checks and repairs. Explore our upcoming Flotaryx Garage workshop system and free-to-request mechanic booking experience.">
 <meta property="og:title" content="Flotaryx — Fleet management and the upcoming Garage ecosystem">
-<meta property="og:description" content="Manage company cars, vans, trucks, taxis and mixed fleets in one clear workspace.">
+<meta property="og:description" content="Flotaryx Fleet helps teams manage vehicles, drivers, checks and repairs. Explore our upcoming Flotaryx Garage workshop system and free-to-request mechanic booking experience.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://flotaryx.com/">
 <meta name="robots" content="index,follow">
-<title>Flotaryx — Fleet Management for Cars, Vans, Trucks and Taxis</title>
+<title>Flotaryx — Fleet Management &amp; Upcoming Garage Ecosystem</title>
 <link rel="icon" href="/favicon.png" type="image/png">
 <style>
 :root{--navy:#0a2340;--navy2:#123856;--blue:#226acf;--blue2:#50b7ed;--teal:#49cfb8;--ink:#142d43;--muted:#587086;--line:#dbe6f0;--bg:#f5f8fc;--white:#fff;scroll-behavior:smooth}
@@ -183,7 +183,7 @@ details p{margin:12px 0 0;color:#536b80;font-size:14px;line-height:1.75}
     items.forEach(el=>{const translation=el.getAttribute('data-'+lang);el.textContent=translation===null?el.getAttribute('data-en'):translation;});
     document.querySelectorAll('.step > b').forEach((el,i)=>{el.textContent=stepWords[lang]+' '+String(i+1).padStart(2,'0');});
     selector.value=lang;
-    document.title=lang==='pl'?'Flotaryx — zarządzanie flotą pojazdów':'Flotaryx — '+selector.options[selector.selectedIndex].text+' | Fleet Management';
+    document.title=lang==='pl'?'Flotaryx — Fleet i Garage (w przygotowaniu)':'Flotaryx — '+selector.options[selector.selectedIndex].text+' | Fleet & Garage (coming soon)';
     try{window.localStorage.setItem('fleetpilot_site_lang',lang);}catch(error){}
   }
   selector.addEventListener('change',()=>translate(selector.value));
