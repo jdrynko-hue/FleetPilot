@@ -52,6 +52,24 @@ void main() {
     }
   });
 
+  test('supports zero-, two- and three-decimal currency minor units', () {
+    final cases = [
+      ('JPY', 'JPY 7200'),
+      ('KRW', 'KRW 7200'),
+      ('KWD', 'KWD 7.200'),
+      ('BHD', 'BHD 7.200'),
+      ('CZK', 'CZK 72.00'),
+      ('USD', 'USD 72.00'),
+      ('CHF', 'CHF 72.00'),
+    ];
+    for (final c in cases) {
+      final quote = GarageCustomerQuoteRepository.parse(
+        rawQuote(currency: c.$1),
+      )!;
+      expect(quote.formatMinor(quote.totalMinor), c.$2);
+    }
+  });
+
   test('null quote means no published quote, not an approval', () {
     expect(GarageCustomerQuoteRepository.parse(null), isNull);
   });
@@ -60,7 +78,7 @@ void main() {
     for (final payload in [
       <String, Object?>{},
       {'revision': 1},
-      rawQuote(currency: 'JPY'),
+      rawQuote(currency: 'XXX'),
       rawQuote(currency: 'gbp'),
       'malformed',
       [rawQuote()],

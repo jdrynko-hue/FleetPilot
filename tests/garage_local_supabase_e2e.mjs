@@ -265,5 +265,60 @@ assert.equal(approvalAudit.filter(x => x.action === 'start_approved_repair').len
 assert.deepEqual(mustPass(await http('/rest/v1/garage_quote_approvals?select=*', {
   jwt: outsider.jwt,
 }), 'outsider cannot query raw approved estimates'), []);
+
+const overseasJob = onlyOne(mustPass(await http(
+  '/rest/v1/garage_work_orders?select=id', {
+    method:'POST',jwt:ownerA.jwt,prefer:'return=representation',
+    body:{
+      workspace_id:shopA,vehicle_id:vehicle.id,
+      assigned_user_id:mechanic.id,
+      complaint:'International customer brake inspection'
+    },
+  }
+), 'create foreign-currency work order'), 'one foreign-currency job');
+assert.equal(mustPass(await rpc(mechanic,'garage_begin_diagnosis',{
+  p_workspace_id:shopA,p_order_id:overseasJob.id,
+}), 'diagnosis for foreign-currency job'), 'diagnosing');
+assert.equal(mustPass(await rpc(ownerA,'garage_publish_quote',{
+  p_workspace_id:shopA,p_order_id:overseasJob.id,
+  p_lines:[{
+    type:'labour',description:'Overseas brake service',
+    quantity:1,unit_price_minor:12000,tax_minor:0,
+  }],
+  p_currency:'JPY',
+}), 'JPY quote override'),1);
+const yenEstimate=mustPass(await rpc(
+  privateCustomer,'garage_customer_current_quote',{
+    p_workspace_id:shopA,p_order_id:overseasJob.id,
+  }),
+  'customer sees chosen JPY currency');
+assert.equal(yenEstimate.currency,'JPY');
+assert.equal(yenEstimate.total_minor,12000);
+assert.equal(mustPass(await rpc(ownerA,'garage_publish_quote',{
+  p_workspace_id:shopA,p_order_id:overseasJob.id,
+  p_lines:[{
+    type:'labour',description:'Overseas service revision',
+    quantity:1,unit_price_minor:13000,tax_minor:0,
+  }],
+  p_currency:'JPY',
+}), 'same JPY currency on second quote revision'),2);
+mustDeny(await rpc(ownerA,'garage_publish_quote',{
+  p_workspace_id:shopA,p_order_id:overseasJob.id,
+  p_lines:[{
+    type:'labour',description:'Unsupported currency switch',
+    quantity:1,unit_price_minor:13000,tax_minor:0,
+  }],
+  p_currency:'KWD',
+}), 'cannot change currency in existing approved quote series');
+mustDeny(await rpc(ownerA,'garage_publish_quote',{
+  p_workspace_id:shopA,p_order_id:overseasJob.id,
+  p_lines:[{
+    type:'labour',description:'Invalid arbitrary currency',
+    quantity:1,unit_price_minor:13000,tax_minor:0,
+  }],
+  p_currency:'XXX',
+}), 'invalid ISO currency code rejected');
+console.log('PASS local garage quote currency override, customer visibility and revision consistency');
+
 console.log('PASS local Supabase Auth + PostgREST: two garages, five users, invites, RLS, mechanic assignment, verified quote revisions and repair-start approval');
 

@@ -8,7 +8,11 @@ CREATE TABLE public.garage_quote_revisions (
   workspace_id uuid NOT NULL,
   order_id uuid NOT NULL,
   revision integer NOT NULL CHECK (revision BETWEEN 1 AND 100000),
-  currency text NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+  currency text NOT NULL CHECK (currency IN (
+    'GBP','EUR','PLN','USD','CHF','CZK','SEK','NOK','DKK','HUF','RON',
+    'CAD','AUD','NZD','UAH','AED','INR','BRL','ZAR','SGD','TRY','MXN',
+    'ILS','THB','HKD','JPY','KRW','ISK','KWD','BHD','OMR'
+  )),
   subtotal_minor bigint NOT NULL CHECK (subtotal_minor >= 0),
   tax_minor bigint NOT NULL CHECK (tax_minor >= 0),
   total_minor bigint NOT NULL CHECK (total_minor = subtotal_minor + tax_minor),
@@ -108,7 +112,8 @@ CREATE TRIGGER garage_quote_email_lock
   FOR EACH ROW EXECUTE FUNCTION garage_private.guard_quoted_customer_email();
 
 CREATE FUNCTION public.garage_publish_quote(
-  p_workspace_id uuid,p_order_id uuid,p_lines jsonb
+  p_workspace_id uuid,p_order_id uuid,p_lines jsonb,
+  p_currency text DEFAULT NULL
 ) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $$
@@ -139,6 +144,24 @@ BEGIN
   END IF;
   SELECT w.currency INTO v_currency FROM public.garage_workspaces w
     WHERE w.id=p_workspace_id;
+  -- Choice for this work order: inherit the workshop default unless
+  -- explicitly overridden. The same work order cannot mix currencies over
+  -- revisions: otherwise approval history would be misleading.
+  v_currency:=coalesce(p_currency,v_currency);
+  IF v_currency IS NULL OR v_currency NOT IN (
+    'GBP','EUR','PLN','USD','CHF','CZK','SEK','NOK','DKK','HUF','RON',
+    'CAD','AUD','NZD','UAH','AED','INR','BRL','ZAR','SGD','TRY','MXN',
+    'ILS','THB','HKD','JPY','KRW','ISK','KWD','BHD','OMR'
+  ) THEN
+    RAISE EXCEPTION 'Unsupported quote currency';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.garage_quote_revisions q
+    WHERE q.workspace_id=p_workspace_id AND q.order_id=p_order_id
+      AND q.currency<>v_currency
+  ) THEN
+    RAISE EXCEPTION 'Cannot change currency of an existing quote series';
+  END IF;
   IF p_lines IS NULL OR jsonb_typeof(p_lines)<>'array' OR
      jsonb_array_length(p_lines) NOT BETWEEN 1 AND 50 THEN
     RAISE EXCEPTION 'Quote requires 1-50 itemized lines';
@@ -209,9 +232,9 @@ BEGIN
   RETURN v_rev;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.garage_publish_quote(uuid,uuid,jsonb)
+REVOKE ALL ON FUNCTION public.garage_publish_quote(uuid,uuid,jsonb,text)
   FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.garage_publish_quote(uuid,uuid,jsonb)
+GRANT EXECUTE ON FUNCTION public.garage_publish_quote(uuid,uuid,jsonb,text)
   TO authenticated;
 
 -- Exact verified-email customer authorization. Cannot read a quote or

@@ -79,7 +79,7 @@ BEGIN
  IF has_table_privilege('authenticated','public.garage_quote_approvals','INSERT')
     OR has_table_privilege('authenticated','public.garage_quote_revisions','UPDATE')
     OR has_function_privilege('anon','public.garage_customer_approve_quote(uuid,uuid,integer)','EXECUTE')
-    OR has_function_privilege('anon','public.garage_publish_quote(uuid,uuid,jsonb)','EXECUTE') THEN
+    OR has_function_privilege('anon','public.garage_publish_quote(uuid,uuid,jsonb,text)','EXECUTE') THEN
     RAISE EXCEPTION 'Unsafe direct quote privileges';
  END IF;
 END $$;
@@ -311,6 +311,80 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN rejected:=true; END;
  IF NOT rejected THEN
    RAISE EXCEPTION 'Business email incorrectly granted Fleet approval'; END IF;
+END $$;
+COMMIT;
+
+
+-- Multi-currency quote selection on a separate fresh job. JPY has no minor
+-- decimal units; KWD has three. GBP old approvals remain unchanged.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+INSERT INTO public.garage_work_orders (
+ id,workspace_id,vehicle_id,assigned_user_id,complaint
+) VALUES (
+ '00000000-0000-4000-8000-000000000410',
+ '00000000-0000-4000-8000-000000000101',
+ '00000000-0000-4000-8000-000000000301',
+ '00000000-0000-4000-8000-000000000004',
+ 'Inspect tyres in customer selected currency'
+);
+COMMIT;
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000004',true);
+SELECT public.garage_begin_diagnosis(
+  '00000000-0000-4000-8000-000000000101',
+  '00000000-0000-4000-8000-000000000410'
+);
+COMMIT;
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+DO $$
+DECLARE
+  rejected boolean:=false;
+  v_lines jsonb:=jsonb_build_array(jsonb_build_object(
+    'type','labour','description','Inspection work',
+    'quantity',1,'unit_price_minor',1500,'tax_minor',0));
+BEGIN
+  IF public.garage_publish_quote(
+    '00000000-0000-4000-8000-000000000101',
+    '00000000-0000-4000-8000-000000000410',
+    v_lines,'JPY')<>1 THEN
+    RAISE EXCEPTION 'JPY quote publish failed';
+  END IF;
+  IF (SELECT currency FROM public.garage_quote_revisions
+      WHERE order_id='00000000-0000-4000-8000-000000000410')<>'JPY' THEN
+    RAISE EXCEPTION 'Custom currency did not persist';
+  END IF;
+  IF public.garage_publish_quote(
+    '00000000-0000-4000-8000-000000000101',
+    '00000000-0000-4000-8000-000000000410',
+    v_lines,'JPY')<>2 THEN
+    RAISE EXCEPTION 'Same currency revision failed';
+  END IF;
+  BEGIN
+    PERFORM public.garage_publish_quote(
+      '00000000-0000-4000-8000-000000000101',
+      '00000000-0000-4000-8000-000000000410',
+      v_lines,'KWD');
+  EXCEPTION WHEN OTHERS THEN rejected:=true;
+  END;
+  IF NOT rejected THEN
+    RAISE EXCEPTION 'Changing currency of same job revision was allowed';
+  END IF;
+  rejected:=false;
+  BEGIN
+    PERFORM public.garage_publish_quote(
+      '00000000-0000-4000-8000-000000000101',
+      '00000000-0000-4000-8000-000000000410',
+      v_lines,'XXX');
+  EXCEPTION WHEN OTHERS THEN rejected:=true;
+  END;
+  IF NOT rejected THEN
+    RAISE EXCEPTION 'Unsupported currency allowed';
+  END IF;
 END $$;
 COMMIT;
 
