@@ -1,0 +1,63 @@
+name: Flotaryx iPhone ecosystem preview hub - browser QA
+
+on:
+  pull_request:
+    paths:
+      - 'web/demo/portal/**'
+      - 'web/demo/index.html'
+      - 'tests/iphone_ecosystem_preview_hub_test.mjs'
+      - '.github/workflows/iphone-ecosystem-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hub-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static security and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/iphone_ecosystem_preview_hub_test.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          s=Path('web/demo/portal/index.html').read_text(encoding='utf-8')
+          x=s.lower()
+          for banned in ('<script', '<iframe', '<form', 'fetch(', 'xmlhttprequest', 'supabase.co', 'stripe.com',
+                         'localstorage', 'sessionstorage', 'window.open(', 'target="_blank"'):
+              assert banned not in x, 'unsafe preview feature: '+banned
+          assert 'content-security-policy' in x
+          assert "connect-src 'none'" in x
+          assert 'noindex,nofollow' in x
+          for role in ('fleet','garage','mechanic','customer'):
+              assert f'href="../index.html#{role}"' in s
+              assert f'href="#{role}"' in Path('web/demo/index.html').read_text()
+          assert s.count('https://rawcdn.githack.com/') == 1
+          print('PASS: static hub with 4 linked demo roles, no API, no deployment')
+          PY
+      - name: Install isolated test browsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Test mobile Safari engine and Chromium navigation
+        run: node tests/iphone_ecosystem_preview_hub_test.mjs
+      - name: Attach fictional iPhone preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-iphone-ecosystem-hub-preview
+          path: artifacts/iphone-preview/*.png
+          retention-days: 7
+          if-no-files-found: warn
