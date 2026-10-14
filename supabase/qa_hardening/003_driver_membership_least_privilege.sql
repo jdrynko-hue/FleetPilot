@@ -127,7 +127,7 @@ language plpgsql
 stable
 security definer
 set search_path = public
-as $
+as $entitlements$
 begin
   if not public.has_company_role(_company_id, array['owner','admin','manager','viewer']) then
     raise exception 'Access denied';
@@ -195,7 +195,7 @@ begin
     on p.code = s.plan_code
   where s.company_id = _company_id;
 end;
-$;
+$entitlements$;
 
 -- Membership owners/admins may invite a user into the driver role, but
 -- that user cannot use legacy Fleet table reads or any new driver RPC yet.
