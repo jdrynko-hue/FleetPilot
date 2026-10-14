@@ -121,6 +121,27 @@ on public.fleet_documents for each row
 execute function public.qa_validate_document_links();
 revoke all on function public.qa_validate_document_links() from public,anon,authenticated;
 
+-- Unlike a trigger alone, this checks legacy document links too. Do not
+-- report any row content or customer detail; abort the entire installation
+-- if an existing attachment refers to an issue/repair of another vehicle.
+do $legacy_validation$
+begin
+ if exists (
+   select 1 from public.fleet_documents d join public.issues i on i.id=d.issue_id
+   where i.company_id is distinct from d.company_id
+      or i.vehicle_id is distinct from d.vehicle_id
+ ) or exists (
+   select 1 from public.fleet_documents d join public.repairs r on r.id=d.repair_id
+   where r.company_id is distinct from d.company_id
+      or r.vehicle_id is distinct from d.vehicle_id
+ ) then
+   raise exception 'Existing QA document relationship mismatch; abort and review'
+     using errcode='23514';
+ end if;
+end;
+$legacy_validation$;
+
+
 -- SECURITY DEFINER code bypasses RLS. Remove public/API EXECUTE from
 -- every existing definer function, then explicitly allow known Fleet RPCs.
 -- PostgreSQL trigger firing does not depend on API EXECUTE grants.
