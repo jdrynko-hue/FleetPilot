@@ -81,3 +81,7 @@ UPDATE public.drivers SET email='driver-b@local.test'
 INSERT INTO public.company_members(company_id,user_id,role) VALUES
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000005','driver'),
  ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000006','driver');
+
+-- Old unrelated synthetic request must not consume the new pending slot.
+UPDATE public.vehicle_change_requests SET status='cancelled'
+WHERE id='90000000-0000-4000-8000-000000000001';
