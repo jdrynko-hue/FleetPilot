@@ -174,7 +174,7 @@ void main() {
           category == GarageMediaCategory.document ? [pdf] : [],
       readFile: (_, __) async =>
           Uint8List.fromList([37, 80, 68, 70, 45]),
-      savePdf: (_, __) async => saves++,
+      savePdf: (_, __) async { saves++; },
     );
     await tester.tap(find.text('PDFs'));
     await tester.pumpAndSettle();
