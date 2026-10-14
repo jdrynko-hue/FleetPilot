@@ -1,14 +1,6 @@
 name: QA Fleet private Storage - disposable Supabase E2E
 
 on:
-  push:
-    branches: [security/qa-fleet-storage-private-20261014]
-    paths:
-      - '.github/workflows/qa-fleet-storage.yml'
-      - 'supabase/qa_hardening/**'
-      - 'tests/qa_fleet_storage_*'
-      - 'supabase/migrations/001_fleetpilot.sql'
-      - 'supabase/migrations/002_saas_foundation.sql'
   pull_request:
     paths:
       - '.github/workflows/qa-fleet-storage.yml'
@@ -28,6 +20,11 @@ jobs:
       QA_LOCAL_DIR: /tmp/flotaryx-fleet-storage-test
     steps:
       - uses: actions/checkout@v4
+      - name: Validate test code before starting Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/qa_fleet_storage_local_e2e.mjs
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
