@@ -17,6 +17,7 @@ body:has(.view:target) .view:first-of-type:not(:target){display:none}.view:targe
 [hidden]{display:none!important}.js-only{display:none}body.js .js-only{display:block}.empty{padding:22px 12px;text-align:center;background:#f8fafc;border:1px dashed #d2dfeb;border-radius:12px;color:#687e94;font-size:13px}.footer{padding:20px 0 28px;text-align:center;color:#758ba0;font-size:12px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#143c61;color:#fff;padding:12px 18px;border-radius:11px;box-shadow:0 8px 25px #13345230;max-width:calc(100% - 26px);z-index:5;font-size:13px}
 @media(max-width:800px){.columns{grid-template-columns:1fr}.metric{padding:15px}.metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.masthead>.wrap{min-height:62px}.wrap{padding:0 14px}.role-nav{gap:6px}.role-nav a{min-height:49px;padding:8px 3px;font-size:11px;gap:2px;flex-direction:column}.card{padding:16px}.metric strong{font-size:25px}.status-grid{grid-template-columns:1fr 1fr 1fr}.stage{font-size:11px;padding:9px 4px}.page-intro h1{font-size:26px}.masthead .small{font-size:11px;max-width:130px}}
+.demo-guide{background:#fff;border:1px solid #c4d9ed;border-radius:14px;padding:16px 18px;margin:-5px 0 22px;box-shadow:0 8px 24px #1434520a}.demo-guide-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.demo-guide .eyebrow{color:#2268aa}.demo-guide h2{font-size:17px;line-height:1.3;margin:9px 0 5px}.demo-guide p{margin:0 0 12px;color:#586f86;font-size:13px}.demo-guide progress{width:100%;height:8px;display:block;margin-top:13px;accent-color:#2680d4}.demo-guide .btn{flex-shrink:0}.demo-guide .muted{font-size:11px}.demo-guide [data-complete="true"]{color:#166647}.demo-guide .guide-body{display:flex;align-items:center;justify-content:space-between;gap:15px}@media(max-width:480px){.demo-guide{padding:14px}.demo-guide .guide-body{align-items:stretch;flex-direction:column}.demo-guide .btn{width:100%}}
 </style>
 <script>document.documentElement.classList.add('js');document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('js'))</script>
 </head>
@@ -30,6 +31,14 @@ body:has(.view:target) .view:first-of-type:not(:target){display:none}.view:targe
 <a href="#mechanic" data-role="mechanic"><span aria-hidden="true">⚙</span> Mechanik</a>
 <a href="#customer" data-role="customer"><span aria-hidden="true">◉</span> Klient</a>
 </nav>
+<div class="demo-guide js-only" id="demoGuide" role="region" aria-label="Przewodnik po demonstracji">
+ <div class="demo-guide-header"><span class="eyebrow">SCENARIUSZ KROK PO KROKU</span><span class="muted" id="demoGuideStep">Krok 1 z 7</span></div>
+ <progress id="demoGuideProgress" max="7" value="0" aria-label="Postęp demonstracji"></progress>
+ <div class="guide-body">
+ <div><h2 id="demoGuideTitle">Zgłoś usterkę we Fleet</h2><p id="demoGuideHint">W panelu Fleet kliknij „Wyślij usterkę do Garage”.</p></div>
+ <button type="button" class="btn outline" id="demoGuideGo">Otwórz Fleet →</button>
+ </div>
+</div>
 <noscript><div class="notice">Przełączanie paneli działa bez JavaScript. Przyciski do zmiany statusu naprawy wymagają zwykłej przeglądarki z JavaScript.</div></noscript>
 <section class="view active" id="fleet" aria-labelledby="fleetTitle">
 <div class="page-intro"><span class="eyebrow">FLOTARYX FLEET</span><h1 id="fleetTitle">Centrum zarządzania flotą</h1><p>Zgłoszenia kierowców, koszty i historia napraw — połączone z Garage.</p></div>
@@ -68,6 +77,33 @@ function switchRole(){
  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===role));
  document.querySelectorAll('[data-role]').forEach(a=>{if(a.dataset.role===role)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
 }
+const guideStages=[
+ {role:'fleet',title:'Zgłoś usterkę we Fleet',hint:'W panelu Fleet kliknij „Wyślij usterkę do Garage”.'},
+ {role:'garage',title:'Przygotuj kosztorys w Garage',hint:'Przyjmij zgłoszenie i wyślij kosztorys do floty.'},
+ {role:'fleet',title:'Zatwierdź kosztorys',hint:'Wróć do Fleet i zatwierdź wycenę warsztatu.'},
+ {role:'mechanic',title:'Rozpocznij naprawę',hint:'Mechanik może rozpocząć pracę dopiero po zatwierdzeniu przez Fleet.'},
+ {role:'mechanic',title:'Zakończ naprawę',hint:'Zakończenie pracy zaktualizuje historię serwisową Fleet.'},
+ {role:'customer',title:'Wyślij zapytanie jako klient',hint:'Wyszukaj warsztat i poproś o preferowany termin wizyty.'},
+ {role:'garage',title:'Potwierdź wizytę w Garage',hint:'W Garage zaakceptuj zapytanie prywatnego klienta.'}
+];
+const roleName={fleet:'Fleet',garage:'Garage',mechanic:'Mechanik',customer:'Klient'};
+function guideData(){
+ if(phase<5)return {index:phase,stage:guideStages[phase],done:false};
+ if(booking==='none')return {index:5,stage:guideStages[5],done:false};
+ if(booking==='requested')return {index:6,stage:guideStages[6],done:false};
+ return {index:7,stage:{role:'fleet',title:'Scenariusz ukończony',hint:'Sprawdź historię naprawy w Fleet lub uruchom ponownie demo.'},done:true};
+}
+function guide(){
+ const next=guideData();
+ const label=next.done?'Gotowe':'Krok '+(next.index+1)+' z 7';
+ set('demoGuideStep',label);
+ set('demoGuideTitle',next.stage.title);
+ set('demoGuideHint',next.stage.hint);
+ byId('demoGuideProgress').value=next.index;
+ const button=byId('demoGuideGo');
+ button.textContent=next.done?'Zobacz historię Fleet →':'Przejdź do '+roleName[next.stage.role]+' →';
+ byId('demoGuide').dataset.complete=String(next.done);
+}
 function render(){
  set('fleetIssueCount',phase===5?'0':'1');set('fleetGarageCount',phase>=1&&phase<5?'1':'0');
  set('fleetStatus',labels[phase]);set('garageStatus',phase===0?'Brak zgłoszenia':labels[phase]);
@@ -87,6 +123,7 @@ function render(){
  byId('historyList').textContent=phase===5?'Zakończono wymianę części hamulcowych · '+money()+' · mechanik Marek Nowak.':'Historia tej naprawy pojawi się po zakończeniu zlecenia.';
  byId('garageHistory').replaceChildren(...(log.length?log:['Warsztat gotowy do odbierania zgłoszeń.']).map(s=>{const li=document.createElement('li');li.textContent=s;return li}));
  switchRole();
+ guide();
 }
 function act(name){
  switch(name){
@@ -99,9 +136,15 @@ function act(name){
  case 'confirm':if(booking!=='requested')return;booking='confirmed';push('Garage potwierdził termin klienta.');break;
  default:return;
  }
- render();toast('Status zmieniony. Sprawdź drugi panel.');
+ render();toast('Krok ukończony. Wykonaj następny krok z przewodnika.');
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)act(b.dataset.action)});
+byId('demoGuideGo').addEventListener('click',()=>{
+ const role=guideData().stage.role;
+ window.location.hash='#'+role;
+ switchRole();
+ byId(role).scrollIntoView({behavior:'smooth',block:'start'});
+});
 byId('reset').addEventListener('click',()=>{phase=0;booking='none';estimate='240.00';service='Diagnostyka hamulców';slot='2026-11-20T10:00';log.length=0;render();toast('Przywrócono fikcyjne dane początkowe.')});
 window.addEventListener('hashchange',switchRole);
 render();
