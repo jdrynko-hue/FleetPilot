@@ -93,7 +93,7 @@ BEGIN
   WHERE k.conrelid=to_regclass('public.'||e.tbl)
     AND k.contype='f' AND array_length(k.conkey,1)=1
     AND a.attname=e.col;
-  IF n <> CASE WHEN found_oid IS NULL THEN 0 ELSE 1 END THEN
+  IF (found_oid IS NULL AND n <> 0) OR (found_oid IS NOT NULL AND n <> 1) THEN
    RAISE EXCEPTION 'Unknown QA FK: %.%',e.tbl,e.col;
   END IF;
   IF found_oid IS NOT NULL THEN
