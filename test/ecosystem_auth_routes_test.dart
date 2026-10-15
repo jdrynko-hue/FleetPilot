@@ -9,6 +9,7 @@ import 'package:fleetpilot/auth/auth_gate.dart';
 import 'package:fleetpilot/auth/login_screen.dart';
 import 'package:fleetpilot/core/app_config.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,16 @@ void main() {
     email:'fixture$account@example.test',password:'mock-only-password').then((_) {});
   Future<void> openPrivate(WidgetTester tester) async {
     if (AppConfig.ecosystemQaEnabled) {
+      // MockClient-backed membership requests need an actual asynchronous
+      // event-loop turn: pumpAndSettle alone can leave FutureBuilder loading.
+      final verified = await tester.runAsync(() =>
+        EcosystemAccessRepository.forClient(Supabase.instance.client).load());
+      expect(verified, isNotNull);
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ecosystem_customer')), findsOneWidget);
       await tester.tap(find.byKey(const Key('ecosystem_customer')));
       await tester.pumpAndSettle();
     }
