@@ -47,7 +47,7 @@ jobs:
           import re
           from pathlib import Path
           s=Path('web/demo/session/index.html').read_text()
-          scripts=re.findall(r'<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>',s)
+          scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,flags=re.DOTALL)
           scripts=[x for x in scripts if x.strip()]
           assert len(scripts)==1, f'Expected exactly one inline app script, got {len(scripts)}'
           Path('/tmp/flotaryx-session-inline.mjs').write_text(scripts[0])
