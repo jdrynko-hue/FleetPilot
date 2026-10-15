@@ -38,9 +38,9 @@ void main() {
             headers:{'content-type':'application/json'});
         }
         if(request.url.path=='/auth/v1/logout')return http.Response('{}',200);
-        if(request.url.path=='/rest/v1/user_profiles')return http.Response('null',200,headers:{'content-type':'application/json'});
+        if(request.url.path=='/rest/v1/user_profiles')return http.Response('null',200,request:request,headers:{'content-type':'application/json'});
         if(['/rest/v1/company_members','/rest/v1/garage_members'].contains(request.url.path)) {
-          return http.Response('[]',200,headers:{'content-type':'application/json'});
+          return http.Response('[]',200,request:request,headers:{'content-type':'application/json'});
         }
         throw StateError('Unexpected mocked request');
       }));
