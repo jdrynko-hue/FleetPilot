@@ -54,12 +54,14 @@ void main() {
     await tester.pumpWidget(MaterialApp(home:EcosystemGate(
       isCurrentAccount:()=>current,
       loadAccess:() async {loads++;return const EcosystemAccess(hasFleet:false,garages:[]);},
-      signOut:() async {},destinationBuilder:(_)=>const Scaffold(body:Text('Customer page')))));
+      signOut:() async {},destinationBuilder:(_)=>Scaffold(
+        appBar:AppBar(title:const Text('Customer page')),
+        body:const Text('Customer page body')))));
     await tester.pumpAndSettle();await tester.tap(find.byKey(const Key('ecosystem_customer')));
     await tester.pumpAndSettle();current=false;
     await tester.pageBack();await tester.pumpAndSettle();expect(loads,1);
     await tester.tap(find.byKey(const Key('ecosystem_customer')));await tester.pumpAndSettle();
-    expect(find.text('Customer page'),findsNothing);
+    expect(find.text('Customer page body'),findsNothing);
   });
 
 }
