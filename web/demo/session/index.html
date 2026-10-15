@@ -89,7 +89,8 @@ const permitted=new Set([
  'garage_assign_mechanic','garage_begin_diagnosis','garage_publish_quote',
  'garage_fleet_snapshot','garage_fleet_approve_quote','garage_start_approved_repair',
  'garage_fleet_update_progress','garage_booking_request','garage_booking_confirm_slot',
- 'garage_booking_my_requests','garage_booking_my_notifications','garage_my_assigned_jobs'
+ 'garage_booking_my_requests','garage_booking_my_notifications','garage_my_assigned_jobs',
+ 'garage_fleet_requests_for_me','garage_booking_shop_inbox'
 ]);
 let selected='fleet',session=null,stage=0,requestId=null,orderId=null,
  bookingId=null,bookingStatus='none',snapshot=null,jobs=[],notices=[],busy=false;
@@ -157,7 +158,9 @@ async function signOut(){
  if(!session)return;
  const jwt=session.jwt;
  // Remove local bearer first. Revoke refresh/session server-side best effort.
- session=null;snapshot=null;jobs=[];notices=[];
+ session=null;stage=0;requestId=null;orderId=null;bookingId=null;
+ bookingStatus='none';snapshot=null;jobs=[];notices=[];
+ render();
  el('accountInfo').hidden=true;el('loginForm').hidden=false;
  text('accountEmail','');text('accountRole','');text('loginError','');
  text('notice','Wylogowano. Aby zmienić rolę, zaloguj inne konto.');
@@ -213,13 +216,41 @@ function render(){
 async function refresh(){
  if(!session)return;
  const role=session.role;
- if(role==='fleet'&&requestId){
-  snapshot=await rpc('garage_fleet_snapshot',{p_request:requestId});
+ // Reconstruct only data THIS caller can read from RLS-scoped RPCs.
+ // No request/order/customer state may ever survive logout and role change.
+ if(role==='fleet'||role==='garage'){
+  const requests=await rpc('garage_fleet_requests_for_me');
+  const own=requests.find(r=>r.company_id===cfg.company &&
+    r.workspace_id===cfg.shop);
+  if(own){
+   requestId=own.request_id;
+   snapshot=await rpc('garage_fleet_snapshot',{p_request:requestId});
+   orderId=snapshot.work_order_id||null;
+   const status=snapshot.work_order_status;
+   stage=status==='ready'||status==='collected'?6:
+    status==='in_progress'||status==='awaiting_parts'?5:
+    snapshot.quote?.approved?4:snapshot.quote?3:
+    own.request_status==='accepted'?2:1;
+  }else{
+   requestId=null;orderId=null;snapshot=null;stage=0;
+  }
+  if(role==='garage'){
+   const inbox=await rpc('garage_booking_shop_inbox',{p_workspace:cfg.shop});
+   const ownBooking=inbox.find(b=>b.status==='requested')
+     ||inbox.find(b=>b.status==='confirmed');
+   bookingId=ownBooking?.id||null;
+   bookingStatus=ownBooking?.status||'none';
+  }
  }else if(role==='mechanic'){
   jobs=await rpc('garage_my_assigned_jobs',{p_workspace_id:cfg.shop});
+  orderId=jobs[0]?.id||null;
+  stage=jobs.some(j=>j.status==='awaiting_approval')?4:
+    jobs.some(j=>j.status==='in_progress')?5:0;
  }else if(role==='customer'){
   const bookings=await rpc('garage_booking_my_requests');
-  if(bookingId)bookingStatus=bookings.find(b=>b.id===bookingId)?.status||bookingStatus;
+  const ownBooking=bookings.find(b=>b.workspace_id===cfg.shop);
+  bookingId=ownBooking?.id||null;
+  bookingStatus=ownBooking?.status||'none';
   notices=await rpc('garage_booking_my_notifications');
  }
  render();
