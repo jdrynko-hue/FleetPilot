@@ -63,35 +63,74 @@ grant select,insert on public.driver_vehicle_checks to authenticated;
 -- As in production, change requests are RPC-only. QA is missing these RPCs,
 -- so access must remain DENIED rather than exposing the table directly.
 
--- Company-scoped foreign keys. Existing single-ID FKs are deliberately retained.
+-- Reject unknown legacy FKs; remove only verified single-column NO ACTION
+-- references before adding tenant-scoped constraints and deletion actions.
+DO $fk_guard$
+DECLARE e record; found_oid oid; n integer;
+BEGIN
+ FOR e IN SELECT * FROM (VALUES
+ ('fleet_documents','vehicle_id','vehicles'),
+ ('fleet_documents','issue_id','issues'),
+ ('fleet_documents','repair_id','repairs'),
+ ('driver_vehicle_checks','vehicle_id','vehicles'),
+ ('driver_vehicle_checks','driver_id','drivers'),
+ ('vehicle_change_requests','driver_id','drivers'),
+ ('vehicle_change_requests','from_vehicle_id','vehicles'),
+ ('vehicle_change_requests','to_vehicle_id','vehicles')
+ ) AS v(tbl,col,target) LOOP
+  SELECT k.oid INTO found_oid FROM pg_constraint k
+  JOIN pg_attribute a ON a.attrelid=k.conrelid AND a.attnum=k.conkey[1]
+  JOIN pg_attribute b ON b.attrelid=k.confrelid AND b.attnum=k.confkey[1]
+  WHERE k.conrelid=to_regclass('public.'||e.tbl)
+    AND k.confrelid=to_regclass('public.'||e.target)
+    AND k.contype='f' AND array_length(k.conkey,1)=1
+    AND array_length(k.confkey,1)=1 AND a.attname=e.col
+    AND b.attname='id' AND k.conname=e.tbl||'_'||e.col||'_fkey'
+    AND k.confdeltype='a' AND k.confupdtype='a'
+    AND NOT k.condeferrable;
+  SELECT count(*) INTO n FROM pg_constraint k
+  JOIN pg_attribute a ON a.attrelid=k.conrelid AND a.attnum=k.conkey[1]
+  WHERE k.conrelid=to_regclass('public.'||e.tbl)
+    AND k.contype='f' AND array_length(k.conkey,1)=1
+    AND a.attname=e.col;
+  IF n <> CASE WHEN found_oid IS NULL THEN 0 ELSE 1 END THEN
+   RAISE EXCEPTION 'Unknown QA FK: %.%',e.tbl,e.col;
+  END IF;
+  IF found_oid IS NOT NULL THEN
+   EXECUTE format('ALTER TABLE public.%I DROP CONSTRAINT %I',e.tbl,e.tbl||'_'||e.col||'_fkey');
+  END IF;
+  found_oid:=NULL;
+ END LOOP;
+END $fk_guard$;
+
 alter table public.repairs
  add constraint qa_repairs_company_id_id_unique unique (company_id,id);
 alter table public.driver_vehicle_checks
  add constraint qa_checks_company_id_id_unique unique (company_id,id);
 alter table public.fleet_documents
  add constraint qa_documents_vehicle_fk foreign key (company_id,vehicle_id)
- references public.vehicles(company_id,id);
+ references public.vehicles(company_id,id) on delete cascade;
 alter table public.fleet_documents
  add constraint qa_documents_issue_fk foreign key (company_id,issue_id)
- references public.issues(company_id,id);
+ references public.issues(company_id,id) on delete set null (issue_id);
 alter table public.fleet_documents
  add constraint qa_documents_repair_fk foreign key (company_id,repair_id)
- references public.repairs(company_id,id);
+ references public.repairs(company_id,id) on delete set null (repair_id);
 alter table public.driver_vehicle_checks
  add constraint qa_checks_vehicle_fk foreign key (company_id,vehicle_id)
- references public.vehicles(company_id,id);
+ references public.vehicles(company_id,id) on delete cascade;
 alter table public.driver_vehicle_checks
  add constraint qa_checks_driver_fk foreign key (company_id,driver_id)
- references public.drivers(company_id,id);
+ references public.drivers(company_id,id) on delete set null (driver_id);
 alter table public.vehicle_change_requests
  add constraint qa_changes_driver_fk foreign key (company_id,driver_id)
- references public.drivers(company_id,id);
+ references public.drivers(company_id,id) on delete cascade;
 alter table public.vehicle_change_requests
  add constraint qa_changes_from_vehicle_fk foreign key (company_id,from_vehicle_id)
- references public.vehicles(company_id,id);
+ references public.vehicles(company_id,id) on delete set null (from_vehicle_id);
 alter table public.vehicle_change_requests
  add constraint qa_changes_to_vehicle_fk foreign key (company_id,to_vehicle_id)
- references public.vehicles(company_id,id);
+ references public.vehicles(company_id,id) on delete cascade;
 alter table public.fleet_documents
  add constraint qa_documents_storage_tenant_path
  check (storage_path like company_id::text||'/'||vehicle_id::text||'/%');
