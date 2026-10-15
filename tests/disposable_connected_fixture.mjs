@@ -60,7 +60,13 @@ export async function createFixture(){
  valid(await rpc(garage,'garage_fleet_accept_connection',{
   p_company:company.company_id,p_shop:sh
  }),'grant Fleet↔Garage consent');
- return {api,anon,shop:sh,bay,company:company.company_id,issue:company.issue_id,
+ const caps=valid(await rpc(fleet,'qa_session_capabilities',{
+  p_company:company.company_id,p_workspace:sh
+ }),'Fleet caller capabilities');
+ assert.equal(caps.length,1,'Capability RPC must return one row');
+ assert.equal(caps[0].fleet,true,'Fleet owner must have Fleet capability');
+ assert.equal(caps[0].garage,false,'Fleet owner must not inherit Garage role');
+  return {api,anon,shop:sh,bay,company:company.company_id,issue:company.issue_id,
   roles:{fleet,garage,mechanic,customer}};
 }
 
