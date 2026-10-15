@@ -1,23 +1,17 @@
-name: Single-session Fleet Garage login QA - disposable only
+name: Flotaryx single-session connected QA - disposable only
+
 
 on:
   pull_request:
     paths:
-      - 'web/demo/connected/**'
-      - 'tests/connected_garage_browser_e2e.mjs'
+      - '.github/workflows/staging-single-session-qa.yml'
+      - 'web/demo/session/**'
+      - 'tests/single_session_browser_e2e.mjs'
       - 'tests/single_session_connected_browser_e2e.mjs'
       - 'tests/disposable_connected_fixture.mjs'
-      - 'web/demo/session/**'
-      - '.github/workflows/connected-garage-browser-qa.yml'
       - 'supabase/garage_staging/**'
       - 'tests/repairbridge_fleet_fixture.sql'
-  push:
-    branches:
-      - feat/garage-connected-browser-qa-20261014
-    paths:
-      - 'web/demo/session/**'
-      - 'tests/staging_single_session_browser_e2e.mjs'
-      - '.github/workflows/staging-single-session-qa.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -46,7 +40,6 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Verify browser test syntax and local-only UI
         run: |
-          node --check tests/staging_single_session_browser_e2e.mjs
           node --check tests/disposable_connected_fixture.mjs
           node --check tests/single_session_connected_browser_e2e.mjs
           python3 - <<'PY'
@@ -54,7 +47,7 @@ jobs:
           page=Path('web/demo/session/index.html').read_text()
           assert 'noindex,nofollow' in page
           assert "allowed(location.hostname)" in page
-          assert "api.protocol==='http:'" in page
+          assert "u.protocol==='http:'" in page
           assert 'stripe.com' not in page.lower()
           assert 'supabase.co' not in page.lower()
           assert '<meta name="robots"' in page
@@ -104,29 +97,15 @@ jobs:
           }
           export GARAGE_TEST_API_URL="$(read_local API_URL)"
           export GARAGE_TEST_ANON_KEY="$(read_local ANON_KEY)"
+          export SINGLE_SESSION_API_URL="$GARAGE_TEST_API_URL"
+          export SINGLE_SESSION_ANON_KEY="$GARAGE_TEST_ANON_KEY"
           test -n "$GARAGE_TEST_ANON_KEY"
           test -n "$GARAGE_TEST_API_URL"
           [[ "$GARAGE_TEST_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
-          node tests/staging_single_session_browser_e2e.mjs
+          node tests/single_session_browser_e2e.mjs
           node tests/single_session_connected_browser_e2e.mjs
-      - name: Verify API-connected iPhone screenshots contain only fictional UI
-        shell: bash
-        run: |
-          set -euo pipefail
-          for role in 01-fleet 02-garage 03-mechanic 04-customer; do
-            test -s "artifacts/session-iphone-qa/${role}.png"
-          done
-          echo 'PASS: four WebKit browser screenshots after real local API operations'
-      - name: Upload safe fictional connected-iPhone screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: flotaryx-single-session-mobile-real-api
-          path: artifacts/session-iphone-qa/*.png
-          if-no-files-found: warn
-          retention-days: 7
       - name: Verify single-user real connected screenshots
         shell: bash
         run: |
