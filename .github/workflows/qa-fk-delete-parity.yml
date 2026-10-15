@@ -74,10 +74,11 @@ jobs:
                       rows[fields[0]]=fields[1]
           assert len(rows)==8, f'Expected 8 FK checks, got {rows}'
           optional={'fleet_documents.issue_id','fleet_documents.repair_id'}
-          assert all(rows[n]=='PASS_OPTIONAL_ABSENT' for n in optional), rows
+          assert all(rows[n] in ('PASS_BASELINE','PASS_OPTIONAL_ABSENT')
+                     for n in optional),rows
           assert all(status=='PASS_BASELINE' for n,status in rows.items()
                      if n not in optional),rows
-          print('PASS: 6 known FKs and 2 explicitly optional absent FKs; only catalog metadata read')
+          print('PASS: six required FKs, two known optional FKs (present in fixture, absent on hosted QA)')
           PY
       - name: Apply staged hardening in disposable database ONLY
         shell: bash
