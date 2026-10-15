@@ -105,51 +105,16 @@ jobs:
             -f supabase/migrations/001_fleetpilot.sql \
             -f supabase/migrations/002_saas_foundation.sql \
             -f tests/qa_fleet_rls_fixture.sql
-          # Deliberately change a legacy FK's DELETE action.
+          # Deliberately change the known legacy FK to an unexpected action.
           psql -X -d disposable_fk_drift -v ON_ERROR_STOP=1 <<'SQL'
           ALTER TABLE public.fleet_documents DROP CONSTRAINT fleet_documents_vehicle_id_fkey;
           ALTER TABLE public.fleet_documents ADD CONSTRAINT fleet_documents_vehicle_id_fkey
              FOREIGN KEY(vehicle_id) REFERENCES public.vehicles(id) ON DELETE CASCADE;
           SQL
-          # Metadata-only preflight should flag the unexpected referential action.
           psql -X -d disposable_fk_drift -A -t -F '|' -v ON_ERROR_STOP=1 \
             -f supabase/qa_hardening/preflight/01_fk_legacy_catalog.sql \
             > "$RUNNER_TEMP/fk_catalog_drift.txt"
-          grep -q '^fleet_documents.vehicle_id|HOLD_FK_SCHEMA_DRIFT
-          code=$?
-          set -e
-          if [[ "$code" == 0 ]]; then
-            echo 'ERROR: drifted legacy FK was accepted' >&2
-            exit 1
-          fi
-          grep -q 'Unknown QA FK' "$RUNNER_TEMP/drift_result.txt"
-          # RLS / grants / original constraint must be unchanged after the
-          # failed BEGIN ... ROLLBACK transaction in disposable DB.
-          [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_class WHERE oid IN
-              ('public.fleet_documents'::regclass,
-               'public.driver_vehicle_checks'::regclass,
-               'public.vehicle_change_requests'::regclass) AND relrowsecurity")" == 0 ]]
-          [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_constraint
-               WHERE conname='fleet_documents_vehicle_id_fkey' AND confdeltype='c'")" == 1 ]]
-          [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_constraint WHERE conname='qa_documents_vehicle_fk'")" == 0 ]]
-          echo 'PASS: unknown legacy FK aborted entire migration; no partial RLS or DDL'
-      - name: Reject second migration application
-        shell: bash
-        run: |
-          set -euo pipefail
-          if psql -X -v ON_ERROR_STOP=1 \
-             -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
-             > "$RUNNER_TEMP/replay_result.txt" 2>&1; then
-            echo 'ERROR: repeated migration unexpectedly succeeded' >&2
-            exit 1
-          fi
-          grep -q 'Existing policy' "$RUNNER_TEMP/replay_result.txt"
-          echo 'PASS: replay is rejected without changing installed policies'
- \
-            "$RUNNER_TEMP/fk_catalog_drift.txt"
+          grep -q '^fleet_documents.vehicle_id|HOLD_FK_SCHEMA_DRIFT$' "$RUNNER_TEMP/fk_catalog_drift.txt"
           set +e
           psql -X -d disposable_fk_drift -v ON_ERROR_STOP=1 \
             -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
@@ -161,19 +126,18 @@ jobs:
             exit 1
           fi
           grep -q 'Unknown QA FK' "$RUNNER_TEMP/drift_result.txt"
-          # RLS / grants / original constraint must be unchanged after the
-          # failed BEGIN ... ROLLBACK transaction in disposable DB.
+          # A failed transaction must not partially enable RLS or install FKs.
           [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_class WHERE oid IN
-              ('public.fleet_documents'::regclass,
-               'public.driver_vehicle_checks'::regclass,
-               'public.vehicle_change_requests'::regclass) AND relrowsecurity")" == 0 ]]
+             "SELECT count(*) FROM pg_class WHERE oid IN
+             ('public.fleet_documents'::regclass,
+              'public.driver_vehicle_checks'::regclass,
+              'public.vehicle_change_requests'::regclass) AND relrowsecurity")" == 0 ]]
           [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_constraint
-               WHERE conname='fleet_documents_vehicle_id_fkey' AND confdeltype='c'")" == 1 ]]
+             "SELECT count(*) FROM pg_constraint
+              WHERE conname='fleet_documents_vehicle_id_fkey' AND confdeltype='c'")" == 1 ]]
           [[ "$(psql -X -d disposable_fk_drift -tAc \
-              "SELECT count(*) FROM pg_constraint WHERE conname='qa_documents_vehicle_fk'")" == 0 ]]
-          echo 'PASS: unknown legacy FK aborted entire migration; no partial RLS or DDL'
+             "SELECT count(*) FROM pg_constraint WHERE conname='qa_documents_vehicle_fk'")" == 0 ]]
+          echo 'PASS: unknown legacy FK aborted entire migration without partial DDL'
       - name: Reject second migration application
         shell: bash
         run: |
@@ -185,4 +149,4 @@ jobs:
             exit 1
           fi
           grep -q 'Existing policy' "$RUNNER_TEMP/replay_result.txt"
-          echo 'PASS: replay is rejected without changing installed policies'
+          echo 'PASS: migration replay is rejected'
