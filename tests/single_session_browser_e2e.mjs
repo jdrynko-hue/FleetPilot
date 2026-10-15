@@ -72,6 +72,7 @@ try{
     assert.equal(await page.locator('.panel.active').count(),1);
     const other=role==='fleet'?'garage':'fleet';
     await page.locator('[data-role="'+other+'"]').click();
+    await page.waitForFunction(()=>document.querySelectorAll('.panel.active').length===0);
     assert.equal(await page.locator('.panel.active').count(),0);
     assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
     await page.locator('#logoutButton').click();
