@@ -145,7 +145,11 @@ async function signIn(event){
   text('accountEmail',session.email);
   text('notice','Zalogowano do jednorazowego Supabase: '+selected);
   el('notice').classList.remove('error');
-  await refresh();
+  // The sign-in can succeed even when a synthetic role has no data.
+  // Data-fetch/RLS failures must never be misreported as bad credentials.
+  try{await refresh();}
+  catch{ text('notice','Sesja zalogowana. Brak danych lub uprawnień do tego modułu.');
+         el('notice').classList.add('error');}
  }catch(e){text('loginError','Nie udało się zalogować do wybranej roli.');}
  finally{busy=false;nav()}
 }
