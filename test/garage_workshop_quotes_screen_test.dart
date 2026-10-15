@@ -44,6 +44,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('quote_unit_0')),'20.25');
     await tester.enterText(find.byKey(const Key('quote_tax_0')),'4.50');
     await tester.ensureVisible(find.byKey(const Key('quote_publish')));
+    await tester.drag(find.byType(ListView), const Offset(0, -200));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('quote_publish')));
     await tester.pumpAndSettle();
     expect(calls,0);
@@ -69,6 +71,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('quote_description_0')),'Clutch');
     await tester.enterText(find.byKey(const Key('quote_unit_0')),'50');
     await tester.ensureVisible(find.byKey(const Key('quote_publish')));
+    await tester.drag(find.byType(ListView), const Offset(0, -200));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('quote_publish')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('garage_editor_confirm')));
