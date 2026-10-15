@@ -19,6 +19,7 @@ on:
       - 'tests/garage_mechanic_roster_e2e.mjs'
       - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
+      - 'tests/garage_storage_operation_compat.sql'
       - '.github/workflows/garage-rls.yml'
   push:
     branches: [main]
@@ -39,6 +40,7 @@ on:
       - 'tests/garage_mechanic_roster_e2e.mjs'
       - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
+      - 'tests/garage_storage_operation_compat.sql'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
 
@@ -130,6 +132,7 @@ jobs:
             supabase/migrations/20261014000800_resource_calendar_notifications.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/009_mechanic_roster_bay_assignment.sql" \
             supabase/migrations/20261014000900_mechanic_roster_assignment.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/010_storage_authenticated_info_compat.sql" supabase/migrations/20261015000021_storage_info_compat.sql
           # GoTrue signup on loopback must issue a session without contacting
           # external email providers. Never change this in hosted production.
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' \
@@ -166,6 +169,9 @@ jobs:
           node "$GITHUB_WORKSPACE/tests/garage_resource_calendar_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_mechanic_roster_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/flotaryx_unified_ecosystem_e2e.mjs"
+          qa_db_url="$(get_local_setting DB_URL)"
+          echo "::add-mask::$qa_db_url"
+          psql "$qa_db_url" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/tests/garage_storage_operation_compat.sql"
       - name: Stop isolated Supabase services
         if: always()
         shell: bash
