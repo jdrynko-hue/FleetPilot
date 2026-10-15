@@ -8,6 +8,12 @@ SET LOCAL statement_timeout='60s';
 DO $preflight$
 DECLARE r record; fn oid; is_trigger boolean; is_definer boolean;
 BEGIN
+ -- public is used by reviewed function search paths. Do not install ACLs
+ -- while an API role can create objects there, including inherited grants.
+ IF has_schema_privilege('anon','public','CREATE')
+    OR has_schema_privilege('authenticated','public','CREATE') THEN
+   RAISE EXCEPTION 'Untrusted CREATE on public schema; manual review';
+ END IF;
  FOR r IN SELECT * FROM (VALUES
   ('create_company_for_current_user(text,text,text)',false,true),
   ('get_company_entitlements(uuid)',false,true),

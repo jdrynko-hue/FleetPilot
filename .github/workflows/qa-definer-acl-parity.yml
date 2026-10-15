@@ -5,14 +5,52 @@ on:
     paths:
       - 'supabase/qa_hardening/007_public_definer_acl_parity.sql'
       - 'tests/qa_definer_acl_local_e2e.mjs'
+      - 'tests/qa_definer_acl_guards.py'
+      - 'supabase/qa_hardening/preflight/02_definer_acl_catalog.sql'
       - '.github/workflows/qa-definer-acl-parity.yml'
-      - 'supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql'
+      - 'supabase/qa_hardening/*.sql'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+      - 'tests/qa_fleet_storage_local_tables.sql'
+      - 'tests/qa_driver_rpc_local_schema.sql'
+      - 'tests/qa_company_invite_local_e2e.mjs'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  catalog-guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-acl-guard-only
+          POSTGRES_DB: disposable_acl_guards
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d disposable_acl_guards"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: disposable-acl-guard-only
+      PGDATABASE: disposable_acl_guards
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client when needed
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Verify schema drift rejection and atomic rollback on disposable databases
+        run: python3 tests/qa_definer_acl_guards.py
   definer-acl:
     runs-on: ubuntu-latest
     timeout-minutes: 25

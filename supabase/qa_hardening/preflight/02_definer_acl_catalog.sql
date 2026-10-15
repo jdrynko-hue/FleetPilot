@@ -56,7 +56,8 @@ SELECT 'unreviewed_anonymous_definer',
   JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
   WHERE n.nspname='public' AND p.prosecdef
    AND has_function_privilege('anon',p.oid,'EXECUTE')
-   AND p.oid <> ALL(ARRAY[
+   -- Remove missing signatures: a NULL in <> ALL would hide unknown RPCs.
+   AND p.oid <> ALL(array_remove(ARRAY[
     to_regprocedure('public.create_company_for_current_user(text,text,text)'),
     to_regprocedure('public.get_company_entitlements(uuid)'),
     to_regprocedure('public.has_company_role(uuid,text[])'),
@@ -66,7 +67,7 @@ SELECT 'unreviewed_anonymous_definer',
     to_regprocedure('public.enforce_member_plan_limit()'),
     to_regprocedure('public.enforce_vehicle_plan_limit()'),
     to_regprocedure('public.sync_vehicle_assignment()')
-   ]::oid[])
+   ]::oid[],NULL))
  ) THEN 'HOLD_UNREVIEWED_DEFINER'
  ELSE 'PASS_TARGET' END
 ORDER BY check_name;
