@@ -1,0 +1,102 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../auth/company_gate.dart';
+import '../core/localization.dart';
+import 'ecosystem_access.dart';
+import 'ecosystem_module_hub.dart';
+
+/// QA-only entry point. A private customer is never forced to create a fleet.
+class EcosystemGate extends StatefulWidget {
+  const EcosystemGate({required this.loadAccess,
+    required this.destinationBuilder, required this.signOut, super.key});
+
+  factory EcosystemGate.forClient(SupabaseClient client, {Key? key}) =>
+      EcosystemGate(key: key,
+        loadAccess: EcosystemAccessRepository.forClient(client).load,
+        signOut: () => client.auth.signOut(),
+        destinationBuilder: (destination) =>
+          destination.module == EcosystemModule.fleet
+            ? const CompanyGate()
+            : EcosystemModuleHub(client: client, destination: destination),
+      );
+
+  final Future<EcosystemAccess> Function() loadAccess;
+  final Widget Function(EcosystemDestination) destinationBuilder;
+  final Future<void> Function() signOut;
+  @override
+  State<EcosystemGate> createState() => _EcosystemGateState();
+}
+
+class _EcosystemGateState extends State<EcosystemGate> {
+  late Future<EcosystemAccess> _access;
+  bool _signingOut = false;
+  String? _error;
+  bool get pl => AppLocale.language.value == 'pl';
+  @override
+  void initState() { super.initState(); _access = widget.loadAccess(); }
+  void _reload() => setState(() { _error = null; _access = widget.loadAccess(); });
+  void _open(EcosystemDestination destination) {
+    if (_signingOut) return;
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: (_) => widget.destinationBuilder(destination),
+    )).then((_) { if (mounted && !_signingOut) _reload(); });
+  }
+  Future<void> _logout() async {
+    setState(() { _signingOut = true; _error = null; });
+    try { await widget.signOut(); }
+    catch (_) {
+      if (mounted) setState(() => _error = pl
+        ? 'Nie udało się wylogować. Spróbuj ponownie.'
+        : 'Could not sign out. Please retry.');
+    } finally { if (mounted) setState(() => _signingOut = false); }
+  }
+  Widget _tile(String id, String title, IconData icon,
+      EcosystemDestination destination, {String? subtitle}) => Card(
+    child: ListTile(key: Key(id), leading: Icon(icon), title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: _signingOut ? null : () => _open(destination)),
+  );
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Flotaryx'), actions: [
+      IconButton(key: const Key('ecosystem_refresh'), onPressed: _signingOut ? null : _reload,
+        tooltip: pl ? 'Odśwież' : 'Refresh', icon: const Icon(Icons.refresh)),
+      IconButton(key: const Key('ecosystem_logout'), onPressed: _signingOut ? null : _logout,
+        tooltip: pl ? 'Wyloguj' : 'Sign out', icon: const Icon(Icons.logout)),
+    ]),
+    body: FutureBuilder<EcosystemAccess>(future: _access,
+      builder: (context, snapshot) {
+        if (_signingOut || snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(pl ? 'Nie udało się sprawdzić dostępu.' : 'Could not verify access.'),
+            FilledButton(key: const Key('ecosystem_retry'), onPressed: _reload,
+              child: Text(pl ? 'Spróbuj ponownie' : 'Retry')),
+          ]));
+        }
+        final access = snapshot.requireData;
+        return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(padding: const EdgeInsets.all(20), children: [
+            Text(pl ? 'Wybierz moduł' : 'Choose a module',
+              style: Theme.of(context).textTheme.headlineSmall),
+            if (_error != null) Text(_error!),
+            _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
+              (pl ? 'Utwórz flotę' : 'Create a fleet'), Icons.local_shipping_outlined,
+              const EcosystemDestination(EcosystemModule.fleet)),
+            for (final garage in access.garages)
+              _tile('ecosystem_${garage.workspaceId}',
+                garage.module == EcosystemModule.mechanic
+                  ? (pl ? 'Moje zlecenia' : 'My assigned jobs') : 'Flotaryx Garage',
+                Icons.build_outlined, garage, subtitle: garage.name),
+            _tile('ecosystem_customer', pl ? 'Rezerwacje warsztatów' : 'Workshop bookings',
+              Icons.calendar_month_outlined,
+              const EcosystemDestination(EcosystemModule.customer)),
+          ]),
+        ));
+      }),
+  );
+}

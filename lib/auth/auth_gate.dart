@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/fleet_repository.dart';
+import '../core/app_config.dart';
+import '../ecosystem/ecosystem_gate.dart';
 import 'company_gate.dart';
 import 'login_screen.dart';
 import 'password_recovery_screen.dart';
@@ -45,6 +47,11 @@ class _AuthGateState extends State<AuthGate> {
             Uri.base.queryParameters['type'] == 'recovery');
     _subscription = _repository.authChanges.listen((state) {
       if (!mounted) return;
+      if (!mounted) return;
+      if (_user?.id != state.session?.user.id) {
+        // Pushed private routes must not survive logout or an account switch.
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
       setState(() {
         _user = state.session?.user;
         if (state.event == AuthChangeEvent.passwordRecovery) {
@@ -83,6 +90,12 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
     if (_user == null) return const LoginScreen();
+    // Fleet invitation handling keeps priority, including its explicit errors.
+    final invite = Uri.base.queryParameters['invite'];
+    if (AppConfig.ecosystemQaEnabled && (invite == null || invite.isEmpty)) {
+      return EcosystemGate.forClient(
+        Supabase.instance.client, key: ValueKey(_user!.id));
+    }
     return CompanyGate(key: ValueKey(_user!.id));
   }
 }
