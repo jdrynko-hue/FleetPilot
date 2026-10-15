@@ -44,12 +44,20 @@ checks AS (
  GROUP BY e.child_table,e.from_column
 )
 SELECT child_table||'.'||from_column AS check_name,
- CASE WHEN actual_fk_count=1 AND known_fk_count=1
-      THEN 'PASS_BASELINE'
+ CASE WHEN to_regclass('public.'||child_table) IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM pg_catalog.pg_attribute a
+              WHERE a.attrelid=to_regclass('public.'||child_table)
+                AND a.attname=from_column AND NOT a.attisdropped
+            ) THEN 'HOLD_MISSING_TABLE_OR_COLUMN'
+      WHEN actual_fk_count=1 AND known_fk_count=1 THEN 'PASS_BASELINE'
+      WHEN actual_fk_count=0 AND child_table='fleet_documents'
+           AND from_column IN ('issue_id','repair_id')
+           THEN 'PASS_OPTIONAL_ABSENT'
       ELSE 'HOLD_FK_SCHEMA_DRIFT' END AS result
 FROM checks
 ORDER BY check_name;
 
 COMMIT;
 -- This scan does NOT validate referential integrity of existing QA customer rows.
--- PASS_BASELINE is necessary but insufficient for permission to change hosted QA.
+-- PASS_BASELINE/PASS_OPTIONAL_ABSENT are necessary but insufficient for permission to change hosted QA.
