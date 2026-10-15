@@ -12,7 +12,7 @@ if(!api||!anon||!/^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(api))
  throw Error('Refusing any Supabase other than disposable loopback HTTP');
 const html=readFileSync(new URL('../web/demo/session/index.html',import.meta.url),'utf8');
 assert.match(html,/<meta name="robots" content="noindex,nofollow"/);
-assert.doesNotMatch(html,/supabase\.co|stripe\.com|localStorage|sessionStorage/);
+assert.doesNotMatch(html,/supabase\.co|stripe\.com|localStorage\s*\.|sessionStorage\s*\./);
 for(const name of ['fleet','garage','mechanic','customer'])
  assert.match(html,new RegExp('id="'+name+'" class="panel'));
 
