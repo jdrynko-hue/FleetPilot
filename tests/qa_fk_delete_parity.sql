@@ -2,7 +2,7 @@
 -- All record mutations happen in a transaction which is rolled back.
 \set ON_ERROR_STOP on
 DO $check_catalog$
-DECLARE x record; k pg_constraint%ROWTYPE; n integer;
+DECLARE x record; fk_row pg_constraint%ROWTYPE; n integer;
 BEGIN
  FOR x IN SELECT * FROM (VALUES
   ('qa_documents_vehicle_fk','c',''),
@@ -15,15 +15,15 @@ BEGIN
   ('qa_changes_to_vehicle_fk','c','')
  ) AS expected(name,action,set_null_column)
  LOOP
-  SELECT * INTO k FROM pg_catalog.pg_constraint WHERE conname=x.name;
-  IF NOT FOUND OR k.confdeltype<>x.action OR
-    array_length(k.conkey,1)<>2 THEN
+  SELECT * INTO fk_row FROM pg_catalog.pg_constraint WHERE conname=x.name;
+  IF NOT FOUND OR fk_row.confdeltype<>x.action OR
+    array_length(fk_row.conkey,1)<>2 THEN
    RAISE EXCEPTION 'Wrong composite FK delete action for %',x.name;
   END IF;
   IF x.set_null_column<>'' AND NOT EXISTS(
-    SELECT 1 FROM unnest(k.confdelsetcols) AS deletion_col(attnum)
+    SELECT 1 FROM unnest(fk_row.confdelsetcols) AS deletion_col(attnum)
     JOIN pg_catalog.pg_attribute a
-      ON a.attrelid=k.conrelid AND a.attnum=deletion_col.attnum
+      ON a.attrelid=fk_row.conrelid AND a.attnum=deletion_col.attnum
     WHERE a.attname=x.set_null_column
   ) THEN RAISE EXCEPTION 'SET NULL must target only field %',x.set_null_column;
   END IF;
