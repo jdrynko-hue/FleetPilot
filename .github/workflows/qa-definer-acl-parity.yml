@@ -68,6 +68,8 @@ jobs:
             exit 1
           fi
           echo "::add-mask::$LOCAL_ACL_ANON_KEY"
+          export LOCAL_INVITE_API_URL="$LOCAL_ACL_API_URL"
+          export LOCAL_INVITE_ANON_KEY="$LOCAL_ACL_ANON_KEY"
           node "$GITHUB_WORKSPACE/tests/qa_definer_acl_local_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/qa_company_invite_local_e2e.mjs"
       - name: Remove disposable Supabase without backup
