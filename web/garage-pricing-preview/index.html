@@ -142,7 +142,7 @@ footer:'Flotaryx Garage · Projekt cennika · płatności i subskrypcje nieaktyw
 perMonth:'/ mies.',beforeTax:'przed podatkiem',billedMonthly:'płatne miesięcznie',billedAnnually:'płatne rocznie',effective:'efektywnie miesięcznie',currencyNote:''}
 };
 let cycle='monthly';
-function money(value,market){return market==='PL'?value.toLocaleString('pl-PL')+' zł':pricing[market].symbol+value.toLocaleString('en-GB')}
+function money(value,market){const fraction=value%1===0?0:2;const amount=value.toLocaleString(market==='PL'?'pl-PL':'en-GB',{minimumFractionDigits:fraction,maximumFractionDigits:fraction});return market==='PL'?amount+' zł':pricing[market].symbol+amount}
 function render(){
  const lang=document.getElementById('language').value;
  const market=document.getElementById('market').value;
