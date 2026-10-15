@@ -1,0 +1,53 @@
+name: QA integrity and guarded metadata repair - disposable only
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-boolean-integrity.yml'
+      - 'supabase/qa_hardening/integrity_review/**'
+      - 'supabase/qa_hardening/data_review/**'
+      - 'tests/qa_fleet_document_path_repair.py'
+      - 'tests/qa_fleet_boolean_integrity.py'
+      - 'tests/qa_fleet_rls_fixture.sql'
+      - 'tests/qa_fleet_auth_bootstrap.sql'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: synthetic-integrity-only
+          POSTGRES_DB: disposable_integrity_review
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d disposable_integrity_review"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: synthetic-integrity-only
+      PGDATABASE: disposable_integrity_review
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client when needed
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Test constant-only integrity reports on synthetic data
+        run: |
+          python3 tests/qa_fleet_boolean_integrity.py
+          python3 tests/qa_fleet_document_path_repair.py

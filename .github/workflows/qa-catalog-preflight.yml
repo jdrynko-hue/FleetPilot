@@ -1,0 +1,99 @@
+name: Flotaryx QA catalog-only migration release gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-catalog-preflight.yml'
+      - 'supabase/qa_hardening/preflight/**'
+      - 'tests/qa_catalog_gate.mjs'
+      - 'tests/qa_fleet_rls_fixture.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ephemeral-catalog-2026-only
+          POSTGRES_DB: fleet_catalog_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fleet_catalog_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ephemeral-catalog-2026-only
+      PGDATABASE: fleet_catalog_disposable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate scripts and prohibit remote data access
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/qa_catalog_gate.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('supabase/qa_hardening/preflight/00_catalog_only.sql').read_text()
+          lower=s.lower()
+          assert 'begin transaction isolation level repeatable read read only;' in lower
+          assert 'commit;' in lower
+          assert 'pg_catalog' in lower
+          assert "select '20_definer_search_path'" in lower
+          assert "select '19_anonymous_definer_execution'" in lower
+          assert all(f"select '{i}_" in lower for i in ('15','16','17','18'))
+          body=s.split("BEGIN TRANSACTION",1)[1]
+          forbidden=('insert into ','update public.','delete from ','alter table ',
+            'create table ','drop table ','truncate table ','disable row level security',
+            'grant all','revoke all','copy public.','select * from public.',
+            'from auth.users','from public.fleet_documents','from public.drivers')
+          for word in forbidden:
+            assert word not in body.lower(),f'Forbidden catalog-only SQL operation: {word}'
+          print('PASS: preflight marked READ ONLY, no application-row scanning')
+          PY
+      - name: Prepare disposable synthetic Fleet schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql
+      - name: Run catalog preflight in transaction READ ONLY
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -A -t -F '|' -v ON_ERROR_STOP=1 \
+            -f supabase/qa_hardening/preflight/00_catalog_only.sql \
+            > "$RUNNER_TEMP/catalog_readonly.txt"
+          node tests/qa_catalog_gate.mjs "$RUNNER_TEMP/catalog_readonly.txt" --expect-block
+      - name: Assert CI deployment gate is impossible to bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          node tests/qa_catalog_gate.mjs "$RUNNER_TEMP/catalog_readonly.txt" \
+            --release-gate > "$RUNNER_TEMP/gate_check.txt" 2>&1
+          result=$?
+          set -e
+          cat "$RUNNER_TEMP/gate_check.txt"
+          if [[ "$result" != "3" ]]; then
+            echo "Unexpected release-gate result $result; expected fail-closed exit 3" >&2
+            exit 1
+          fi
+          echo 'PASS: generated catalog report cannot authorize a deployment'
