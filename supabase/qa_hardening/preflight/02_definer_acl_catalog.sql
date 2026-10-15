@@ -37,13 +37,18 @@ SELECT signature AS check_name,
    WHEN signature = 'set_updated_at()' AND prosecdef IS DISTINCT FROM false
      THEN 'HOLD_MUTATOR_SECURITY_DRIFT'
    WHEN anon_exec OR auth_exec IS DISTINCT FROM target_auth THEN 'HOLD_ACL'
-   WHEN signature='set_updated_at()' AND NOT
+   WHEN signature IN ('set_updated_at()','get_company_entitlements(uuid)') AND NOT
       ('search_path=public, pg_temp'=ANY(coalesce(proconfig,ARRAY[]::text[]))
        OR 'search_path=public,pg_temp'=ANY(coalesce(proconfig,ARRAY[]::text[])))
       THEN 'HOLD_SEARCH_PATH'
    ELSE 'PASS_TARGET'
  END AS result
 FROM checks
+UNION ALL
+SELECT 'public_schema_untrusted_create',
+ CASE WHEN has_schema_privilege('anon','public','CREATE')
+   OR has_schema_privilege('authenticated','public','CREATE')
+ THEN 'HOLD_UNTRUSTED_SCHEMA_CREATE' ELSE 'PASS_TARGET' END
 UNION ALL
 SELECT 'unreviewed_anonymous_definer',
  CASE WHEN EXISTS(
