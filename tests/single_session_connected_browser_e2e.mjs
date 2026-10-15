@@ -110,6 +110,7 @@ async function runBrowser(name,engine){
   await snap('mechanic');
   // The active session MUST NOT allow clicking into someone else's screen.
   await page.locator('[data-role="garage"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.panel.active').length===0);
   assert.equal(await page.locator('.panel.active').count(),0);
   assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
   await page.locator('#logoutButton').click();
