@@ -101,7 +101,8 @@ BEGIN
   END IF;
   found_oid:=NULL;
  END LOOP;
-END $fk_guard$;
+END;
+$fk_guard$;
 
 alter table public.repairs
  add constraint qa_repairs_company_id_id_unique unique (company_id,id);
