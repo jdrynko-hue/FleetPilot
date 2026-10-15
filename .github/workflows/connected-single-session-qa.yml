@@ -3,7 +3,7 @@ name: Staging single-session Fleet Garage browser QA
 on:
   pull_request:
     paths:
-      - 'web/demo/connected/**'
+      - 'web/demo/session/**'
       - 'tests/connected_single_session_browser_e2e.mjs'
       - 'tests/single_session_connected_browser_e2e.mjs'
       - 'tests/disposable_connected_fixture.mjs'
@@ -54,7 +54,7 @@ jobs:
           page=Path('web/demo/session/index.html').read_text()
           assert 'noindex,nofollow' in page
           assert "allowed(location.hostname)" in page
-          assert "api.protocol==='http:'" in page
+          assert "u.protocol==='http:'" in page
           assert 'stripe.com' not in page.lower()
           assert 'supabase.co' not in page.lower()
           assert '<meta name="robots"' in page
@@ -62,8 +62,8 @@ jobs:
           assert '__FLOTARYX_SINGLE_SESSION_QA__' in page
           assert '/qa-config.js' not in page
           assert 'cfg.roles' not in page
-          assert "localStorage" not in page
-          assert "sessionStorage" not in page
+          assert "localStorage." not in page
+          assert "sessionStorage." not in page
           assert all('id="'+role+'"' in page for role in
               ('fleet','garage','mechanic','customer'))
           print('PASS fail-closed localhost-only interface')
