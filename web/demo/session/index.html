@@ -259,10 +259,11 @@ async function signIn(event){
  finally{if(authEpoch===epoch){busy=false;nav()}}
 }
 async function signOut(message){
- if(!session)return;
- const old=session,jwt=old.jwt;
- clearTimeout(old.timer);
- old.jwt=null;old.refreshToken=null;old.access=null;
+ const old=session,jwt=old?.jwt;
+ if(old){
+  clearTimeout(old.timer);
+  old.jwt=null;old.refreshToken=null;old.access=null;
+ }
  ++authEpoch;busy=false;
  // Remove local bearer first. Revoke refresh/session server-side best effort.
  session=null;stage=0;requestId=null;orderId=null;bookingId=null;
@@ -272,6 +273,7 @@ async function signOut(message){
  text('accountEmail','');text('accountRole','');text('loginError','');
  text('notice',typeof message==='string'?message:'Wylogowano. Aby zmienić rolę, zaloguj inne konto.');
  nav();
+ if(!jwt)return;
  try{
   await boundedFetch(cfg.api+'/auth/v1/logout?scope=local',{method:'POST',keepalive:true,
    headers:{apikey:cfg.anon,authorization:'Bearer '+jwt},
@@ -426,7 +428,7 @@ async function act(name){
 el('loginForm').addEventListener('submit',signIn);
 el('logoutButton').addEventListener('click',()=>{void signOut()});
 // Never restore private views or credentials from a browser back/forward cache.
-addEventListener('pagehide',()=>{if(session)void signOut('Sesja zamknięta. Zaloguj się ponownie.')});
+addEventListener('pagehide',()=>{void signOut('Sesja zamknięta. Zaloguj się ponownie.')});
 controls.forEach(c=>c.addEventListener('click',()=>act(c.dataset.act)));
 addEventListener('hashchange',nav);
 text('notice',configured?

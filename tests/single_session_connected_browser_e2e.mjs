@@ -239,6 +239,28 @@ async function runBrowser(name,engine,profile,platform){
   await page.locator('#logoutButton').click();
   await page.locator('#loginForm:visible').waitFor();
   assert.deepEqual(await page.evaluate(()=>[localStorage.length,sessionStorage.length]),[0,0]);
+  // Navigating away during the password grant must also invalidate that
+  // attempt, before any caller object has been created in the application.
+  let releaseLogin,sawLogin,finishedLogin;
+  const loginGate=new Promise(resolve=>{releaseLogin=resolve});
+  const loginReached=new Promise(resolve=>{sawLogin=resolve});
+  const loginHandled=new Promise(resolve=>{finishedLogin=resolve});
+  await page.route(passwordGrant,async route=>{
+   const response=await route.fetch();sawLogin();await loginGate;
+   await route.fulfill({response});finishedLogin();
+  });
+  await page.locator('#loginEmail').fill(fixture.roles.customer.email);
+  await page.locator('#loginPassword').fill(pwd);
+  await page.locator('#signInButton').click();
+  await loginReached;
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+  const lateLogin=page.waitForResponse(r=>r.url().includes('grant_type=password'));
+  releaseLogin();await loginHandled;await (await lateLogin).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+  await page.unroute(passwordGrant);
+  assert.equal(await page.locator('#accountInfo:visible').count(),0);
+  assert.equal(await page.locator('.panel.active').count(),0);
+  assert.equal(await page.locator('#signInButton:disabled').count(),0);
   console.log('PASS '+name+' session lifecycle: one real refresh, local-only logout, failed refresh closed, 401 write not replayed, stale pagehide response ignored');
   assert.deepEqual(errs,[]);
   assert.deepEqual(external,[]);
