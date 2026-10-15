@@ -264,7 +264,6 @@ async function act(name){
  }catch(e){text('notice',e.message);el('notice').classList.add('error')}
  finally{busy=false;render()}
 }
-let orderId=null;
 el('loginForm').addEventListener('submit',signIn);
 el('logoutButton').addEventListener('click',signOut);
 controls.forEach(c=>c.addEventListener('click',()=>act(c.dataset.act)));
