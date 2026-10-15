@@ -29,7 +29,7 @@ ul{padding-left:22px}li{margin:6px 0}footer{font-size:12px;text-align:center;col
 <div class="notice error" id="notice" role="status" aria-live="polite">Konfiguracja lokalna nie została zweryfikowana.</div>
 <section class="card" aria-labelledby="authHeading">
 <h2 id="authHeading">Zaloguj się jako pojedynczy użytkownik testowy</h2>
-<p>Przełączanie użytkowników wymaga wylogowania i ponownego logowania. Żaden token innego użytkownika nie jest ładowany do tej strony. Wybór roli zmienia wyłącznie widok; uprawnienia sprawdza serwer Supabase przy każdej operacji.</p>
+<p>Przełączanie użytkowników wymaga wylogowania i ponownego logowania. Żaden token innego użytkownika nie jest ładowany do tej strony. Dostępne moduły rozpoznajemy na podstawie członkostwa konta. Uprawnienia każdej operacji sprawdza serwer Supabase.</p>
 <form id="loginForm" class="login" autocomplete="off">
 <label for="loginEmail">E-mail konta testowego<input id="loginEmail" type="email" autocomplete="off" required></label>
 <label for="loginPassword">Hasło konta testowego<input id="loginPassword" type="password" autocomplete="off" required></label>
@@ -123,6 +123,37 @@ function nav(){
    !session?'Wybierz rolę, a następnie zaloguj jej własnym kontem testowym.':'');
  render();
 }
+async function discoverAccess(caller){
+ // Use the authenticated Auth response ID, never user-editable metadata.
+ if(!/^[0-9a-f-]{36}$/i.test(caller.id))throw Error('Brak zweryfikowanej tożsamości');
+ async function ownMembership(table,scope,value){
+  const query='?select=role&user_id=eq.'+caller.id+'&'+scope+'=eq.'+value;
+  const r=await fetch(cfg.api+'/rest/v1/'+table+query,{
+   headers:{apikey:cfg.anon,authorization:'Bearer '+caller.jwt,accept:'application/json'},
+   cache:'no-store'
+  });
+  if(session!==caller)throw Error('Sesja zmieniła się podczas rozpoznawania dostępu');
+  if(r.status===401){await signOut();throw Error('Sesja wygasła')}
+  const rows=await r.json();
+  if(!r.ok||!Array.isArray(rows)||rows.some(row=>typeof row.role!=='string'))
+   throw Error('Nie udało się potwierdzić członkostwa konta');
+  return rows.map(row=>row.role);
+ }
+ const [fleetRoles,garageRoles]=await Promise.all([
+  ownMembership('company_members','company_id',cfg.company),
+  ownMembership('garage_members','workspace_id',cfg.shop)
+ ]);
+ if(session!==caller)throw Error('Sesja zmieniła się podczas rozpoznawania dostępu');
+ const staff=['owner','admin','manager'];
+ const available=[];
+ if(fleetRoles.some(role=>[...staff,'viewer'].includes(role)))available.push('fleet');
+ if(garageRoles.some(role=>['owner','service_adviser'].includes(role)))available.push('garage');
+ if(garageRoles.includes('mechanic'))available.push('mechanic');
+ // Any signed-in user can request their own private booking. This is not
+ // Fleet or Garage membership; booking RPCs authorize the customer identity.
+ available.push('customer');
+ return {available,fleetWrite:fleetRoles.some(role=>staff.includes(role))};
+}
 async function signIn(event){
  event.preventDefault();
  if(!configured||session||busy)return;
@@ -139,18 +170,34 @@ async function signIn(event){
   if(!r.ok||typeof d.access_token!=='string')throw Error('Logowanie odrzucone');
   // Exactly one caller token stays in closure memory. No cookies,
   // sessionStorage, localStorage, URL fragments or shared role-JWT map.
-  session={jwt:d.access_token,role:selected,email:d.user?.email||email};
+  session={jwt:d.access_token,role:null,email:d.user?.email||email,id:d.user?.id,access:null};
+  const caller=session;
   el('loginEmail').value=''; el('loginForm').hidden=true;
   el('accountInfo').hidden=false;
-  text('accountRole','Wybrany widok: '+selected+' — dostęp kontroluje API');
+  text('accountRole','Sprawdzanie dostępu konta');
   text('accountEmail',session.email);
-  text('notice','Zalogowano do jednorazowego Supabase: '+selected);
+  text('notice','Sprawdzanie członkostwa konta');
   el('notice').classList.remove('error');
-  // The sign-in can succeed even when a synthetic role has no data.
-  // Data-fetch/RLS failures must never be misreported as bad credentials.
-  try{await refresh();}
-  catch{ text('notice','Sesja zalogowana. Brak danych lub uprawnień do tego modułu.');
-         el('notice').classList.add('error');}
+  // Auth success and membership discovery are separate. A missing schema,
+  // network failure or denied lookup must leave every privileged panel shut.
+  try{
+   const access=await discoverAccess(caller);
+   if(session!==caller)return;
+   caller.access=access;
+   caller.role=access.available.includes(selected)?selected:access.available[0];
+   selected=caller.role;
+   location.hash=selected;
+   text('accountRole','Dostęp konta: '+caller.role+' — uprawnienia z członkostwa');
+   await refresh();
+   if(session!==caller)return;
+   text('notice','Zalogowano do jednorazowego Supabase: '+caller.role);
+  }catch{
+   if(session!==caller)return;
+   caller.role=null;caller.access=null;
+   text('accountRole','Nie potwierdzono dostępu do modułów');
+   text('notice','Sesja zalogowana. Nie udało się potwierdzić dostępu lub pobrać danych.');
+   el('notice').classList.add('error');
+  }
  }catch(e){text('loginError','Nie udało się zalogować do wybranej roli.');}
  finally{busy=false;nav()}
 }
@@ -212,7 +259,8 @@ function render(){
   approve:stage===3,start:stage===4,ready:stage===5,
   request:bookingStatus==='none',confirm:bookingStatus==='requested'};
  controls.forEach(c=>c.disabled=busy||!configured||!session
-   ||session.role!==selected||acts[c.dataset.act]!==session.role||!ready[c.dataset.act]);
+   ||session.role!==selected||acts[c.dataset.act]!==session.role
+   ||(session.role==='fleet'&&!session.access?.fleetWrite)||!ready[c.dataset.act]);
  el('signInButton').disabled=busy||!configured||!!session;
  el('logoutButton').disabled=busy;
 }

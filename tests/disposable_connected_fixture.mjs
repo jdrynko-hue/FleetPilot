@@ -33,6 +33,9 @@ export async function createFixture({realFleet=false}={}){
  const garage=await signup('garage');
  const mechanic=await signup('mechanic');
  const customer=await signup('customer');
+ // Supabase users can edit this metadata. It must never grant module access.
+ valid(await http('/auth/v1/user',customer,{data:{role:'owner',is_admin:true}},'PUT'),
+  'customer editable metadata');
  const sh=valid(await http('/rest/v1/garage_workspaces?select=id',garage,
   {owner_user_id:garage.id,name:'Local Connected Garage',country:'GB',currency:'GBP'},
   'POST','return=representation'),'create garage')[0].id;

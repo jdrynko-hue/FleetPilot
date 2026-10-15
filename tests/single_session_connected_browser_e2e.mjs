@@ -56,12 +56,12 @@ async function runBrowser(name,engine,profile,platform){
    if(!['localhost','127.0.0.1'].includes(u.hostname))external.push(u.origin);
   });
   await page.goto(url);
-  const move=async(role)=>{
+  const move=async(role,requested=role)=>{
    if(await page.locator('#accountInfo:visible').count()){
     await page.locator('#logoutButton').click();
     await page.locator('#loginForm:visible').waitFor();
    }
-   await page.locator('[data-role="'+role+'"]').click();
+   await page.locator('[data-role="'+requested+'"]').click();
    await page.locator('#loginEmail').fill(fixture.roles[role].email);
    await page.locator('#loginPassword').fill(pwd);
    await page.locator('#signInButton').click();
@@ -81,7 +81,8 @@ async function runBrowser(name,engine,profile,platform){
     fullPage:true,animations:'disabled'});
   };
   assert.equal(await page.locator('.panel.active').count(),0);
-  await move('fleet');
+  await move('fleet','garage');
+  assert.equal(await page.locator('#garage.panel.active').count(),0);
   await click('send','Wysłana');
   await move('garage');
   await click('accept','Przyjęta');
@@ -96,7 +97,8 @@ async function runBrowser(name,engine,profile,platform){
   await move('fleet');
   await page.waitForFunction(()=>document.querySelectorAll('#history li').length===4);
   await snap('fleet');
-  await move('customer');
+  await move('customer','fleet');
+  assert.equal(await page.locator('#fleet.panel.active').count(),0);
   await click('request');
   await page.waitForFunction(()=>document.querySelector('#customerState').textContent==='requested');
   await move('garage');
@@ -116,6 +118,22 @@ async function runBrowser(name,engine,profile,platform){
   await page.locator('#logoutButton').click();
   await page.locator('#loginForm:visible').waitFor();
   assert.deepEqual(await page.evaluate(()=>[localStorage.length,sessionStorage.length]),[0,0]);
+  // A failed membership lookup must not fall back to the requested Fleet
+  // view, even though the password and access token are valid.
+  const lookup='**/rest/v1/company_members?*';
+  await page.route(lookup,route=>route.fulfill({status:503,
+   contentType:'application/json',body:JSON.stringify({message:'Synthetic outage'})}));
+  await page.locator('[data-role="fleet"]').click();
+  await page.locator('#loginEmail').fill(fixture.roles.fleet.email);
+  await page.locator('#loginPassword').fill(pwd);
+  await page.locator('#signInButton').click();
+  await page.waitForFunction(()=>document.querySelector('#accountRole').textContent===
+   'Nie potwierdzono dostępu do modułów');
+  assert.equal(await page.locator('.panel.active').count(),0);
+  assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
+  await page.unroute(lookup);
+  await page.locator('#logoutButton').click();
+  await page.locator('#loginForm:visible').waitFor();
   assert.deepEqual(errs,[]);
   assert.deepEqual(external,[]);
   console.log('PASS '+name+' real local Auth: four sequential accounts, Fleet↔Garage approval, mechanic, private booking, no shared session');

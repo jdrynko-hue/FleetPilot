@@ -125,6 +125,7 @@ jobs:
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
           export UNIFIED_REAL_FLEET=1
+          export SINGLE_SESSION_EXPECT_CONTEXT=1
           export LOCAL_ACL_API_URL="$GARAGE_TEST_API_URL"
           export LOCAL_ACL_ANON_KEY="$GARAGE_TEST_ANON_KEY"
           export LOCAL_INVITE_API_URL="$GARAGE_TEST_API_URL"

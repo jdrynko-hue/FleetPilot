@@ -137,7 +137,7 @@ async function checkBrowser(browserType,label){
   await page.locator('#accountInfo:not([hidden])').waitFor();
   await page.locator('#'+role+'.panel.active').waitFor();
   assert.equal(await page.locator('#accountRole').innerText(),
-   'Wybrany widok: '+role+' — dostęp kontroluje API');
+   'Dostęp konta: '+role+' — uprawnienia z członkostwa');
  }
  async function logout(){
   await page.locator('#logoutButton').click();

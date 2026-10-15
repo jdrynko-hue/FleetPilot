@@ -14,7 +14,7 @@ async function register(role){
  const email='single-session-'+role+'-'+randomUUID()+'@example.test';
  const res=await fetch(api+'/auth/v1/signup',{
   method:'POST',headers:{apikey:key,'content-type':'application/json'},
-  body:JSON.stringify({email,password})
+  body:JSON.stringify({email,password,data:{role:'owner',is_admin:true}})
  });
  const data=await res.json();
  assert.ok(res.ok&&data.access_token,'local Auth registration failed');
@@ -68,9 +68,19 @@ try{
     await page.locator('#loginPassword').fill(password);
     await page.locator('#signInButton').click();
     await page.locator('#accountInfo:visible').waitFor();
-    await page.locator('#'+role+'.panel.active').waitFor();
-    assert.equal(await page.locator('.panel.active').count(),1);
-    const other=role==='fleet'?'garage':'fleet';
+    if(process.env.SINGLE_SESSION_EXPECT_CONTEXT==='1'){
+     // These brand-new users have no Fleet/workshop membership; a role tab
+     // or user-editable owner claim must not open a privileged module.
+     await page.locator('#customer.panel.active').waitFor();
+     assert.equal(await page.locator('.panel.active').count(),1);
+    }else{
+     // Auth-only stack has no membership schema. Keep sign-in distinct from
+     // authorization failure and leave every module/action closed.
+     await page.waitForFunction(()=>document.querySelector('#accountRole').textContent===
+      'Nie potwierdzono dostępu do modułów');
+     assert.equal(await page.locator('.panel.active').count(),0);
+    }
+    const other='fleet';
     await page.locator('[data-role="'+other+'"]').click();
     await page.waitForFunction(()=>document.querySelectorAll('.panel.active').length===0);
     assert.equal(await page.locator('.panel.active').count(),0);
@@ -82,7 +92,7 @@ try{
     assert.deepEqual(storage,[0,0]);
    }
    assert.deepEqual(errors,[],name+' browser errors');
-   console.log('PASS '+name+': real Auth with 4 separate sessions, hidden cross-role panels, zero bearer persistence');
+   console.log('PASS '+name+': real Auth with 4 separate sessions, spoofed owner metadata ignored, absent membership fails closed, zero bearer persistence');
   }finally{await browser.close();}
  }
 }finally{await new Promise(resolve=>server.close(resolve));}
