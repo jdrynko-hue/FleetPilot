@@ -65,6 +65,12 @@ async function runBrowser(name,engine){
    await page.locator('#loginEmail').fill(fixture.roles[role].email);
    await page.locator('#loginPassword').fill(pwd);
    await page.locator('#signInButton').click();
+   await page.waitForFunction(() =>
+     document.querySelector('#accountInfo').hidden === false ||
+     document.querySelector('#loginError').textContent.length > 0,
+     null,{timeout:12000});
+   const message=await page.locator('#loginError').textContent();
+   assert.equal(message,'',role+' membership gate denied login: '+message);
    await page.locator('#accountInfo:visible').waitFor();
    await page.locator('#'+role+'.panel.active').waitFor();
   };
