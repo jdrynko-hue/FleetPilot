@@ -1,0 +1,119 @@
+name: QA FK production delete semantics - disposable PostgreSQL
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-fk-delete-parity.yml'
+      - 'tests/qa_fk_delete_parity.sql'
+      - 'supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql'
+      - 'tests/qa_fleet_rls_fixture.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-fk-delete-semantics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: synthetic-fk-2026-only
+          POSTGRES_DB: disposable_fk_parity
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d disposable_fk_parity"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: synthetic-fk-2026-only
+      PGDATABASE: disposable_fk_parity
+    steps:
+      - uses: actions/checkout@v4
+      - name: Local PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+      - name: Build disposable Fleet QA using existing repo fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql
+      - name: Assert exact FK semantics with transaction rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f tests/qa_fk_delete_parity.sql
+      - name: Existing cross-tenant RLS and API grants regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f tests/qa_fleet_rls_isolation.sql
+      - name: Reject schema drift before ANY persistent migration DDL
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE disposable_fk_drift'
+          psql -X -d disposable_fk_drift -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql
+          # Deliberately change a legacy FK's DELETE action.
+          psql -X -d disposable_fk_drift -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER TABLE public.fleet_documents DROP CONSTRAINT fleet_documents_vehicle_id_fkey;
+          ALTER TABLE public.fleet_documents ADD CONSTRAINT fleet_documents_vehicle_id_fkey
+             FOREIGN KEY(vehicle_id) REFERENCES public.vehicles(id) ON DELETE CASCADE;
+          SQL
+          set +e
+          psql -X -d disposable_fk_drift -v ON_ERROR_STOP=1 \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
+            > "$RUNNER_TEMP/drift_result.txt" 2>&1
+          code=$?
+          set -e
+          if [[ "$code" == 0 ]]; then
+            echo 'ERROR: drifted legacy FK was accepted' >&2
+            exit 1
+          fi
+          grep -q 'Unknown QA FK' "$RUNNER_TEMP/drift_result.txt"
+          # RLS / grants / original constraint must be unchanged after the
+          # failed BEGIN ... ROLLBACK transaction in disposable DB.
+          [[ "$(psql -X -d disposable_fk_drift -tAc \
+              "SELECT count(*) FROM pg_class WHERE oid IN
+              ('public.fleet_documents'::regclass,
+               'public.driver_vehicle_checks'::regclass,
+               'public.vehicle_change_requests'::regclass) AND relrowsecurity")" == 0 ]]
+          [[ "$(psql -X -d disposable_fk_drift -tAc \
+              "SELECT count(*) FROM pg_constraint
+               WHERE conname='fleet_documents_vehicle_id_fkey' AND confdeltype='c'")" == 1 ]]
+          [[ "$(psql -X -d disposable_fk_drift -tAc \
+              "SELECT count(*) FROM pg_constraint WHERE conname='qa_documents_vehicle_fk'")" == 0 ]]
+          echo 'PASS: unknown legacy FK aborted entire migration; no partial RLS or DDL'
+      - name: Reject second migration application
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 \
+             -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
+             > "$RUNNER_TEMP/replay_result.txt" 2>&1; then
+            echo 'ERROR: repeated migration unexpectedly succeeded' >&2
+            exit 1
+          fi
+          grep -q 'Existing policy' "$RUNNER_TEMP/replay_result.txt"
+          echo 'PASS: replay is rejected without changing installed policies'
