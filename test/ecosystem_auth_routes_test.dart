@@ -54,20 +54,20 @@ void main() {
     expect(find.text('Previous account private data'),findsOneWidget);
   }
   testWidgets('logout clears a pushed private route and shows normal login', (tester) async {
-    account=1;await login();await tester.pumpWidget(const MaterialApp(home:AuthGate()));
+    account=1;await tester.runAsync(login);await tester.pumpWidget(const MaterialApp(home:AuthGate()));
     await tester.pumpAndSettle();
     if(AppConfig.ecosystemQaEnabled)expect(find.byType(EcosystemGate),findsOneWidget);
     await openPrivate(tester);
-    await Supabase.instance.client.auth.signOut();await tester.pumpAndSettle();
+    await tester.runAsync(() => Supabase.instance.client.auth.signOut());await tester.pumpAndSettle();
     expect(find.text('Previous account private data'),findsNothing);
     expect(find.byType(LoginScreen),findsOneWidget);
-  });
+  }, timeout: const Timeout(Duration(seconds:45)));
   testWidgets('switching accounts cannot leave another account route open', (tester) async {
-    account=1;await login();await tester.pumpWidget(const MaterialApp(home:AuthGate()));
+    account=1;await tester.runAsync(login);await tester.pumpWidget(const MaterialApp(home:AuthGate()));
     await tester.pumpAndSettle();await openPrivate(tester);
-    account=2;await login();await tester.pumpAndSettle();
+    account=2;await tester.runAsync(login);await tester.pumpAndSettle();
     expect(find.text('Previous account private data'),findsNothing);
     expect(find.byType(AuthGate),findsOneWidget);
     if(AppConfig.ecosystemQaEnabled)expect(find.byType(EcosystemGate),findsOneWidget);
-  });
+  }, timeout: const Timeout(Duration(seconds:45)));
 }
