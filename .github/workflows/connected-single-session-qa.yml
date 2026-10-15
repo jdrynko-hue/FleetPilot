@@ -1,0 +1,121 @@
+name: Staging single-session Fleet Garage browser QA
+
+on:
+  pull_request:
+    paths:
+      - 'web/demo/connected/**'
+      - 'tests/connected_single_session_browser_e2e.mjs'
+      - 'tests/single_session_connected_browser_e2e.mjs'
+      - 'tests/disposable_connected_fixture.mjs'
+      - 'web/demo/session/**'
+      - '.github/workflows/connected-garage-browser-qa.yml'
+      - 'supabase/garage_staging/**'
+      - 'tests/repairbridge_fleet_fixture.sql'
+  push:
+    branches:
+      - feat/garage-connected-browser-qa-20261014
+    paths:
+      - 'web/demo/session/**'
+      - 'tests/connected_single_session_browser_e2e.mjs'
+      - '.github/workflows/connected-single-session-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  local-connected-demo:
+    name: Four separately authenticated actors — real local API
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GARAGE_QA_DIR: /tmp/flotaryx-auth-per-session
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Install pinned disposable browser dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Verify browser test syntax and local-only UI
+        run: |
+          node --check tests/connected_single_session_browser_e2e.mjs
+          node --check tests/disposable_connected_fixture.mjs
+          node --check tests/single_session_connected_browser_e2e.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          page=Path('web/demo/session/index.html').read_text()
+          assert 'noindex,nofollow' in page
+          assert "allowed(location.hostname)" in page
+          assert "api.protocol==='http:'" in page
+          assert 'stripe.com' not in page.lower()
+          assert 'supabase.co' not in page.lower()
+          assert '<meta name="robots"' in page
+          assert '/session-config.js' in page
+          assert '__FLOTARYX_SINGLE_SESSION_QA__' in page
+          assert '/qa-config.js' not in page
+          assert 'cfg.roles' not in page
+          assert "localStorage" not in page
+          assert "sessionStorage" not in page
+          assert all('id="'+role+'"' in page for role in
+              ('fleet','garage','mechanic','customer'))
+          print('PASS fail-closed localhost-only interface')
+          PY
+      - name: Initialize single-use Supabase without external mail or Fleet production migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GARAGE_QA_DIR"
+          cd "$GARAGE_QA_DIR"
+          supabase init --yes
+          mkdir -p supabase/migrations
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/001_workshop_foundation.sql" supabase/migrations/20261014000100_garage_workshops.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/002_staff_invites_and_diagnosis.sql" supabase/migrations/20261014000200_garage_invites.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" supabase/migrations/20261014000300_garage_assignments.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" supabase/migrations/20261014000400_garage_quotes.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" supabase/migrations/20261014000500_garage_private_media.sql
+          cp "$GITHUB_WORKSPACE/tests/repairbridge_fleet_fixture.sql" supabase/migrations/20261014000590_local_fleet_fixture.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/006_fleet_garage_repair_bridge.sql" supabase/migrations/20261014000600_repairbridge.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/007_private_customer_bookings.sql" supabase/migrations/20261014000700_consumer_booking.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/008_resource_calendar_notifications.sql" supabase/migrations/20261014000800_calendar.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/009_mechanic_roster_bay_assignment.sql" supabase/migrations/20261014000900_mechanic_roster.sql
+          sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
+          grep -q '^enable_confirmations = false$' supabase/config.toml
+      - name: Start local Supabase Auth and Data API
+        shell: bash
+        run: |
+          cd "$GARAGE_QA_DIR"
+          supabase start -x studio,analytics,imgproxy
+      - name: Run single-session browser acceptance with four distinct JWT users
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GARAGE_QA_DIR"
+          supabase status -o env > "$RUNNER_TEMP/connected_qa_environment"
+          read_local() {
+            sed -n "s/^$1=//p" "$RUNNER_TEMP/connected_qa_environment" | head -1 | tr -d '"'
+          }
+          export GARAGE_TEST_API_URL="$(read_local API_URL)"
+          export GARAGE_TEST_ANON_KEY="$(read_local ANON_KEY)"
+          test -n "$GARAGE_TEST_ANON_KEY"
+          test -n "$GARAGE_TEST_API_URL"
+          [[ "$GARAGE_TEST_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]
+          echo "::add-mask::$GARAGE_TEST_ANON_KEY"
+          cd "$GITHUB_WORKSPACE"
+          node tests/connected_single_session_browser_e2e.mjs
+          node tests/single_session_connected_browser_e2e.mjs
+      - name: Destroy ephemeral Supabase containers and discard state
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$GARAGE_QA_DIR/supabase" ]]; then
+            cd "$GARAGE_QA_DIR"
+            supabase stop --no-backup || true
+          fi
