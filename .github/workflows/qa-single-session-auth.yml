@@ -43,6 +43,16 @@ jobs:
           assert "u.protocol==='http:'" in s
           print('PASS: source has no shared role tokens, storage persistence or remote destinations')
           PY
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          s=Path('web/demo/session/index.html').read_text()
+          scripts=re.findall(r'<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>',s)
+          scripts=[x for x in scripts if x.strip()]
+          assert len(scripts)==1, f'Expected exactly one inline app script, got {len(scripts)}'
+          Path('/tmp/flotaryx-session-inline.mjs').write_text(scripts[0])
+          PY
+          node --check /tmp/flotaryx-session-inline.mjs
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
