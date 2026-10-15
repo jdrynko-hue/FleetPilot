@@ -126,7 +126,8 @@ async function checkBrowser(browserType,label){
  });
  async function choose(role){
   await page.locator('[data-role="'+role+'"]').click();
-  await page.waitForFunction(r=>location.hash==='#'+r,role);
+  await page.waitForFunction(r=>document.querySelector(
+   '[data-role="'+r+'"]').getAttribute('aria-current')==='page',role);
  }
  async function login(role){
   await choose(role);
