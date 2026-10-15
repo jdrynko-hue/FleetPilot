@@ -304,7 +304,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       appBar: AppBar(title: Text(_tr('Nowy kosztorys', 'New estimate'))),
       body: SafeArea(child: _loading
         ? const Center(child: CircularProgressIndicator())
-        : ListView(padding: const EdgeInsets.all(16), children: [
+        : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 112), children: [
           Text(widget.order.complaint,
             style: Theme.of(context).textTheme.titleMedium),
           if (_error != null) Text(_error!, key: const Key('quote_editor_error')),
