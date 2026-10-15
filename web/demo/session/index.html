@@ -173,12 +173,14 @@ async function signOut(){
 }
 async function rpc(name,args={}){
  if(!configured||!session||!permitted.has(name))throw Error('Niedozwolone RPC');
+ const caller=session;
  const r=await fetch(cfg.api+'/rest/v1/rpc/'+name,{
   method:'POST',cache:'no-store',
-  headers:{apikey:cfg.anon,authorization:'Bearer '+session.jwt,
+  headers:{apikey:cfg.anon,authorization:'Bearer '+caller.jwt,
    'content-type':'application/json',accept:'application/json'},
   body:JSON.stringify(args)
  });
+ if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
  if(r.status===401){await signOut();throw Error('Sesja wygasła')}
  const raw=await r.text();let d;
  try{d=raw?JSON.parse(raw):null}catch{d=raw}
@@ -212,19 +214,24 @@ function render(){
  controls.forEach(c=>c.disabled=busy||!configured||!session
    ||session.role!==selected||acts[c.dataset.act]!==session.role||!ready[c.dataset.act]);
  el('signInButton').disabled=busy||!configured||!!session;
+ el('logoutButton').disabled=busy;
 }
 async function refresh(){
  if(!session)return;
- const role=session.role;
+ const active=session;
+ const role=active.role;
  // Reconstruct only data THIS caller can read from RLS-scoped RPCs.
  // No request/order/customer state may ever survive logout and role change.
  if(role==='fleet'||role==='garage'){
   const requests=await rpc('garage_fleet_requests_for_me');
+  if(session!==active)return;
   const own=requests.find(r=>r.company_id===cfg.company &&
     r.workspace_id===cfg.shop);
   if(own){
    requestId=own.request_id;
-   snapshot=await rpc('garage_fleet_snapshot',{p_request:requestId});
+   const newSnapshot=await rpc('garage_fleet_snapshot',{p_request:requestId});
+   if(session!==active)return;
+   snapshot=newSnapshot;
    orderId=snapshot.work_order_id||null;
    const status=snapshot.work_order_status;
    stage=status==='ready'||status==='collected'?6:
@@ -236,23 +243,30 @@ async function refresh(){
   }
   if(role==='garage'){
    const inbox=await rpc('garage_booking_shop_inbox',{p_workspace:cfg.shop});
+   if(session!==active)return;
    const ownBooking=inbox.find(b=>b.status==='requested')
      ||inbox.find(b=>b.status==='confirmed');
    bookingId=ownBooking?.id||null;
    bookingStatus=ownBooking?.status||'none';
   }
  }else if(role==='mechanic'){
-  jobs=await rpc('garage_my_assigned_jobs',{p_workspace_id:cfg.shop});
+  const newJobs=await rpc('garage_my_assigned_jobs',{p_workspace_id:cfg.shop});
+  if(session!==active)return;
+  jobs=newJobs;
   orderId=jobs[0]?.id||null;
   stage=jobs.some(j=>j.status==='awaiting_approval')?4:
     jobs.some(j=>j.status==='in_progress')?5:0;
  }else if(role==='customer'){
   const bookings=await rpc('garage_booking_my_requests');
+  if(session!==active)return;
   const ownBooking=bookings.find(b=>b.workspace_id===cfg.shop);
   bookingId=ownBooking?.id||null;
   bookingStatus=ownBooking?.status||'none';
-  notices=await rpc('garage_booking_my_notifications');
+  const newNotices=await rpc('garage_booking_my_notifications');
+  if(session!==active)return;
+  notices=newNotices;
  }
+ if(session!==active)return;
  render();
 }
 async function act(name){
