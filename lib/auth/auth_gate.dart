@@ -47,7 +47,6 @@ class _AuthGateState extends State<AuthGate> {
             Uri.base.queryParameters['type'] == 'recovery');
     _subscription = _repository.authChanges.listen((state) {
       if (!mounted) return;
-      if (!mounted) return;
       if (_user?.id != state.session?.user.id) {
         // Pushed private routes must not survive logout or an account switch.
         Navigator.of(context).popUntil((route) => route.isFirst);

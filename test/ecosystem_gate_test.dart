@@ -49,4 +49,17 @@ void main() {
     expect(find.text('Nie udało się wylogować. Spróbuj ponownie.'),findsOneWidget);
     expect(find.byKey(const Key('ecosystem_customer')),findsOneWidget);
   });
+  testWidgets('returning after an account switch never reloads the old picker', (tester) async {
+    var current=true;var loads=0;
+    await tester.pumpWidget(MaterialApp(home:EcosystemGate(
+      isCurrentAccount:()=>current,
+      loadAccess:() async {loads++;return const EcosystemAccess(hasFleet:false,garages:[]);},
+      signOut:() async {},destinationBuilder:(_)=>const Scaffold(body:Text('Customer page')))));
+    await tester.pumpAndSettle();await tester.tap(find.byKey(const Key('ecosystem_customer')));
+    await tester.pumpAndSettle();current=false;
+    await tester.pageBack();await tester.pumpAndSettle();expect(loads,1);
+    await tester.tap(find.byKey(const Key('ecosystem_customer')));await tester.pumpAndSettle();
+    expect(find.text('Customer page'),findsNothing);
+  });
+
 }

@@ -47,7 +47,11 @@ void main() {
   Future<void> login() => Supabase.instance.client.auth.signInWithPassword(
     email:'fixture$account@example.test',password:'mock-only-password').then((_) {});
   Future<void> openPrivate(WidgetTester tester) async {
-    final context=tester.element(find.byType(AuthGate));
+    if (AppConfig.ecosystemQaEnabled) {
+      await tester.tap(find.byKey(const Key('ecosystem_customer')));
+      await tester.pumpAndSettle();
+    }
+    final context=tester.element(find.byType(AuthGate, skipOffstage:false));
     Navigator.of(context).push<void>(MaterialPageRoute<void>(builder:(_)=>
       const Scaffold(body:Text('Previous account private data'))));
     await tester.pumpAndSettle();

@@ -9,10 +9,12 @@ import 'ecosystem_module_hub.dart';
 /// QA-only entry point. A private customer is never forced to create a fleet.
 class EcosystemGate extends StatefulWidget {
   const EcosystemGate({required this.loadAccess,
-    required this.destinationBuilder, required this.signOut, super.key});
+    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, super.key});
 
-  factory EcosystemGate.forClient(SupabaseClient client, {Key? key}) =>
-      EcosystemGate(key: key,
+  factory EcosystemGate.forClient(SupabaseClient client, {Key? key}) {
+    final userId = client.auth.currentUser?.id;
+    return EcosystemGate(key: key,
+        isCurrentAccount: () => userId != null && client.auth.currentUser?.id == userId,
         loadAccess: EcosystemAccessRepository.forClient(client).load,
         signOut: () => client.auth.signOut(),
         destinationBuilder: (destination) =>
@@ -20,10 +22,12 @@ class EcosystemGate extends StatefulWidget {
             ? const CompanyGate()
             : EcosystemModuleHub(client: client, destination: destination),
       );
+  }
 
   final Future<EcosystemAccess> Function() loadAccess;
   final Widget Function(EcosystemDestination) destinationBuilder;
   final Future<void> Function() signOut;
+  final bool Function()? isCurrentAccount;
   @override
   State<EcosystemGate> createState() => _EcosystemGateState();
 }
@@ -35,9 +39,13 @@ class _EcosystemGateState extends State<EcosystemGate> {
   bool get pl => AppLocale.language.value == 'pl';
   @override
   void initState() { super.initState(); _access = widget.loadAccess(); }
-  void _reload() => setState(() { _error = null; _access = widget.loadAccess(); });
+  bool get _current => widget.isCurrentAccount?.call() ?? true;
+  void _reload() {
+    if (!_current) return;
+    setState(() { _error = null; _access = widget.loadAccess(); });
+  }
   void _open(EcosystemDestination destination) {
-    if (_signingOut) return;
+    if (_signingOut || !_current) return;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => widget.destinationBuilder(destination),
     )).then((_) { if (mounted && !_signingOut) _reload(); });
