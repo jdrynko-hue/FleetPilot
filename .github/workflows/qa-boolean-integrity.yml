@@ -1,10 +1,12 @@
-name: QA boolean integrity report - synthetic databases only
+name: QA integrity and guarded metadata repair - disposable only
 
 on:
   pull_request:
     paths:
       - '.github/workflows/qa-boolean-integrity.yml'
       - 'supabase/qa_hardening/integrity_review/**'
+      - 'supabase/qa_hardening/data_review/**'
+      - 'tests/qa_fleet_document_path_repair.py'
       - 'tests/qa_fleet_boolean_integrity.py'
       - 'tests/qa_fleet_rls_fixture.sql'
       - 'tests/qa_fleet_auth_bootstrap.sql'
@@ -46,4 +48,6 @@ jobs:
             sudo apt-get install -y postgresql-client
           fi
       - name: Test constant-only integrity reports on synthetic data
-        run: python3 tests/qa_fleet_boolean_integrity.py
+        run: |
+          python3 tests/qa_fleet_boolean_integrity.py
+          python3 tests/qa_fleet_document_path_repair.py
