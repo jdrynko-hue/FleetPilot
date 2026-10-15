@@ -67,22 +67,19 @@ try{
     await page.locator('#loginEmail').fill(accounts[role].email);
     await page.locator('#loginPassword').fill(password);
     await page.locator('#signInButton').click();
-    await page.locator('#accountInfo:visible').waitFor();
-    await page.locator('#'+role+'.panel.active').waitFor();
-    assert.equal(await page.locator('.panel.active').count(),1);
-    const other=role==='fleet'?'garage':'fleet';
-    await page.locator('[data-role="'+other+'"]').click();
-    await page.waitForFunction(()=>document.querySelectorAll('.panel.active').length===0);
+    // Auth-only local stack has no role-capability RPC or role membership.
+    // Authentication alone must NEVER unlock any Fleet/Garage panel.
+    await page.waitForFunction(()=>
+      document.querySelector('#loginError').textContent.length>0);
+    assert.equal(await page.locator('#accountInfo:visible').count(),0);
+    assert.equal(await page.locator('#loginForm:visible').count(),1);
     assert.equal(await page.locator('.panel.active').count(),0);
     assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
-    await page.locator('#logoutButton').click();
-    await page.locator('#loginForm:visible').waitFor();
-    assert.equal(await page.locator('.panel.active').count(),0);
     const storage=await page.evaluate(()=>[localStorage.length,sessionStorage.length]);
     assert.deepEqual(storage,[0,0]);
    }
    assert.deepEqual(errors,[],name+' browser errors');
-   console.log('PASS '+name+': real Auth with 4 separate sessions, hidden cross-role panels, zero bearer persistence');
+   console.log('PASS '+name+': valid Auth without verified membership cannot unlock any role, zero bearer persistence');
   }finally{await browser.close();}
  }
 }finally{await new Promise(resolve=>server.close(resolve));}

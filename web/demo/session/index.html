@@ -29,7 +29,7 @@ ul{padding-left:22px}li{margin:6px 0}footer{font-size:12px;text-align:center;col
 <div class="notice error" id="notice" role="status" aria-live="polite">Konfiguracja lokalna nie została zweryfikowana.</div>
 <section class="card" aria-labelledby="authHeading">
 <h2 id="authHeading">Zaloguj się jako pojedynczy użytkownik testowy</h2>
-<p>Przełączanie użytkowników wymaga wylogowania i ponownego logowania. Żaden token innego użytkownika nie jest ładowany do tej strony. Wybór roli zmienia wyłącznie widok; uprawnienia sprawdza serwer Supabase przy każdej operacji.</p>
+<p>Przełączanie użytkowników wymaga wylogowania i ponownego logowania. Żaden token innego użytkownika nie jest ładowany do tej strony. Wybór widoku jest weryfikowany po logowaniu z przypisaniem konta w Supabase; każda operacja jest ponownie autoryzowana.</p>
 <form id="loginForm" class="login" autocomplete="off">
 <label for="loginEmail">E-mail konta testowego<input id="loginEmail" type="email" autocomplete="off" required></label>
 <label for="loginPassword">Hasło konta testowego<input id="loginPassword" type="password" autocomplete="off" required></label>
@@ -137,9 +137,30 @@ async function signIn(event){
   });
   const d=await r.json();
   if(!r.ok||typeof d.access_token!=='string')throw Error('Logowanie odrzucone');
-  // Exactly one caller token stays in closure memory. No cookies,
-  // sessionStorage, localStorage, URL fragments or shared role-JWT map.
-  session={jwt:d.access_token,role:selected,email:d.user?.email||email};
+  // Always derive role entitlement from the server-side current membership,
+  // NEVER from the tab, mutable metadata, email, or a preloaded JWT map.
+  const selectedAtLogin=selected;
+  const capResponse=await fetch(cfg.api+'/rest/v1/rpc/qa_session_capabilities',{
+   method:'POST',cache:'no-store',
+   headers:{apikey:cfg.anon,authorization:'Bearer '+d.access_token,
+    'content-type':'application/json',accept:'application/json'},
+   body:JSON.stringify({p_company:cfg.company,p_workspace:cfg.shop})
+  });
+  let caps;
+  try{caps=await capResponse.json();}catch{caps=null}
+  const allowedCaps=Array.isArray(caps)?caps[0]:null;
+  const approved=capResponse.ok && allowedCaps &&
+   allowedCaps[selectedAtLogin]===true && selected===selectedAtLogin;
+  if(!approved){
+   try{await fetch(cfg.api+'/auth/v1/logout',{
+    method:'POST',cache:'no-store',
+    headers:{apikey:cfg.anon,authorization:'Bearer '+d.access_token}
+   });}catch{}
+   throw Error('Wybrany panel nie jest przypisany do tego konta');
+  }
+  // Exactly one server-authorised session stays in closure memory.
+  // No cookies, sessionStorage, localStorage, URL tokens or shared role map.
+  session={jwt:d.access_token,role:selectedAtLogin,email:d.user?.email||email};
   el('loginEmail').value=''; el('loginForm').hidden=true;
   el('accountInfo').hidden=false;
   text('accountRole','Wybrany widok: '+selected+' — dostęp kontroluje API');
@@ -151,7 +172,9 @@ async function signIn(event){
   try{await refresh();}
   catch{ text('notice','Sesja zalogowana. Brak danych lub uprawnień do tego modułu.');
          el('notice').classList.add('error');}
- }catch(e){text('loginError','Nie udało się zalogować do wybranej roli.');}
+ }catch(e){text('loginError',
+   e?.message==='Wybrany panel nie jest przypisany do tego konta'?
+    'To konto nie ma dostępu do wybranego panelu.': 'Nie udało się zalogować do wybranej roli.');}
  finally{busy=false;nav()}
 }
 async function signOut(){
