@@ -28,7 +28,7 @@ async function signup(role){
  assert.ok(s.access_token);
  return {id:s.user.id,email,jwt:s.access_token};
 }
-export async function createFixture(){
+export async function createFixture({realFleet=false}={}){
  const fleet=await signup('fleet');
  const garage=await signup('garage');
  const mechanic=await signup('mechanic');
@@ -51,9 +51,37 @@ export async function createFixture(){
  const bay=valid(await rpc(garage,'garage_booking_add_resource',{
   p_shop:sh,p_label:'Brake inspection bay',p_mechanic:mechanic.id
  }),'add workshop bay');
- const company=valid(await rpc(fleet,'repairbridge_test_create_fleet',{
-  p_registration:'QA-FLEET-001',p_title:'Brake failure test'
- }),'create disposable fleet');
+ let company;
+ if(realFleet){
+  // Exercise the actual Fleet onboarding/tenant policies, without a fixture RPC
+  // bypassing them. All accounts and rows belong to this disposable instance.
+  const id=valid(await rpc(fleet,'create_company_for_current_user',{
+   _name:'Disposable unified Fleet',_country:'GB',_currency:'GBP'
+  }),'real Fleet onboarding');
+  const [vehicle]=valid(await http('/rest/v1/vehicles?select=id',fleet,{
+   company_id:id,registration:'QA-FLEET-001'
+  },'POST','return=representation'),'real Fleet vehicle');
+  const [issue]=valid(await http('/rest/v1/issues?select=id',fleet,{
+   company_id:id,vehicle_id:vehicle.id,title:'Brake failure test',
+   description:'Confidential Fleet description'
+  },'POST','return=representation'),'real Fleet issue');
+  company={company_id:id,vehicle_id:vehicle.id,issue_id:issue.id};
+  const entitlements=valid(await rpc(fleet,'get_company_entitlements',{
+   _company_id:id
+  }),'real Fleet trial subscription');
+  assert.equal(entitlements[0]?.subscription_status,'trialing');
+  assert.equal(entitlements[0]?.is_access_active,true);
+  for(const actor of [garage,mechanic,customer]){
+   assert.equal(valid(await rpc(actor,'is_company_member',{_company_id:id}),
+    'separate Fleet membership'),false);
+   assert.deepEqual(valid(await http('/rest/v1/vehicles?company_id=eq.'+id,
+    actor,undefined,'GET'),'foreign Fleet vehicle isolation'),[]);
+  }
+ }else{
+  company=valid(await rpc(fleet,'repairbridge_test_create_fleet',{
+   p_registration:'QA-FLEET-001',p_title:'Brake failure test'
+  }),'create disposable fleet');
+ }
  valid(await rpc(fleet,'garage_fleet_request_connection',{
   p_company:company.company_id,p_shop:sh
  }),'request Fleet↔Garage consent');

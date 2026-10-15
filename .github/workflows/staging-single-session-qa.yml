@@ -1,4 +1,4 @@
-name: Flotaryx single-session connected QA - disposable only
+name: Unified hardened Fleet Garage - Android and iPhone
 
 
 on:
@@ -10,7 +10,8 @@ on:
       - 'tests/single_session_connected_browser_e2e.mjs'
       - 'tests/disposable_connected_fixture.mjs'
       - 'supabase/garage_staging/**'
-      - 'tests/repairbridge_fleet_fixture.sql'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ permissions:
 
 jobs:
   local-connected-demo:
-    name: Single-account Auth with local Supabase and mobile browsers
+    name: Hardened real Fleet and Garage - Android Chrome and iPhone Safari emulation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -26,6 +27,13 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: '0'
     steps:
       - uses: actions/checkout@v4
+      - name: Read pinned green security stack from PR 61 (no merge or deployment)
+        uses: actions/checkout@v4
+        with:
+          repository: jdrynko-hue/FleetPilot
+          ref: ee36ffbfaf14c2636e069174ac34523204058619
+          path: .qa-security-source
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -61,7 +69,7 @@ jobs:
               ('fleet','garage','mechanic','customer'))
           print('PASS fail-closed localhost-only interface')
           PY
-      - name: Initialize single-use Supabase without external mail or Fleet production migrations
+      - name: Compose actual Fleet security stack and Garage in a fresh unlinked Supabase
         shell: bash
         run: |
           set -euo pipefail
@@ -69,16 +77,28 @@ jobs:
           cd "$GARAGE_QA_DIR"
           supabase init --yes
           mkdir -p supabase/migrations
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/001_workshop_foundation.sql" supabase/migrations/20261014000100_garage_workshops.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/002_staff_invites_and_diagnosis.sql" supabase/migrations/20261014000200_garage_invites.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" supabase/migrations/20261014000300_garage_assignments.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" supabase/migrations/20261014000400_garage_quotes.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" supabase/migrations/20261014000500_garage_private_media.sql
-          cp "$GITHUB_WORKSPACE/tests/repairbridge_fleet_fixture.sql" supabase/migrations/20261014000590_local_fleet_fixture.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/006_fleet_garage_repair_bridge.sql" supabase/migrations/20261014000600_repairbridge.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/007_private_customer_bookings.sql" supabase/migrations/20261014000700_consumer_booking.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/008_resource_calendar_notifications.sql" supabase/migrations/20261014000800_calendar.sql
-          cp "$GITHUB_WORKSPACE/supabase/garage_staging/009_mechanic_roster_bay_assignment.sql" supabase/migrations/20261014000900_mechanic_roster.sql
+          # Fleet foundation resets are confined to this fresh local stack.
+          # No RepairBridge replacement Fleet tables or provisioning RPC.
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/migrations/001_fleetpilot.sql" "supabase/migrations/20261015000001_001_fleetpilot.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/migrations/002_saas_foundation.sql" "supabase/migrations/20261015000002_002_saas_foundation.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/tests/qa_fleet_storage_local_tables.sql" "supabase/migrations/20261015000003_qa_fleet_storage_local_tables.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql" "supabase/migrations/20261015000004_001_restrict_fleet_documents_checks_change_requests.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/002_private_fleet_storage.sql" "supabase/migrations/20261015000005_002_private_fleet_storage.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/003_driver_membership_least_privilege.sql" "supabase/migrations/20261015000006_003_driver_membership_least_privilege.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/tests/qa_driver_rpc_local_schema.sql" "supabase/migrations/20261015000007_qa_driver_rpc_local_schema.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/004_driver_read_rpcs.sql" "supabase/migrations/20261015000008_004_driver_read_rpcs.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/005_driver_write_rpcs.sql" "supabase/migrations/20261015000009_005_driver_write_rpcs.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/006_company_invites_membership_rpc.sql" "supabase/migrations/20261015000010_006_company_invites_membership_rpc.sql"
+          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/007_public_definer_acl_parity.sql" "supabase/migrations/20261015000011_007_public_definer_acl_parity.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/001_workshop_foundation.sql" "supabase/migrations/20261015000012_001_workshop_foundation.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/002_staff_invites_and_diagnosis.sql" "supabase/migrations/20261015000013_002_staff_invites_and_diagnosis.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" "supabase/migrations/20261015000014_003_mechanic_assignment.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" "supabase/migrations/20261015000015_004_quote_revisions_and_approval.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" "supabase/migrations/20261015000016_005_private_media_storage.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/006_fleet_garage_repair_bridge.sql" "supabase/migrations/20261015000017_006_fleet_garage_repair_bridge.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/007_private_customer_bookings.sql" "supabase/migrations/20261015000018_007_private_customer_bookings.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/008_resource_calendar_notifications.sql" "supabase/migrations/20261015000019_008_resource_calendar_notifications.sql"
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/009_mechanic_roster_bay_assignment.sql" "supabase/migrations/20261015000020_009_mechanic_roster_bay_assignment.sql"
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
           grep -q '^enable_confirmations = false$' supabase/config.toml
       - name: Start local Supabase Auth and Data API
@@ -104,21 +124,29 @@ jobs:
           [[ "$GARAGE_TEST_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
+          export UNIFIED_REAL_FLEET=1
+          export LOCAL_ACL_API_URL="$GARAGE_TEST_API_URL"
+          export LOCAL_ACL_ANON_KEY="$GARAGE_TEST_ANON_KEY"
+          export LOCAL_INVITE_API_URL="$GARAGE_TEST_API_URL"
+          export LOCAL_INVITE_ANON_KEY="$GARAGE_TEST_ANON_KEY"
+          node .qa-security-source/tests/qa_definer_acl_local_e2e.mjs
+          node .qa-security-source/tests/qa_company_invite_local_e2e.mjs
           node tests/single_session_browser_e2e.mjs
           node tests/single_session_connected_browser_e2e.mjs
-      - name: Verify single-user real connected screenshots
+      - name: Verify both Android and iPhone real connected screenshots
         shell: bash
         run: |
           set -euo pipefail
           for role in fleet garage mechanic customer; do
             test -s "artifacts/single-session-connected/${role}.png"
+            test -s "artifacts/single-session-connected/android/${role}.png"
           done
-      - name: Upload single-user connected fictional iPhone screens
+      - name: Upload Android and iPhone screens using synthetic accounts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flotaryx-single-session-connected-iphone
-          path: artifacts/single-session-connected/*.png
+          name: flotaryx-unified-android-iphone
+          path: artifacts/single-session-connected/**/*.png
           retention-days: 7
           if-no-files-found: warn
       - name: Destroy ephemeral Supabase containers and discard state

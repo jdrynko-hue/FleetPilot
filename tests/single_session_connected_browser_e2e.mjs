@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,mkdirSync} from 'node:fs';
 import {createServer} from 'node:http';
-import {chromium,webkit} from 'playwright';
+import {chromium,webkit,devices} from 'playwright';
 import {createFixture} from './disposable_connected_fixture.mjs';
 const ui=readFileSync('web/demo/session/index.html','utf8');
 const pwd='LocalBrowserQA2026!Disposable';
@@ -42,13 +42,13 @@ async function serve(f){
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  return {url:'http://127.0.0.1:'+server.address().port+'/index.html',server};
 }
-async function runBrowser(name,engine){
- const fixture=await createFixture();
+async function runBrowser(name,engine,profile,platform){
+ const fixture=await createFixture({realFleet:process.env.UNIFIED_REAL_FLEET==='1'});
  const {url,server}=await serve(fixture);
  const browser=await engine.launch();
  try{
   const context=await browser.newContext({
-   viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+   ...devices[profile]});
   const page=await context.newPage(),errs=[],external=[];
   page.on('pageerror',e=>errs.push(e.message));
   page.on('request',r=>{
@@ -75,9 +75,9 @@ async function runBrowser(name,engine){
       document.querySelector('#fleetState').textContent===n,label);
   };
   const snap=async(role)=>{
-   if(name!=='WebKit')return;
-   mkdirSync('artifacts/single-session-connected',{recursive:true});
-   await page.screenshot({path:'artifacts/single-session-connected/'+role+'.png',
+   const dir='artifacts/single-session-connected'+(platform==='android'?'/android':'');
+   mkdirSync(dir,{recursive:true});
+   await page.screenshot({path:dir+'/'+role+'.png',
     fullPage:true,animations:'disabled'});
   };
   assert.equal(await page.locator('.panel.active').count(),0);
@@ -121,6 +121,8 @@ async function runBrowser(name,engine){
   console.log('PASS '+name+' real local Auth: four sequential accounts, Fleet↔Garage approval, mechanic, private booking, no shared session');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
-for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]])
- await runBrowser(name,engine);
+for(const [name,engine,profile,platform] of [
+ ['Android Chrome (emulated Pixel 5)',chromium,'Pixel 5','android'],
+ ['iPhone Safari (emulated iPhone 13)',webkit,'iPhone 13','ios']])
+ await runBrowser(name,engine,profile,platform);
 console.log('PASS: actual connected multi-role flow using only one authenticated browser user at once');
