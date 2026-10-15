@@ -5,6 +5,9 @@ on:
     paths:
       - 'web/demo/connected/**'
       - 'tests/connected_garage_browser_e2e.mjs'
+      - 'tests/single_session_connected_browser_e2e.mjs'
+      - 'tests/disposable_connected_fixture.mjs'
+      - 'web/demo/session/**'
       - '.github/workflows/connected-garage-browser-qa.yml'
       - 'supabase/garage_staging/**'
       - 'tests/repairbridge_fleet_fixture.sql'
@@ -44,6 +47,8 @@ jobs:
       - name: Verify browser test syntax and local-only UI
         run: |
           node --check tests/connected_garage_browser_e2e.mjs
+          node --check tests/disposable_connected_fixture.mjs
+          node --check tests/single_session_connected_browser_e2e.mjs
           python3 - <<'PY'
           from pathlib import Path
           page=Path('web/demo/connected/index.html').read_text()
@@ -100,6 +105,7 @@ jobs:
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
           node tests/connected_garage_browser_e2e.mjs
+          node tests/single_session_connected_browser_e2e.mjs
       - name: Verify API-connected iPhone screenshots contain only fictional UI
         shell: bash
         run: |
@@ -116,6 +122,21 @@ jobs:
           path: artifacts/connected-iphone-qa/*.png
           if-no-files-found: warn
           retention-days: 7
+      - name: Verify single-user real connected screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          for role in fleet garage mechanic customer; do
+            test -s "artifacts/single-session-connected/${role}.png"
+          done
+      - name: Upload single-user connected fictional iPhone screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flotaryx-single-session-connected-iphone
+          path: artifacts/single-session-connected/*.png
+          retention-days: 7
+          if-no-files-found: warn
       - name: Destroy ephemeral Supabase containers and discard state
         if: always()
         shell: bash
