@@ -33,16 +33,21 @@ class EcosystemGate extends StatefulWidget {
 }
 
 class _EcosystemGateState extends State<EcosystemGate> {
-  late Future<EcosystemAccess> _access;
+  late Future<EcosystemAccess?> _access;
   bool _signingOut = false;
   String? _error;
   bool get pl => AppLocale.language.value == 'pl';
   @override
-  void initState() { super.initState(); _access = widget.loadAccess(); }
+  void initState() { super.initState(); _access = _loadAccess(); }
+  Future<EcosystemAccess?> _loadAccess() async {
+    // Handle even an immediate failure before FutureBuilder subscribes.
+    // The UI receives no private transport/database exception details.
+    try { return await widget.loadAccess(); } catch (_) { return null; }
+  }
   bool get _current => widget.isCurrentAccount?.call() ?? true;
   void _reload() {
     if (!_current) return;
-    setState(() { _error = null; _access = widget.loadAccess(); });
+    setState(() { _error = null; _access = _loadAccess(); });
   }
   void _open(EcosystemDestination destination) {
     if (_signingOut || !_current) return;
@@ -74,7 +79,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
       IconButton(key: const Key('ecosystem_logout'), onPressed: _signingOut ? null : _logout,
         tooltip: pl ? 'Wyloguj' : 'Sign out', icon: const Icon(Icons.logout)),
     ]),
-    body: FutureBuilder<EcosystemAccess>(future: _access,
+    body: FutureBuilder<EcosystemAccess?>(future: _access,
       builder: (context, snapshot) {
         if (_signingOut || snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
@@ -86,7 +91,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
               child: Text(pl ? 'Spróbuj ponownie' : 'Retry')),
           ]));
         }
-        final access = snapshot.requireData;
+        final access = snapshot.requireData!;
         return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(padding: const EdgeInsets.all(20), children: [
             Text(pl ? 'Wybierz moduł' : 'Choose a module',

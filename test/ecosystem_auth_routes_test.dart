@@ -18,7 +18,8 @@ void main() {
     for(final channel in ['plugins.flutter.io/shared_preferences','com.llfbandit.app_links/events']) {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(MethodChannel(channel),
-          (call) async => call.method=='getAll' ? <String,Object>{} : null);
+          (call) async => channel=='plugins.flutter.io/shared_preferences'
+            ? (call.method=='getAll' ? <String,Object>{} : true) : null);
     }
     await Supabase.initialize(url:'https://fyestmquqvkdebxxbcky.supabase.co',
       publishableKey:'sb_publishable_mock_only',
