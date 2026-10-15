@@ -93,7 +93,7 @@ const permitted=new Set([
  'garage_fleet_requests_for_me','garage_booking_shop_inbox'
 ]);
 let selected='fleet',session=null,stage=0,requestId=null,orderId=null,
- bookingId=null,bookingStatus='none',snapshot=null,jobs=[],notices=[],busy=false;
+ bookingId=null,bookingStatus='none',snapshot=null,jobs=[],notices=[],busy=false,authEpoch=0;
 function valid(){
  if(!allowed(location.hostname)||!cfg||typeof cfg!=='object'||'roles' in cfg)return false;
  try{
@@ -123,17 +123,66 @@ function nav(){
    !session?'Wybierz rolę, a następnie zaloguj jej własnym kontem testowym.':'');
  render();
 }
+// Bound both headers and response-body reads; no automatic retries of writes.
+async function boundedFetch(url,options={}){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(url,{...options,signal:controller.signal});
+  const raw=await response.text();
+  return {ok:response.ok,status:response.status,
+   json:async()=>JSON.parse(raw),text:async()=>raw};
+ }finally{clearTimeout(timeout)}
+}
+function adoptTokens(caller,data){
+ const expiry=Number.isFinite(data.expires_at)?data.expires_at:
+   Date.now()/1000+Number(data.expires_in);
+ if(typeof data.access_token!=='string'||!data.access_token||
+    typeof data.refresh_token!=='string'||!data.refresh_token||
+    data.user?.id!==caller.id||!Number.isFinite(expiry))
+  throw Error('Nieprawidłowa sesja');
+ caller.jwt=data.access_token;caller.refreshToken=data.refresh_token;
+ caller.expiresAt=expiry;
+ clearTimeout(caller.timer);
+ caller.timer=setTimeout(()=>{void ensureToken(caller).catch(()=>{})},
+  Math.max(0,(expiry-Date.now()/1000-30)*1000));
+}
+async function ensureToken(caller){
+ if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
+ if(caller.expiresAt>Date.now()/1000+30)return;
+ // Membership reads and foreground work can arrive together. Rotate each
+ // refresh token once and share its result only within this caller session.
+ if(caller.refreshing)return caller.refreshing;
+ caller.refreshing=(async()=>{
+  try{
+   const r=await boundedFetch(cfg.api+'/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',cache:'no-store',headers:{apikey:cfg.anon,'content-type':'application/json'},
+    body:JSON.stringify({refresh_token:caller.refreshToken})
+   });
+   const data=await r.json();
+   if(session!==caller)throw Error('Sesja zmieniła się podczas odnowienia');
+   if(!r.ok)throw Error('Odnowienie odrzucone');
+   adoptTokens(caller,data);
+  }catch{
+   if(session===caller)void signOut('Sesja wygasła lub nie można jej odnowić. Zaloguj się ponownie.');
+   throw Error('Sesja wymaga ponownego logowania');
+  }finally{caller.refreshing=null}
+ })();
+ return caller.refreshing;
+}
 async function discoverAccess(caller){
  // Use the authenticated Auth response ID, never user-editable metadata.
  if(!/^[0-9a-f-]{36}$/i.test(caller.id))throw Error('Brak zweryfikowanej tożsamości');
  async function ownMembership(table,scope,value){
+  await ensureToken(caller);
+  if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
   const query='?select=role&user_id=eq.'+caller.id+'&'+scope+'=eq.'+value;
-  const r=await fetch(cfg.api+'/rest/v1/'+table+query,{
+  const r=await boundedFetch(cfg.api+'/rest/v1/'+table+query,{
    headers:{apikey:cfg.anon,authorization:'Bearer '+caller.jwt,accept:'application/json'},
    cache:'no-store'
   });
   if(session!==caller)throw Error('Sesja zmieniła się podczas rozpoznawania dostępu');
-  if(r.status===401){await signOut();throw Error('Sesja wygasła')}
+  if(r.status===401){void signOut('Sesja wygasła. Zaloguj się ponownie.');throw Error('Sesja wygasła')}
   const rows=await r.json();
   if(!r.ok||!Array.isArray(rows)||rows.some(row=>typeof row.role!=='string'))
    throw Error('Nie udało się potwierdzić członkostwa konta');
@@ -160,18 +209,21 @@ async function signIn(event){
  const email=el('loginEmail').value.trim(),password=el('loginPassword').value;
  el('loginPassword').value='';
  if(!email||!password)return;
+ const epoch=++authEpoch;
  busy=true;text('loginError','');render();
  try{
-  const r=await fetch(cfg.api+'/auth/v1/token?grant_type=password',{
+  const r=await boundedFetch(cfg.api+'/auth/v1/token?grant_type=password',{
    method:'POST',headers:{apikey:cfg.anon,'content-type':'application/json'},
    body:JSON.stringify({email,password}),cache:'no-store'
   });
   const d=await r.json();
+  if(authEpoch!==epoch)return;
   if(!r.ok||typeof d.access_token!=='string')throw Error('Logowanie odrzucone');
   // Exactly one caller token stays in closure memory. No cookies,
   // sessionStorage, localStorage, URL fragments or shared role-JWT map.
   session={jwt:d.access_token,role:null,email:d.user?.email||email,id:d.user?.id,access:null};
   const caller=session;
+  adoptTokens(caller,d);
   el('loginEmail').value=''; el('loginForm').hidden=true;
   el('accountInfo').hidden=false;
   text('accountRole','Sprawdzanie dostępu konta');
@@ -198,22 +250,30 @@ async function signIn(event){
    text('notice','Sesja zalogowana. Nie udało się potwierdzić dostępu lub pobrać danych.');
    el('notice').classList.add('error');
   }
- }catch(e){text('loginError','Nie udało się zalogować do wybranej roli.');}
- finally{busy=false;nav()}
+ }catch(e){
+  if(authEpoch===epoch){
+   if(session)void signOut();
+   text('loginError','Nie udało się zalogować do wybranej roli.');
+  }
+ }
+ finally{if(authEpoch===epoch){busy=false;nav()}}
 }
-async function signOut(){
+async function signOut(message){
  if(!session)return;
- const jwt=session.jwt;
+ const old=session,jwt=old.jwt;
+ clearTimeout(old.timer);
+ old.jwt=null;old.refreshToken=null;old.access=null;
+ ++authEpoch;busy=false;
  // Remove local bearer first. Revoke refresh/session server-side best effort.
  session=null;stage=0;requestId=null;orderId=null;bookingId=null;
  bookingStatus='none';snapshot=null;jobs=[];notices=[];
  render();
  el('accountInfo').hidden=true;el('loginForm').hidden=false;
  text('accountEmail','');text('accountRole','');text('loginError','');
- text('notice','Wylogowano. Aby zmienić rolę, zaloguj inne konto.');
+ text('notice',typeof message==='string'?message:'Wylogowano. Aby zmienić rolę, zaloguj inne konto.');
  nav();
  try{
-  await fetch(cfg.api+'/auth/v1/logout',{method:'POST',
+  await boundedFetch(cfg.api+'/auth/v1/logout?scope=local',{method:'POST',keepalive:true,
    headers:{apikey:cfg.anon,authorization:'Bearer '+jwt},
    cache:'no-store'});
  }catch{} 
@@ -221,15 +281,19 @@ async function signOut(){
 async function rpc(name,args={}){
  if(!configured||!session||!permitted.has(name))throw Error('Niedozwolone RPC');
  const caller=session;
- const r=await fetch(cfg.api+'/rest/v1/rpc/'+name,{
+ await ensureToken(caller);
+ if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
+ const r=await boundedFetch(cfg.api+'/rest/v1/rpc/'+name,{
   method:'POST',cache:'no-store',
   headers:{apikey:cfg.anon,authorization:'Bearer '+caller.jwt,
    'content-type':'application/json',accept:'application/json'},
   body:JSON.stringify(args)
  });
  if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
- if(r.status===401){await signOut();throw Error('Sesja wygasła')}
- const raw=await r.text();let d;
+ if(r.status===401){void signOut('Sesja wygasła. Zaloguj się ponownie.');throw Error('Sesja wygasła')}
+ const raw=await r.text();
+ if(session!==caller)throw Error('Sesja zmieniła się podczas żądania');
+ let d;
  try{d=raw?JSON.parse(raw):null}catch{d=raw}
  if(!r.ok)throw Error('API odmówiło operacji '+name+' ('+r.status+')');
  return d;
@@ -321,6 +385,7 @@ async function act(name){
  if(!configured||!session||busy||session.role!==selected||acts[name]!==session.role)return;
  const btn=controls.find(b=>b.dataset.act===name);
  if(!btn||btn.disabled)return;
+ const caller=session;
  busy=true;render();
  try{
   if(name==='send'){
@@ -352,13 +417,16 @@ async function act(name){
    bookingStatus='confirmed';
   }else return;
   await refresh();
+  if(session!==caller)return;
   text('notice','API potwierdziło operację: '+name);
   el('notice').classList.remove('error');
- }catch(e){text('notice',e.message);el('notice').classList.add('error')}
- finally{busy=false;render()}
+ }catch(e){if(session===caller){text('notice',e.message);el('notice').classList.add('error')}}
+ finally{if(session===caller){busy=false;render()}}
 }
 el('loginForm').addEventListener('submit',signIn);
-el('logoutButton').addEventListener('click',signOut);
+el('logoutButton').addEventListener('click',()=>{void signOut()});
+// Never restore private views or credentials from a browser back/forward cache.
+addEventListener('pagehide',()=>{if(session)void signOut('Sesja zamknięta. Zaloguj się ponownie.')});
 controls.forEach(c=>c.addEventListener('click',()=>act(c.dataset.act)));
 addEventListener('hashchange',nav);
 text('notice',configured?

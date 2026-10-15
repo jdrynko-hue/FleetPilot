@@ -134,6 +134,112 @@ async function runBrowser(name,engine,profile,platform){
   await page.unroute(lookup);
   await page.locator('#logoutButton').click();
   await page.locator('#loginForm:visible').waitFor();
+  // Force the access-token deadline through the real password response;
+  // refresh itself still reaches local GoTrue and rotates the actual token.
+  const passwordGrant='**/auth/v1/token?grant_type=password';
+  const refreshGrant='**/auth/v1/token?grant_type=refresh_token';
+  let refreshCalls=0;
+  page.on('request',request=>{
+   if(new URL(request.url()).searchParams.get('grant_type')==='refresh_token')refreshCalls++;
+  });
+  const nearExpiry=async route=>{
+   const response=await route.fetch();
+   const data=await response.json();
+   data.expires_at=Math.floor(Date.now()/1000)-1;
+   await route.fulfill({response,json:data});
+  };
+  await page.route(passwordGrant,nearExpiry);
+  await move('fleet');
+  assert.equal(refreshCalls,1,'parallel membership reads must share one real refresh');
+  await page.unroute(passwordGrant);
+  assert.deepEqual(await page.evaluate(()=>[localStorage.length,sessionStorage.length]),[0,0]);
+
+  // Local logout must leave another session of the same account usable.
+  const otherResponse=await fetch(api+'/auth/v1/token?grant_type=password',{
+   method:'POST',headers:{apikey:key,'content-type':'application/json'},
+   body:JSON.stringify({email:fixture.roles.fleet.email,password:pwd})});
+  assert.equal(otherResponse.ok,true);
+  const other=await otherResponse.json();
+  const loggedOut=page.waitForResponse(r=>r.url().endsWith('/auth/v1/logout?scope=local'));
+  await page.locator('#logoutButton').click();
+  assert.equal((await loggedOut).status(),204);
+  await page.locator('#loginForm:visible').waitFor();
+  const otherRefresh=await fetch(api+'/auth/v1/token?grant_type=refresh_token',{
+   method:'POST',headers:{apikey:key,'content-type':'application/json'},
+   body:JSON.stringify({refresh_token:other.refresh_token})});
+  assert.equal(otherRefresh.ok,true,'logout revoked a different device session');
+
+  // Rejected refresh must clear panels/controls and stop, without a loop.
+  await page.route(passwordGrant,nearExpiry);
+  await page.route(refreshGrant,route=>route.fulfill({status:400,
+   contentType:'application/json',body:JSON.stringify({error_code:'refresh_token_not_found'})}));
+  await page.locator('#loginEmail').fill(fixture.roles.fleet.email);
+  await page.locator('#loginPassword').fill(pwd);
+  await page.locator('#signInButton').click();
+  await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Sesja wygasła'));
+  assert.equal(await page.locator('.panel.active').count(),0);
+  assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
+  assert.equal(refreshCalls,2,'failed refresh was retried');
+  await page.unroute(passwordGrant);
+  await page.unroute(refreshGrant);
+
+  // An unauthorized write is never replayed after refreshing credentials.
+  const guestResponse=await fetch(api+'/auth/v1/signup',{
+   method:'POST',headers:{apikey:key,'content-type':'application/json'},
+   body:JSON.stringify({email:'lifecycle-'+platform+'-'+Date.now()+'@example.test',password:pwd})});
+  assert.equal(guestResponse.ok,true);
+  const guest=await guestResponse.json();
+  await page.locator('[data-role="customer"]').click();
+  await page.locator('#loginEmail').fill(guest.user.email);
+  await page.locator('#loginPassword').fill(pwd);
+  await page.locator('#signInButton').click();
+  await page.locator('#customer.panel.active').waitFor();
+  let writes=0;
+  const bookingRpc='**/rest/v1/rpc/garage_booking_request';
+  await page.route(bookingRpc,route=>{writes++;return route.fulfill({status:401,
+   contentType:'application/json',body:JSON.stringify({message:'Synthetic revoked session'})})});
+  await page.locator('[data-act="request"]:not([disabled])').click();
+  await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Sesja wygasła'));
+  assert.equal(writes,1,'unauthorized booking mutation was retried');
+  assert.equal(refreshCalls,2,'401 mutation triggered an unsafe replay refresh');
+  assert.equal(await page.locator('.panel.active').count(),0);
+  assert.equal(await page.locator('[data-act]:not([disabled])').count(),0);
+  assert.equal(await page.locator('#history li').count(),0);
+  assert.equal(await page.locator('#jobs li').count(),0);
+  await page.unroute(bookingRpc);
+
+  // A browser pagehide clears a pending caller. Its late response must not
+  // reopen old Fleet views or overwrite a newly logged-in customer account.
+  let release,seen,finished;
+  const delayed=new Promise(resolve=>{release=resolve});
+  const reached=new Promise(resolve=>{seen=resolve});
+  const handled=new Promise(resolve=>{finished=resolve});
+  const fleetRead='**/rest/v1/rpc/garage_fleet_requests_for_me';
+  await page.route(fleetRead,async route=>{
+   const response=await route.fetch();seen();await delayed;await route.fulfill({response});finished();
+  });
+  await page.locator('[data-role="fleet"]').click();
+  await page.locator('#loginEmail').fill(fixture.roles.fleet.email);
+  await page.locator('#loginPassword').fill(pwd);
+  await page.locator('#signInButton').click();
+  await reached;
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+  assert.equal(await page.locator('.panel.active').count(),0);
+  await move('customer');
+  const lateResponse=page.waitForResponse(r=>r.url().endsWith('/rpc/garage_fleet_requests_for_me'));
+  release();
+  await handled;
+  await (await lateResponse).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+  await page.unroute(fleetRead);
+  await page.waitForFunction(()=>!document.querySelector('#logoutButton').disabled);
+  assert.equal(await page.locator('#customer.panel.active').count(),1);
+  assert.equal(await page.locator('#fleet.panel.active').count(),0);
+  assert.match(await page.locator('#accountRole').textContent(),/^Dostęp konta: customer/);
+  await page.locator('#logoutButton').click();
+  await page.locator('#loginForm:visible').waitFor();
+  assert.deepEqual(await page.evaluate(()=>[localStorage.length,sessionStorage.length]),[0,0]);
+  console.log('PASS '+name+' session lifecycle: one real refresh, local-only logout, failed refresh closed, 401 write not replayed, stale pagehide response ignored');
   assert.deepEqual(errs,[]);
   assert.deepEqual(external,[]);
   console.log('PASS '+name+' real local Auth: four sequential accounts, Fleet↔Garage approval, mechanic, private booking, no shared session');
