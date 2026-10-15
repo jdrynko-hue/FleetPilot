@@ -21,8 +21,9 @@ BEGIN
    RAISE EXCEPTION 'Wrong composite FK delete action for %',x.name;
   END IF;
   IF x.set_null_column<>'' AND NOT EXISTS(
-    SELECT 1 FROM unnest(k.confdelsetcols) n
-    JOIN pg_catalog.pg_attribute a ON a.attrelid=k.conrelid AND a.attnum=n
+    SELECT 1 FROM unnest(k.confdelsetcols) AS deletion_col(attnum)
+    JOIN pg_catalog.pg_attribute a
+      ON a.attrelid=k.conrelid AND a.attnum=deletion_col.attnum
     WHERE a.attname=x.set_null_column
   ) THEN RAISE EXCEPTION 'SET NULL must target only field %',x.set_null_column;
   END IF;
