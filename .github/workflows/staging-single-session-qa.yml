@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/staging-single-session-qa.yml'
       - 'web/demo/session/**'
+      - 'tools/export_private_qa.py'
+      - 'tests/private_qa_export_test.py'
       - 'tests/single_session_browser_e2e.mjs'
       - 'tests/single_session_connected_browser_e2e.mjs'
       - 'tests/disposable_connected_fixture.mjs'
@@ -40,6 +42,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
+      - name: Verify owner-private HTTPS export configuration
+        run: python3 tests/private_qa_export_test.py
       - name: Install pinned disposable browser dependencies
         shell: bash
         run: |
