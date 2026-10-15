@@ -106,7 +106,8 @@ jobs:
           [[ "$GARAGE_TEST_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]
           echo "::add-mask::$GARAGE_TEST_ANON_KEY"
           cd "$GITHUB_WORKSPACE"
-          node tests/single_session_browser_e2e.mjs
+          # Auth-only denial is tested independently by qa-single-session-auth.yml.
+          # Here confirmed customers ARE authorized, so do not expect denial.
           node tests/single_session_connected_browser_e2e.mjs
       - name: Verify single-user real connected screenshots
         shell: bash
