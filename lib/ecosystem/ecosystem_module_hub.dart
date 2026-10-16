@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/localization.dart';
 import '../garage/booking_management_screens.dart';
 import '../garage/calendar_settings_screen.dart';
 import '../garage/consumer_booking_repository.dart';
