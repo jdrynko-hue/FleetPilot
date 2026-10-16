@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/garage/create_workspace_screen.dart';
 import 'package:fleetpilot/garage/garage_ui_text.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +19,29 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('garage_create_submit')));
     await tester.pumpAndSettle();
   }
+  testWidgets('module chooser opens workshop registration and reloads on return', (tester) async {
+    var loads = 0;
+    await tester.pumpWidget(MaterialApp(home: EcosystemGate(
+      loadAccess: () async { loads++; return const EcosystemAccess(hasFleet: false, garages: []); },
+      destinationBuilder: (_) => const Scaffold(body: Text('Customer destination')),
+      signOut: () async {}, isCurrentAccount: () => true,
+      createWorkshopBuilder: (routeContext) => Scaffold(body: FilledButton(
+        key: const Key('finish_registration'),
+        onPressed: () => Navigator.of(routeContext).pop(), child: const Text('Finish'))),
+    )));
+    await tester.pumpAndSettle();
+    expect(loads, 1);
+    expect(find.byKey(const Key('ecosystem_customer')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('ecosystem_create_workshop')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('finish_registration')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('finish_registration')));
+    await tester.pumpAndSettle();
+    expect(loads, 2);
+    expect(find.byKey(const Key('ecosystem_customer')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('creation requires name and business confirmation then sends one request', (tester) async {
     final pending = Completer<void>();
     var requests = 0;
