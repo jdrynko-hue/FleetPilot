@@ -183,6 +183,13 @@ void main() {
       tester.view.physicalSize = Size(width, 2200);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'Vehicles width $width');
+      // Search and insurance controls must be completely within the viewport,
+      // not just silently clipped by the ListView at 320px.
+      final availableWidth = width - 32;
+      expect(tester.getSize(find.byType(TextField).first).width,
+        lessThanOrEqualTo(availableWidth), reason: 'Search width $width');
+      expect(tester.getSize(find.byType(CheckboxListTile)).width,
+        lessThanOrEqualTo(availableWidth), reason: 'Filter width $width');
     }
     tester.view.physicalSize = const Size(1200, 2200);
     await tester.pumpAndSettle();
