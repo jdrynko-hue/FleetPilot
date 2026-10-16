@@ -193,10 +193,15 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    FilterChip(
-                      label: Text('${tr('insurance_due_filter')} ($insuranceAttention)'),
-                      selected: _insuranceOnly,
-                      onSelected: (value) => setState(() => _insuranceOnly = value),
+                    SizedBox(
+                      width: 360,
+                      child: CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text('${tr('insurance_due_filter')} ($insuranceAttention)'),
+                        value: _insuranceOnly,
+                        onChanged: (value) => setState(() => _insuranceOnly = value ?? false),
+                      ),
                     ),
                     TextButton.icon(
                       onPressed: () => Navigator.of(context).push<void>(

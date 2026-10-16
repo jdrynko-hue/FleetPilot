@@ -148,7 +148,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Date not set'), findsOneWidget);
     expect(find.text('Insurance: within 30 days / overdue (3)'), findsOneWidget);
-    await tester.tap(find.byType(FilterChip));
+    await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     expect(find.byType(VehicleListTile), findsNWidgets(3));
     expect(find.text('CAR 31'), findsNothing);
@@ -156,7 +156,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'CAR 31');
     await tester.pumpAndSettle();
     expect(find.text('No matching vehicles'), findsOneWidget);
-    await tester.tap(find.byType(FilterChip));
+    await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     expect(find.text('CAR 31'), findsOneWidget);
     expect(find.byType(VehicleListTile), findsOneWidget);
