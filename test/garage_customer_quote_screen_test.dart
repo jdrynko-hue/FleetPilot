@@ -366,4 +366,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('late response from old approval cannot replace new scope',
+      (tester) async {
+    final oldRpc = Completer<int>();
+    var oldCalls = 0;
+    var newCalls = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(),
+      approveRevision: (revision) {
+        oldCalls++;
+        return oldRpc.future;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pump();
+    expect(oldCalls, 1);
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(revision: 2),
+      approveRevision: (revision) async { newCalls++; return revision; },
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    oldRpc.complete(1);
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    expect(find.text('Approval recorded. Refresh to verify the current status.'),
+        findsNothing);
+    expect(newCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
 }
