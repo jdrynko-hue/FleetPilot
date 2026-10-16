@@ -5,6 +5,7 @@ import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
 import 'booking_time_text.dart';
 import 'booking_local_start.dart';
+import 'garage_ui_text.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -39,12 +40,15 @@ class GarageBookingSearchScreen extends StatefulWidget {
 class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   final _city = TextEditingController();
   List<GarageBookingWorkshop> _shops = const [];
+  String _serviceFilter = '';
+  bool _searched = false;
+  int _scope = 0;
   bool _busy = false;
   String? _error;
   int _generation = 0;
 
-  bool get _pl => AppLocale.language.value == 'pl';
-  String tr(String pl, String en) => _pl ? pl : en;
+  List<GarageBookingWorkshop> get _visibleShops => _serviceFilter.isEmpty
+      ? _shops : _shops.where((shop) => shop.services.contains(_serviceFilter)).toList();
 
   @override
   void didUpdateWidget(covariant GarageBookingSearchScreen oldWidget) {
@@ -55,7 +59,11 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       // Repository callbacks define the authenticated directory scope.
       // Invalidate old in-flight results and never show another scope's shops.
       _generation++;
+      _scope++;
       _shops = const [];
+      _searched = false;
+      _serviceFilter = '';
+      _city.clear();
       _error = null;
       _busy = false;
     }
@@ -72,29 +80,31 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
     if (_busy) return;
     final city = _city.text.trim();
     if (city.isNotEmpty && city.length < 2) {
-      setState(() => _error = tr('Wpisz co najmniej 2 znaki.',
-          'Enter at least two characters.'));
+      setState(() {
+        _shops = const []; _searched = false;
+        _error = 'bookingSearchShortCity';
+      });
       return;
     }
     final gen = ++_generation;
     final search = widget.search;
-    setState(() { _busy = true; _shops = const []; _error = null; });
+    setState(() { _busy = true; _shops = const []; _searched = false; _error = null; });
     try {
       final result = await search(city: city.isEmpty ? null : city);
       if (!mounted || gen != _generation) return;
       setState(() {
         _shops = List.unmodifiable(result);
+        _searched = true;
         if (result.isEmpty) {
-          _error = tr('Brak zgłoszonych warsztatów.',
-              'No workshops accepting requests found.');
+          _error = 'bookingSearchEmpty';
         }
       });
     } catch (_) {
       if (!mounted || gen != _generation) return;
       setState(() {
         _shops = const [];
-        _error = tr('Nie można pobrać katalogu. Spróbuj ponownie.',
-            'Could not load workshops. Retry.');
+        _searched = false;
+        _error = 'bookingSearchFailed';
       });
     } finally {
       if (mounted && gen == _generation) setState(() => _busy = false);
@@ -111,12 +121,10 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('Znajdź mechanika', 'Find a mechanic'))),
+    appBar: AppBar(title: Text(GarageUiText.get('findWorkshop'))),
     body: SafeArea(child: ListView(padding: const EdgeInsets.all(16),
       children: [
-        Text(tr('Wybierz warsztat i poproś o termin. Godzinę musi '
-                'potwierdzić mechanik.',
-                'Request a preferred time. The workshop must confirm it.'),
+        Text(GarageUiText.get('bookingSearchHint'),
             key: const Key('booking_not_guaranteed')),
         const SizedBox(height: 16),
         TextField(key: const Key('booking_search_city'),
@@ -124,14 +132,40 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
           onSubmitted: (_) => _search(),
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
-            labelText: tr('Miasto (opcjonalnie)', 'City (optional)'))),
+            labelText: GarageUiText.get('bookingSearchCity'))),
+        KeyedSubtree(key: ValueKey(_scope), child: DropdownButtonFormField<String>(
+          key: const Key('booking_search_service'),
+          initialValue: _serviceFilter,
+          isExpanded: true,
+          decoration: InputDecoration(border: const OutlineInputBorder(),
+            labelText: GarageUiText.get('bookingSearchService')),
+          items: [
+            DropdownMenuItem(value: '', child: Text(
+              GarageUiText.get('bookingSearchAllServices'), overflow: TextOverflow.ellipsis)),
+            for (final code in GarageBookingService.values)
+              DropdownMenuItem(value: code, child: Text(
+                bookingServiceLabel(code), overflow: TextOverflow.ellipsis)),
+          ],
+          onChanged: _busy ? null : (value) => setState(() => _serviceFilter = value ?? ''),
+        )),
+        const SizedBox(height: 12),
         FilledButton(key: const Key('booking_search_submit'),
           onPressed: _busy ? null : _search,
-          child: Text(tr('Szukaj warsztatów', 'Search workshops'))),
+          child: Text(GarageUiText.get('bookingSearchAction'))),
         if (_busy) const Center(child: CircularProgressIndicator()),
-        if (_error != null) Text(_error!,
+        if (_error != null) Text(GarageUiText.get(_error!),
           key: const Key('booking_search_error')),
-        for (final shop in _shops) Card(
+        if (_searched && _shops.isNotEmpty) ...[
+          Text(GarageUiText.get('bookingSearchLimitHint'),
+            key: const Key('booking_search_limit_hint')),
+          if (_visibleShops.isEmpty)
+            Text(GarageUiText.get('bookingSearchNoService'),
+              key: const Key('booking_search_no_service'))
+          else
+            Text(GarageUiText.format('bookingSearchCount', {'count': _visibleShops.length}),
+              key: const Key('booking_search_count')),
+        ],
+        for (final shop in _visibleShops) Card(
           key: Key('booking_shop_${shop.workspaceId}'),
           child: Padding(padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,11 +173,10 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
                 Text(shop.name, style: Theme.of(context).textTheme.titleMedium),
                 Text('${shop.city}, ${shop.country}'),
                 Text(shop.services.map((service) => bookingServiceLabel(service)).join(', ')),
-                Text(tr('Strefa czasowa: ${shop.timeZone}',
-                    'Workshop time zone: ${shop.timeZone}')),
+                Text(GarageUiText.format('bookingWorkshopZone', {'zone': shop.timeZone})),
                 OutlinedButton(key: Key('booking_open_${shop.workspaceId}'),
                   onPressed: _busy ? null : () => _open(shop),
-                  child: Text(tr('Poproś o termin', 'Request a time'))),
+                  child: Text(GarageUiText.get('bookingRequestTime'))),
               ]),
           ),
         ),
