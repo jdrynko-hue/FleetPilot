@@ -4,7 +4,7 @@ import '../company/business_review_alert.dart';
 import '../core/localization.dart';
 import '../data/models.dart';
 
-enum _HeaderAction { manager, refresh, signOut }
+enum _HeaderAction { manager, createFleet, refresh, signOut }
 
 /// Keeps key actions reachable without overflowing a phone-width AppBar.
 class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -18,6 +18,7 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onNotificationsPressed,
     required this.onRefreshPressed,
     required this.onSignOutPressed,
+    this.onCreateFleetPressed,
     this.businessReviewAlert = const BusinessReviewAlert(),
     super.key,
   });
@@ -31,7 +32,10 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onNotificationsPressed;
   final VoidCallback onRefreshPressed;
   final VoidCallback onSignOutPressed;
+  final VoidCallback? onCreateFleetPressed;
   final Widget businessReviewAlert;
+  bool get _canCreateFleet => onCreateFleetPressed != null &&
+      (selectedMembership.role == 'owner' || selectedMembership.role == 'admin');
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -143,6 +147,8 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
               switch (action) {
                 case _HeaderAction.manager:
                   onManagerPressed();
+                case _HeaderAction.createFleet:
+                  onCreateFleetPressed?.call();
                 case _HeaderAction.refresh:
                   onRefreshPressed();
                 case _HeaderAction.signOut:
@@ -150,6 +156,9 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
               }
             },
             itemBuilder: (_) => [
+              if (_canCreateFleet)
+                PopupMenuItem(key: const Key('fleet_menu_create'),
+                  value: _HeaderAction.createFleet, child: Text(tr('create_fleet'))),
               if (canManage)
                 PopupMenuItem(
                   key: const Key('fleet_menu_manager'),
@@ -173,6 +182,10 @@ class FleetAppBar extends StatelessWidget implements PreferredSizeWidget {
             ],
           )
         else ...[
+          if (_canCreateFleet)
+            IconButton(key: const Key('fleet_create_fleet'),
+              tooltip: tr('create_fleet'), icon: const Icon(Icons.add_business_outlined),
+              onPressed: onCreateFleetPressed),
           IconButton(
             tooltip: tr('refresh'),
             onPressed: onRefreshPressed,

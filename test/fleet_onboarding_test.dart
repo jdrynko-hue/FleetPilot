@@ -167,4 +167,32 @@ void main() {
     expect(find.text('GBP — funt brytyjski'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('uncertain additional creation requires membership check before retry', (tester) async {
+    var writes = 0;
+    var checks = 0;
+    await tester.pumpWidget(MaterialApp(home: CreateCompanyScreen(
+      allowCancel: true, currentAccountId: () => 'account', onCreated: () => checks++,
+      createCompany: ({required name, required country, required currency}) async {
+        writes++;
+        throw StateError('PRIVATE TRANSPORT DETAIL');
+      })));
+    await tester.enterText(find.byType(TextField), 'Additional fleet');
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    final create = find.byType(FilledButton);
+    await tester.ensureVisible(create);
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(writes, 1);
+    expect(tester.widget<FilledButton>(create).onPressed, isNull);
+    expect(find.byKey(const Key('fleet_creation_uncertain')), findsOneWidget);
+    expect(find.textContaining('PRIVATE TRANSPORT DETAIL'), findsNothing);
+    final check = find.byKey(const Key('fleet_creation_check_memberships'));
+    await tester.ensureVisible(check);
+    await tester.tap(check);
+    expect(checks, 1);
+    expect(writes, 1);
+  });
+
 }
