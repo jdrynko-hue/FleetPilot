@@ -12,6 +12,7 @@ import '../garage/media_repository.dart';
 import '../garage/resource_calendar_repository.dart';
 import '../garage/resource_calendar_screen.dart';
 import '../garage/workshop_quotes_screen.dart';
+import '../garage/garage_ui_text.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -25,7 +26,6 @@ class EcosystemModuleHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pl = AppLocale.language.value == 'pl';
     final bookings = GarageBookingRepository(client);
     final calendar = GarageResourceCalendarRepository(client);
     if (destination.module == EcosystemModule.mechanic) {
@@ -38,38 +38,38 @@ class EcosystemModuleHub extends StatelessWidget {
     final customer = destination.module == EcosystemModule.customer;
     final pages = <String, Widget Function()>{
       if (customer) ...{
-        pl ? 'Znajdź warsztat' : 'Find a workshop': () =>
+        GarageUiText.get('findWorkshop'): () =>
           GarageBookingSearchScreen.forRepository(bookings),
-        pl ? 'Moje rezerwacje' : 'My bookings': () =>
+        GarageUiText.get('myBookings'): () =>
           GarageMyBookingsScreen.forRepository(bookings),
-        pl ? 'Powiadomienia' : 'Notifications': () =>
+        GarageUiText.get('notifications'): () =>
           GarageBookingNotificationsScreen.forRepository(calendar),
       } else ...{
         if (destination.canConfigure)
-          pl ? 'Połączenia z flotami' : 'Fleet connections': () =>
+          GarageUiText.get('fleetConnections'): () =>
             GarageBridgeConnectionsScreen.forClient(client: client,
               scopeId: destination.workspaceId!, fleet: false),
-        pl ? 'Kalendarz i stanowiska' : 'Calendar and bays': () =>
+        GarageUiText.get('calendarBays'): () =>
           GarageResourceCalendarScreen.forRepositories(calendar: calendar,
             bookings: bookings, workspaceId: destination.workspaceId!),
-        pl ? 'Zlecenia i kosztorysy' : 'Work orders and estimates': () =>
+        GarageUiText.get('ordersEstimates'): () =>
           GarageWorkshopQuotesScreen.forClient(client: client,
             workspaceId: destination.workspaceId!),
-        pl ? 'Zgłoszenia flot' : 'Fleet repair requests': () =>
+        GarageUiText.get('fleetRequests'): () =>
           GarageRepairRequestsScreen.forClient(client: client,
             workspaceId: destination.workspaceId!, canAssign: destination.canConfigure),
-        pl ? 'Zgłoszenia klientów' : 'Customer requests': () =>
+        GarageUiText.get('customerRequests'): () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,
             workspaceId: destination.workspaceId!),
         if (destination.canConfigure)
-          pl ? 'Ustawienia kalendarza' : 'Calendar settings': () =>
+          GarageUiText.get('calendarSettings'): () =>
             GarageCalendarSettingsScreen.forRepository(repository: calendar,
               workspaceId: destination.workspaceId!),
       },
     };
     return Scaffold(
       appBar: AppBar(title: Text(customer
-        ? (pl ? 'Rezerwacje warsztatów' : 'Workshop bookings')
+        ? GarageUiText.get('workshopBookings')
         : destination.name!)),
       body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(padding: const EdgeInsets.all(20), children: [
