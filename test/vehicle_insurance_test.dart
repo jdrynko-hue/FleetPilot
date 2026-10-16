@@ -139,17 +139,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(VehicleListTile), findsNWidgets(5),
       reason: tester.widgetList<Text>(find.byType(Text)).map((text) => text.data).join(' | '));
-    final layoutErrors = <FlutterErrorDetails>[];
-    final originalErrorHandler = FlutterError.onError!;
-    FlutterError.onError = (details) {
-      layoutErrors.add(details);
-      originalErrorHandler(details);
-    };
-    addTearDown(() => FlutterError.onError = originalErrorHandler);
     for (final width in [320.0, 390.0, 412.0]) {
       tester.view.physicalSize = Size(width, 2200);
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'Vehicles width $width: ${layoutErrors.map((error) => error.toString()).join(' | ')}');
+      expect(tester.takeException(), isNull, reason: 'Vehicles width $width');
     }
     tester.view.physicalSize = const Size(1200, 2200);
     await tester.pumpAndSettle();
@@ -165,7 +158,8 @@ void main() {
     expect(find.text('No matching vehicles'), findsOneWidget);
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
-    expect(find.text('CAR 31'), findsOneWidget);
+    expect(find.descendant(of: find.byType(VehicleListTile),
+      matching: find.text('CAR 31')), findsOneWidget);
     expect(find.byType(VehicleListTile), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
