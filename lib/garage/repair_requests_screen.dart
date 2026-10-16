@@ -429,7 +429,8 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
           if (data.status == 'sent' && widget.accept != null)
             FilledButton(key: const Key('repair_accept'), onPressed: _busy ? null : _accept,
               child: Text(_tr('Przyjmij naprawę', 'Accept repair'))),
-          if (data.workOrderStatus != null) Text(_status(data.workOrderStatus!)),
+          if (data.workOrderStatus != null) Text(_status(data.workOrderStatus!),
+            key: const Key('repair_current_status')),
           if (widget.approve != null && data.needsFleetApproval)
             FilledButton(key: const Key('repair_review_quote'), onPressed: _busy ? null : _openQuote,
               child: Text(_tr('Sprawdź i zatwierdź kosztorys', 'Review and approve estimate'))),

@@ -182,7 +182,9 @@ void main() {
       await confirm();
       await tap(find.byKey(const Key('repair_progress_collected')));
       await confirm();
-      await see(find.text('Collected'), 'repair collected');
+      await until(() => find.byKey(const Key('repair_current_status')).evaluate().isNotEmpty &&
+        tester.widget<Text>(find.byKey(const Key('repair_current_status'))).data == 'Collected',
+        'server-confirmed collected status');
       await tester.runAsync(() async {
         final data = await GarageRepairBridgeRepository(fleet).load(requestId);
         expect(data.workOrderStatus, 'collected'); expect(data.quote!.approved, isTrue);
