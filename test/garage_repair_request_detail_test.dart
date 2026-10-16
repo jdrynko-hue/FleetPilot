@@ -238,6 +238,31 @@ void main() {
     expect(find.textContaining(fixture.issueId), findsNothing);
   });
 
+  testWidgets('slow roster does not block authorized repair actions',
+      (tester) async {
+    final roster = Completer<List<GarageRosterMechanic>>();
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted',workOrderId:fixture.orderId,
+        orderStatus:'awaiting_approval', assigned:true,
+        mechanic:fixture.issueId,
+        estimate:fixture.quote(approved:true))),
+      loadMechanics: () => roster.future,
+      advance: (data, target) async => target,
+    )));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Mechanic assigned'), findsOneWidget);
+    final start = tester.widget<FilledButton>(
+      find.byKey(const Key('repair_advance_in_progress')));
+    expect(start.onPressed, isNotNull);
+    roster.complete(const [GarageRosterMechanic(
+      userId:fixture.issueId, email:'mechanic@example.test')]);
+    await tester.pumpAndSettle();
+    expect(find.text('mechanic@example.test'), findsOneWidget);
+  });
+
   testWidgets('workshop keeps generic label when roster cannot load',
       (tester) async {
     await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
