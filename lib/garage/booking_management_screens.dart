@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
+import 'booking_status_text.dart';
 
 /// Staging-only workshop request inbox. Not linked from production Fleet.
 class GarageBookingWorkshopScreen extends StatefulWidget {
@@ -149,7 +150,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
               Text(entry.startAt.toLocal().toString().substring(0,16)
                 + ' (' + DateTime.now().timeZoneName + ')'),
               Text(entry.durationMinutes.toString() + ' min'),
-              Text(entry.status.name,
+              Text(bookingStatusLabel(entry.status),
                 key: Key('workshop_booking_status_' + entry.id)),
               if (entry.status == GarageBookingStatus.requested)
                 Wrap(spacing: 8, children: [
@@ -234,16 +235,6 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     }
   }
 
-  String label(GarageBookingStatus status) => switch (status) {
-    GarageBookingStatus.requested => tr('Prośba wysłana','Requested'),
-    GarageBookingStatus.confirmed => tr('Potwierdzona','Confirmed'),
-    GarageBookingStatus.declined => tr('Odrzucona','Declined'),
-    GarageBookingStatus.withdrawn => tr('Wycofana','Withdrawn'),
-    GarageBookingStatus.cancellationRequested =>
-      tr('Czeka na anulowanie','Cancellation pending'),
-    GarageBookingStatus.cancelled => tr('Anulowana','Cancelled'),
-  };
-
   Future<void> withdraw(GarageBookingSummary entry) async {
     if (busy) return;
     final scope = scopeVersion;
@@ -308,7 +299,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
               Text(entry.service),
               Text(entry.startAt.toLocal().toString().substring(0,16)
                 + ' (' + DateTime.now().timeZoneName + ')'),
-              Text(label(entry.status),
+              Text(bookingStatusLabel(entry.status),
                 key: Key('customer_booking_status_' + entry.id)),
               if (entry.status == GarageBookingStatus.requested ||
                   entry.status == GarageBookingStatus.confirmed)
