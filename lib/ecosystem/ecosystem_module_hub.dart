@@ -16,13 +16,15 @@ import '../garage/garage_ui_text.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
+import 'customer_portal.dart';
 
 /// Connects the existing repository-backed screens; no fixture IDs or mock data.
 class EcosystemModuleHub extends StatelessWidget {
   const EcosystemModuleHub({required this.client,
-    required this.destination, super.key});
+    required this.destination, this.customerSearchFirst = false, super.key});
   final SupabaseClient client;
   final EcosystemDestination destination;
+  final bool customerSearchFirst;
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +38,15 @@ class EcosystemModuleHub extends StatelessWidget {
       );
     }
     final customer = destination.module == EcosystemModule.customer;
+    if (customer) {
+      return CustomerPortal(searchFirst: customerSearchFirst, pages: [
+        (_) => GarageBookingSearchScreen.forRepository(bookings),
+        (_) => GarageMyBookingsScreen.forRepository(bookings),
+        (_) => GarageBookingNotificationsScreen.forRepository(calendar),
+      ]);
+    }
     final pages = <String, Widget Function()>{
-      if (customer) ...{
-        GarageUiText.get('findWorkshop'): () =>
-          GarageBookingSearchScreen.forRepository(bookings),
-        GarageUiText.get('myBookings'): () =>
-          GarageMyBookingsScreen.forRepository(bookings),
-        GarageUiText.get('notifications'): () =>
-          GarageBookingNotificationsScreen.forRepository(calendar),
-      } else ...{
+
         if (destination.canConfigure)
           GarageUiText.get('fleetConnections'): () =>
             GarageBridgeConnectionsScreen.forClient(client: client,
@@ -69,7 +71,6 @@ class EcosystemModuleHub extends StatelessWidget {
           GarageUiText.get('calendarSettings'): () =>
             GarageCalendarSettingsScreen.forRepository(repository: calendar,
               workspaceId: destination.workspaceId!),
-      },
     };
     return Scaffold(
       appBar: AppBar(title: Text(customer
