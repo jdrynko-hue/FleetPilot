@@ -121,7 +121,8 @@ void main() {
     expect(find.byType(FleetShell), findsNothing);
     await tester.runAsync(() => Supabase.instance.client.auth.signOut());
     await see(find.byType(LoginScreen), 'logout closes private customer routes');
-    expect(find.byType(GarageBookingSearchScreen), findsNothing);
+    await until(() => find.byType(GarageBookingSearchScreen).evaluate().isEmpty,
+      'customer route disposal after logout transition');
 
     await login(owner);
     for (var i = 0; i < 2; i++) {
@@ -153,7 +154,8 @@ void main() {
     await tap(find.byKey(const Key('fleet_mobile_menu')));
     await tap(find.byKey(const Key('fleet_menu_signout')));
     await see(find.byType(LoginScreen), 'Fleet logout returns to login');
-    expect(find.byType(FleetShell), findsNothing);
+    await until(() => find.byType(FleetShell).evaluate().isEmpty,
+      'Fleet route disposal after logout transition');
     expect(find.byType(EcosystemGate), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     // Dispose all real transports before widget-test timer verification.
