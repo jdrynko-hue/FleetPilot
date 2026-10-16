@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
+import 'booking_time_text.dart';
 
 /// Staging-only workshop request inbox. Not linked from production Fleet.
 class GarageBookingWorkshopScreen extends StatefulWidget {
@@ -147,8 +148,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
               Text(entry.vehicleMake + ' ' + entry.vehicleModel),
               if (entry.registration != null) Text(entry.registration!),
               Text(bookingServiceLabel(entry.service) + ': ' + entry.concern),
-              Text(entry.startAt.toLocal().toString().substring(0,16)
-                + ' (' + DateTime.now().timeZoneName + ')'),
+              Text(bookingLocalTimeLabel(entry.startAt)),
               Text(entry.durationMinutes.toString() + ' min'),
               Text(bookingStatusLabel(entry.status),
                 key: Key('workshop_booking_status_' + entry.id)),
@@ -298,8 +298,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
               Text(entry.workshopName,
                 style: Theme.of(context).textTheme.titleMedium),
               Text(bookingServiceLabel(entry.service)),
-              Text(entry.startAt.toLocal().toString().substring(0,16)
-                + ' (' + DateTime.now().timeZoneName + ')'),
+              Text(bookingLocalTimeLabel(entry.startAt)),
               Text(bookingStatusLabel(entry.status),
                 key: Key('customer_booking_status_' + entry.id)),
               if (entry.status == GarageBookingStatus.requested ||
