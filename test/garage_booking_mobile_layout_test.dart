@@ -42,18 +42,24 @@ void main() {
         final picker = find.byKey(const Key('booking_service'));
         await tester.scrollUntilVisible(picker, 200,
           scrollable: find.byType(Scrollable).first);
-        await tester.tap(picker);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(picker);
+        await tester.pumpAndSettle();
+        expect(picker.hitTestable(), findsOneWidget);
+        await tester.tap(picker.hitTestable());
         await tester.pumpAndSettle();
         final option = find.text(bookingServiceLabel(sample.$2,
           language: sample.$1)).last;
         await tester.ensureVisible(option);
-        await tester.tap(option);
+        await tester.pumpAndSettle();
+        await tester.tap(option.hitTestable());
         await tester.pumpAndSettle();
         expect(tester.widget<DropdownButtonFormField<String>>(picker).initialValue,
           sample.$2);
         await tester.scrollUntilVisible(find.byKey(const Key('booking_send')), 200,
           scrollable: find.byType(Scrollable).first);
-        expect(find.byKey(const Key('booking_send')), findsOneWidget);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('booking_send')).hitTestable(), findsOneWidget);
         expect(submissions, 0);
         expect(tester.takeException(), isNull);
       });
