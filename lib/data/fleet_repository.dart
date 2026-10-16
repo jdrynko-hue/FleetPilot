@@ -55,6 +55,10 @@ class FleetRepository {
         .eq('user_id', user.id)
         .order('created_at');
 
+    // Auth can change while PostgREST is still answering the old request.
+    // Never publish the previous account's fleet list into a new session.
+    if (currentUser?.id != user.id) return [];
+
     return (rows as List)
         .map(
           (row) =>
