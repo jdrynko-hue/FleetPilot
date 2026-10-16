@@ -80,6 +80,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(revokes, 0);
     expect(find.textContaining('Past actions remain'), findsOneWidget);
+    expect(find.textContaining('cannot be restored from the app'), findsOneWidget);
     await tester.tap(find.byKey(const Key('bridge_revoke_confirm')));
     await tester.pumpAndSettle();
     expect(revokes, 1);
