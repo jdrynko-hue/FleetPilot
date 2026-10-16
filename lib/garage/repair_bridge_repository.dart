@@ -193,6 +193,8 @@ class GarageRepairBridgeSnapshot {
     required this.status,
     required this.workOrderId,
     required this.workOrderStatus,
+    required this.mechanicAssigned,
+    required this.mechanicUserId,
     required this.sharedDescription,
     required this.sharedRegistration,
     required this.quote,
@@ -207,6 +209,10 @@ class GarageRepairBridgeSnapshot {
   final String status;
   final String? workOrderId;
   final String? workOrderStatus;
+  /// Only a boolean crosses the Fleet/Workshop tenant boundary.
+  final bool? mechanicAssigned;
+  /// Workshop owner/adviser only. Never populated for the Fleet manager.
+  final String? mechanicUserId;
   final String? sharedDescription;
   final String? sharedRegistration;
   final GarageCustomerQuote? quote;
@@ -242,6 +248,16 @@ class GarageRepairBridgeSnapshot {
         (orderId == null && orderStatus != null) ||
         (orderId != null && orderStatus == null)) {
       throw const FormatException('Inconsistent RepairBridge work order');
+    }
+    final rawAssigned = payload['mechanic_assigned'];
+    if (orderId == null ? rawAssigned != null : rawAssigned is! bool) {
+      throw const FormatException('Invalid mechanic assignment status');
+    }
+    final assigned = rawAssigned as bool?;
+    final mechanicId = _optionalUuid(payload, 'mechanic_user_id');
+    if ((mechanicId != null && assigned != true) ||
+        (orderId == null && mechanicId != null)) {
+      throw const FormatException('Inconsistent mechanic assignment');
     }
     final desc = _optionalText(payload, 'shared_description');
     final reg = _optionalText(payload, 'shared_registration');
@@ -316,6 +332,8 @@ class GarageRepairBridgeSnapshot {
       status: status,
       workOrderId: orderId,
       workOrderStatus: orderStatus,
+      mechanicAssigned: assigned,
+      mechanicUserId: mechanicId,
       sharedDescription: desc,
       sharedRegistration: reg,
       quote: quote,
