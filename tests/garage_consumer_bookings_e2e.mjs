@@ -118,14 +118,54 @@ for(let i=0;i<4;i++) {
  good(await rpc(charlie,'garage_booking_cancel',{p_booking:quotaId}),'withdraw quota fixture');
 }
 denied(await book(charlie,'Charlie Example',parallelStart),'sixth distinct request over quota');
+// Durable keys survive terminal states and remain scoped to the verified caller.
+const durable=await signup('durable');
+const durableKey=randomUUID();
+const durableArgs={p_request_key:durableKey,p_workspace:shopA,
+ p_name:'Durable Customer',p_make:'BMW',p_model:'118i',p_registration:null,
+ p_service:'brakes',p_concern:'Durable request',p_start_at:tomorrow};
+denied(await rpc(null,'garage_booking_request_once',durableArgs),'anonymous durable request');
+denied(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_request_key:null}),'missing durable key');
+const keyed=await Promise.all(Array.from({length:8},()=>rpc(durable,'garage_booking_request_once',durableArgs)));
+const durableId=good(keyed[0],'first durable request');
+for(const result of keyed) assert.equal(good(result,'parallel keyed replay'),durableId);
+denied(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_concern:'Changed request'}),'key payload mismatch');
+denied(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_workspace:shopB}),'key workshop mismatch');
+assert.equal(good(await rpc(durable,'garage_booking_cancel',{p_booking:durableId}),'withdraw durable request'),'withdrawn');
+assert.equal(good(await rpc(durable,'garage_booking_request_once',durableArgs),'terminal replay'),durableId);
+assert.equal(good(await rpc(durable,'garage_booking_my_requests'),'durable history').length,1);
+// Same UUID from a different account cannot identify or replay someone else's row.
+const durableOther=await signup('durable-other');
+const otherId=good(await rpc(durableOther,'garage_booking_request_once',durableArgs),'same key scoped to another customer');
+assert.notEqual(otherId,durableId);
+good(await rpc(durableOther,'garage_booking_cancel',{p_booking:otherId}),'withdraw other scope fixture');
+// Explicit new intent uses a new key; identical active legacy requests are reused.
+const nextKey=randomUUID();
+const nextId=good(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_request_key:nextKey}),'new intent after withdrawal');
+assert.notEqual(nextId,durableId);
+// Rate-limit ledger growth even when all keys point at the same active booking.
+for(let i=0;i<48;i++) assert.equal(good(await rpc(durable,'garage_booking_request_once',{
+ ...durableArgs,p_request_key:randomUUID()}),'bounded key alias'),nextId);
+denied(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_request_key:randomUUID()}),'51st key blocked');
+assert.equal(good(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_request_key:nextKey}),'replay survives key quota'),nextId);
+good(await rpc(durable,'garage_booking_cancel',{p_booking:nextId}),'withdraw durable fixture');
 const a=good(await book(alice,'Alice Example'),'Alice requested slot');
 assert.match(a,/^[0-9a-f-]{36}$/);
+const aliceKey=randomUUID();
+const aliceArgs={p_request_key:aliceKey,p_workspace:shopA,p_name:'Alice Example',
+ p_make:'Ford',p_model:'Focus',p_registration:'QA 123',p_service:'brakes',
+ p_concern:'Brakes grinding',p_start_at:tomorrow};
+assert.equal(good(await rpc(alice,'garage_booking_request_once',aliceArgs),'key existing active booking'),a);
+
 // Real parallel HTTP transactions must converge on the first committed row.
 const replays=await Promise.all(Array.from({length:8},()=>book(alice,'Alice Example')));
 for(const replay of replays)
  assert.equal(good(replay,'concurrent identical replay'),a);
 denied(await book(alice,'Changed Name'),'same slot with different payload');
 const b=good(await book(bob,'Bob Example'),'Bob requested same slot');
+const bobArgs={...aliceArgs,p_request_key:randomUUID(),p_name:'Bob Example'};
+assert.equal(good(await rpc(bob,'garage_booking_request_once',bobArgs),'key Bob active booking'),b);
+
 const c=good(await book(bob,'Bob Example',slot2),'Bob requested other slot');
 assert.equal(good(await rpc(alice,'garage_booking_my_requests'),'Alice own inbox').length,1);
 assert.equal(good(await rpc(bob,'garage_booking_my_requests'),'Bob own inbox').length,2);
@@ -147,6 +187,7 @@ denied(await rpc(ownerA,'garage_booking_respond',{
  p_booking:b,p_confirm:true}),'prevent double booking');
 assert.equal(good(await rpc(ownerA,'garage_booking_respond',{
  p_booking:b,p_confirm:false}),'decline Bob overlap'),'declined');
+assert.equal(good(await rpc(bob,'garage_booking_request_once',bobArgs),'declined durable replay'),b);
 assert.equal(good(await rpc(ownerA,'garage_booking_respond',{
  p_booking:c,p_confirm:true}),'confirm non-overlap'),'confirmed');
 const myAlice=good(await rpc(alice,'garage_booking_my_requests'),'Alice confirmed');
@@ -173,5 +214,7 @@ assert.equal(good(await rpc(ownerA,'garage_booking_configure',{
 assert.deepEqual(good(await rpc(null,'garage_booking_discover',{
  p_city:'Dunstable'}),'unlisted garage hidden'),[]);
 assert.equal(good(await book(bob,'Bob Example',slot2),'existing confirmed replay after unlist'),c);
+assert.equal(good(await rpc(alice,'garage_booking_request_once',aliceArgs),'cancelled durable replay after unlist'),a);
+assert.equal(good(await rpc(durable,'garage_booking_request_once',durableArgs),'withdrawn durable replay after unlist'),durableId);
 denied(await book(alice,'Alice Example'),'unlisted garage refuses requests');
 console.log('PASS local Supabase Garage consumer bookings: listing consent, tenant isolation, verified sessions, collision, cancellation, unlisting');

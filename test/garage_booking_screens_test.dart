@@ -57,7 +57,7 @@ void main() {
         submit: ({
           required workspaceId,required customerName,
           required vehicleMake,required vehicleModel,
-          required service,required concern,required desiredStart,
+          required service,required concern,required desiredStart, required requestKey,
           registration,
         }) async => bookingId,
       ),width:width);
@@ -81,7 +81,7 @@ void main() {
       submit: ({
           required workspaceId,required customerName,
           required vehicleMake,required vehicleModel,
-          required service,required concern,required desiredStart,
+          required service,required concern,required desiredStart, required requestKey,
           registration,
       }) async => bookingId,
     ));
@@ -104,11 +104,12 @@ void main() {
       submit: ({
         required workspaceId, required customerName,
         required vehicleMake, required vehicleModel,
-        required service, required concern, required desiredStart,
+        required service, required concern, required desiredStart, required requestKey,
         registration,
       }) async {
         count++;
         expect(workspaceId,shop.workspaceId);
+        expect(requestKey, matches(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')));
         expect(customerName,'Private Person');
         expect(vehicleMake,'Ford');
         expect(vehicleModel,'Focus');
@@ -219,7 +220,7 @@ void main() {
     final BookingSubmit submit = ({
       required workspaceId, required customerName, required vehicleMake,
       required vehicleModel, required service, required concern,
-      required desiredStart, registration,
+      required desiredStart, required requestKey, registration,
     }) async => bookingId;
     const otherShop = GarageBookingWorkshop(
       workspaceId: '00000000-0000-4000-8000-000000000102',
@@ -257,7 +258,7 @@ void main() {
     final BookingSubmit oldSubmit = ({
       required workspaceId, required customerName, required vehicleMake,
       required vehicleModel, required service, required concern,
-      required desiredStart, registration,
+      required desiredStart, required requestKey, registration,
     }) {
       oldSubmissions++;
       expect(workspaceId, shop.workspaceId);
@@ -271,7 +272,7 @@ void main() {
     final BookingSubmit newSubmit = ({
       required workspaceId, required customerName, required vehicleMake,
       required vehicleModel, required service, required concern,
-      required desiredStart, registration,
+      required desiredStart, required requestKey, registration,
     }) async {
       newSubmissions++;
       expect(workspaceId, otherShop.workspaceId);
@@ -317,7 +318,7 @@ void main() {
     final BookingSubmit submit = ({
       required workspaceId, required customerName, required vehicleMake,
       required vehicleModel, required service, required concern,
-      required desiredStart, registration,
+      required desiredStart, required requestKey, registration,
     }) async => bookingId;
     const otherShop = GarageBookingWorkshop(
       workspaceId: '00000000-0000-4000-8000-000000000102',
@@ -463,7 +464,7 @@ void main() {
       submit: ({
         required workspaceId, required customerName,
         required vehicleMake, required vehicleModel,
-        required service, required concern, required desiredStart,
+        required service, required concern, required desiredStart, required requestKey,
         registration,
       }) async {
         submissions++;

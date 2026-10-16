@@ -4,6 +4,7 @@
 \ir ../supabase/garage_staging/007_private_customer_bookings.sql
 \ir ../supabase/garage_staging/011_booking_request_replay.sql
 \ir ../supabase/garage_staging/012_booking_cancellation_replay.sql
+\ir ../supabase/garage_staging/013_booking_durable_request_keys.sql
 
 INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('00000000-0000-4000-8000-000000000031','customer-a@example.test',now()),
@@ -268,3 +269,46 @@ BEGIN
   RAISE EXCEPTION 'Cancellation not persisted'; END IF;
 END $$;
 SELECT 'Garage consumer booking consent, isolation, collision and cancellation: PASS' AS result;
+
+-- Durable ledger is private even for authenticated clients.
+DO $$
+BEGIN
+ IF has_table_privilege('authenticated','garage_private.booking_request_keys','SELECT')
+ OR has_table_privilege('authenticated','garage_private.booking_request_keys','INSERT')
+ OR has_function_privilege('anon','public.garage_booking_request_once(uuid,uuid,text,text,text,text,text,text,timestamp with time zone)','EXECUTE')
+ OR NOT (SELECT relrowsecurity FROM pg_class WHERE oid='garage_private.booking_request_keys'::regclass) THEN
+  RAISE EXCEPTION 'Durable ledger ACL/RLS is unsafe'; END IF;
+END $$;
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000034',true);
+DO $$
+DECLARE v uuid; k uuid:=gen_random_uuid(); t timestamptz:=now()+interval '4 days'; denied boolean:=false;
+BEGIN
+ v:=public.garage_booking_request_once(k,
+  '00000000-0000-4000-8000-000000000101','Durable Customer','BMW','118i',
+  NULL,'brakes','Durable replay',t);
+ PERFORM set_config('booking.qa.durable',v::text,false);
+ PERFORM set_config('booking.qa.key',k::text,false);
+ IF public.garage_booking_cancel(v)<>'withdrawn' THEN RAISE EXCEPTION 'Withdrawal failed'; END IF;
+ PERFORM set_config('TimeZone','Europe/Warsaw',true);
+ IF public.garage_booking_request_once(k,
+  '00000000-0000-4000-8000-000000000101',' Durable Customer ','BMW','118i',
+  NULL,'brakes','Durable replay',t)<>v THEN RAISE EXCEPTION 'Terminal replay duplicated request'; END IF;
+ BEGIN
+  PERFORM public.garage_booking_request_once(k,
+   '00000000-0000-4000-8000-000000000101','Durable Customer','BMW','118i',
+   NULL,'brakes','Changed replay',t);
+ EXCEPTION WHEN unique_violation THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Changed durable payload accepted'; END IF;
+END $$;
+COMMIT;
+DO $$
+BEGIN
+ IF (SELECT count(*) FROM public.garage_booking_events
+ WHERE booking_id=current_setting('booking.qa.durable')::uuid)<>2 THEN
+  RAISE EXCEPTION 'Terminal replay wrote extra audit events'; END IF;
+ IF (SELECT count(*) FROM garage_private.booking_request_keys
+ WHERE request_key=current_setting('booking.qa.key')::uuid)<>1 THEN
+  RAISE EXCEPTION 'Durable ledger not atomic'; END IF;
+END $$;

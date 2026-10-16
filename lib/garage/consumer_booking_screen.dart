@@ -8,7 +8,7 @@ typedef BookingSubmit = Future<String> Function({
   required String workspaceId, required String customerName,
   required String vehicleMake, required String vehicleModel,
   required String service, required String concern,
-  required DateTime desiredStart, String? registration,
+  required DateTime desiredStart, required String requestKey, String? registration,
 });
 typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
 
@@ -192,6 +192,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _sent = false;
   bool _uncertain = false;
   int _generation = 0;
+  String _requestKey = newBookingRequestKey();
 
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl, String en) => _pl ? pl : en;
@@ -208,6 +209,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       _busy = false;
       _sent = false;
       _uncertain = false;
+      _requestKey = newBookingRequestKey();
       _error = null;
       _service = null;
       _when = null;
@@ -267,6 +269,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
     try {
       await submit(
         workspaceId: workspaceId,
+        requestKey: _requestKey,
         customerName: _name.text.trim(),
         vehicleMake: _make.text.trim(),
         vehicleModel: _model.text.trim(),
@@ -279,7 +282,8 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       if (mounted && gen == _generation) setState(() => _sent = true);
     } catch (_) {
       // A timeout can happen after the server accepted a request.
-      // Without an idempotency key, retrying could create a duplicate.
+      // Keep the same key and fail closed; recovery must check current status.
+      // A replay can identify a terminal booking, not a newly reserved slot.
       if (mounted && gen == _generation) {
         setState(() {
           _uncertain = true;
