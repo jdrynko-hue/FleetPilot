@@ -134,8 +134,8 @@ void main() {
       await see(find.text(names[i]), 'own workshop fleet');
       expect(find.text(names[1-i]), findsNothing);
       if (i == 0) {
-        await tester.pageBack(); await tester.pump(const Duration(milliseconds: 400));
-        await tester.pageBack(); await tester.pump(const Duration(milliseconds: 400));
+        await tap(find.byType(BackButton).hitTestable().last);
+        await tap(find.byType(BackButton).hitTestable().last);
         await see(find.byKey(Key('ecosystem_${shops[1]}')), 'return to workshop chooser');
       }
     }
