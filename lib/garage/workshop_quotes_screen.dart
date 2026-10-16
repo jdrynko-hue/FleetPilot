@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/localization.dart';
 import 'garage_currencies.dart';
+import 'garage_ui_text.dart';
 import 'quote_currency_picker.dart';
 import 'quote_order_repository.dart';
 import 'workshop_quote_publisher.dart';
@@ -87,7 +88,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(_tr('Kosztorysy warsztatu', 'Workshop estimates')),
+    appBar: AppBar(title: Text(GarageUiText.get('workshopEstimates')),
       actions: [IconButton(key: const Key('quote_orders_refresh'),
         icon: const Icon(Icons.refresh), onPressed: _loading ? null : _refresh)]),
     body: SafeArea(child: _loading
@@ -214,7 +215,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
     final accepted = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(_tr('Opublikować kosztorys?', 'Publish estimate?')),
+        title: Text(GarageUiText.get('quotePublishQuestion')),
         content: Text(_tr('Pozycji: ${lines.length}. Razem: '
           '${GarageCurrencies.formatMinor(currency, total)}. '
           'Każda zmiana wymaga nowej zgody klienta lub floty.',
@@ -223,10 +224,10 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
           'Changes require a new customer or fleet approval.')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-            child: Text(_tr('Wróć', 'Back'))),
+            child: Text(GarageUiText.get('quoteBack'))),
           FilledButton(key: const Key('garage_editor_confirm'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(_tr('Opublikuj', 'Publish'))),
+            child: Text(GarageUiText.get('quotePublish'))),
         ],
       ),
     );
@@ -256,7 +257,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                Expanded(child: Text(_tr('Pozycja ${index+1}', 'Item ${index+1}'),
+                Expanded(child: Text(GarageUiText.format('itemNumber', {'number': index + 1}),
                   style: Theme.of(context).textTheme.titleMedium)),
                 if (_lines.length > 1) IconButton(
                   key: Key('quote_remove_$index'),
@@ -269,39 +270,37 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                 key: Key('quote_type_$index'),
                 initialValue: draft.type,
                 isExpanded: true,
-                decoration: InputDecoration(labelText: _tr('Typ', 'Type')),
-                items: const [
-                  DropdownMenuItem(value: 'labour', child: Text('Labour')),
-                  DropdownMenuItem(value: 'part', child: Text('Part')),
-                  DropdownMenuItem(value: 'other', child: Text('Other')),
-                ],
+                decoration: InputDecoration(labelText: GarageUiText.get('quoteType')),
+                items: [
+                   DropdownMenuItem(value: 'labour', child: Text(GarageUiText.get('quoteLabour'))),
+                   DropdownMenuItem(value: 'part', child: Text(GarageUiText.get('quotePart'))),
+                   DropdownMenuItem(value: 'other', child: Text(GarageUiText.get('quoteOther'))),
+                 ],
                 onChanged: (v) { if (v != null) draft.type = v; },
               ),
               TextField(controller: draft.description,
                 key: Key('quote_description_$index'),
                 maxLength: 500, decoration: InputDecoration(
-                  labelText: _tr('Opis', 'Description'))),
+                  labelText: GarageUiText.get('quoteDescription'))),
               TextField(controller: draft.quantity,
                 key: Key('quote_quantity_$index'),
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: _tr('Ilość', 'Quantity'))),
+                decoration: InputDecoration(labelText: GarageUiText.get('quoteQuantity'))),
               TextField(controller: draft.unitPrice,
                 key: Key('quote_unit_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
-                decoration: InputDecoration(labelText: _tr(
-                  'Cena jednostkowa ($currency)', 'Unit price ($currency)'))),
+                decoration: InputDecoration(labelText: GarageUiText.format('quoteUnitPrice', {'currency': currency}))),
               TextField(controller: draft.tax,
                 key: Key('quote_tax_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
-                decoration: InputDecoration(labelText: _tr(
-                  'Podatek łącznie ($currency)', 'Line tax ($currency)'))),
+                decoration: InputDecoration(labelText: GarageUiText.format('quoteLineTax', {'currency': currency}))),
             ])));
 
   @override
   Widget build(BuildContext context) {
     final currency = _currency;
     return Scaffold(
-      appBar: AppBar(title: Text(_tr('Nowy kosztorys', 'New estimate'))),
+      appBar: AppBar(title: Text(GarageUiText.get('newEstimate'))),
       body: SafeArea(child: _loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 112), children: [
@@ -329,12 +328,12 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
               key: const Key('quote_add_line'),
               onPressed: _publishing || _lines.length >= 50 ? null :
                 () => setState(() => _lines.add(_QuoteDraft())),
-              icon: const Icon(Icons.add), label: Text(_tr('Dodaj pozycję','Add item'))),
+              icon: const Icon(Icons.add), label: Text(GarageUiText.get('addQuoteItem'))),
             const SizedBox(height: 12),
             FilledButton(key: const Key('quote_publish'),
               onPressed: _publishing ? null : _publish,
-              child: Text(_publishing ? _tr('Publikowanie…','Publishing…') :
-                _tr('Opublikuj kosztorys','Publish estimate'))),
+              child: Text(_publishing ? GarageUiText.get('quotePublishing') :
+                GarageUiText.get('publishEstimate'))),
           ],
         ])),
     );
