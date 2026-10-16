@@ -101,6 +101,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('rejected replacement time clears the prior booking selection', (tester) async {
+    var selections = 0;
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop,
+      pickTime: (_) async => selections++ == 0 ? DateTime.utc(2026, 11, 20, 10) : null,
+      submit: ({required workspaceId, required customerName,
+        required vehicleMake, required vehicleModel, required service,
+        required concern, required desiredStart, required requestKey, registration}) async => bookingId,
+    ));
+    final picker = find.byKey(const Key('booking_pick_time'));
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: picker, matching: find.textContaining('2026-11-20')), findsOneWidget);
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: picker, matching: find.text('Choose date and time')), findsOneWidget);
+    expect(selections, 2);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('search failure purges previously listed shops', (tester) async {
     var fail=false;
     await render(tester,GarageBookingSearchScreen(

@@ -4,6 +4,7 @@ import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
 import 'booking_time_text.dart';
+import 'booking_local_start.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -164,7 +165,15 @@ Future<DateTime?> pickBookingTime(BuildContext context) async {
   final time = await showTimePicker(context: context,
     initialTime: const TimeOfDay(hour: 10, minute: 0));
   if (time == null || !context.mounted) return null;
-  return DateTime(day.year, day.month, day.day, time.hour, time.minute);
+  final selected = bookingLocalStart(year: day.year, month: day.month,
+      day: day.day, hour: time.hour, minute: time.minute);
+  if (selected == null) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+      AppLocale.language.value == 'pl'
+        ? 'Ta godzina nie istnieje lub występuje dwukrotnie z powodu zmiany czasu. Wybierz inną godzinę.'
+        : 'This local time does not exist or occurs twice because the clocks change. Choose another time.')));
+  }
+  return selected;
 }
 
 class GarageBookingRequestScreen extends StatefulWidget {
@@ -247,6 +256,9 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
     if (_busy || _sent) return;
     final gen = _generation;
     final pickTime = widget.pickTime;
+    // A rejected or cancelled replacement must not leave a previous time
+    // ready to submit as though the new selection had succeeded.
+    setState(() { _when = null; _error = null; });
     final when = await pickTime(context);
     if (when != null && mounted && gen == _generation) {
       setState(() { _when = when; _error = null; });
