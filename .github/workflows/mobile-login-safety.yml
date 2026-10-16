@@ -1,0 +1,28 @@
+name: Flotaryx mobile portal entry regression
+
+on:
+  pull_request:
+    paths:
+      - 'web/index.html'
+      - 'web/start/index.html'
+      - 'tests/mobile_login_nav_test.py'
+      - '.github/workflows/mobile-login-safety.yml'
+  push:
+    branches:
+      - feature/mobile-portal-access-20261016
+    paths:
+      - 'web/index.html'
+      - 'web/start/index.html'
+      - 'tests/mobile_login_nav_test.py'
+      - '.github/workflows/mobile-login-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  landing-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tests -p mobile_login_nav_test.py -v
