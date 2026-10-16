@@ -146,7 +146,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
               Text(entry.customerEmail),
               Text(entry.vehicleMake + ' ' + entry.vehicleModel),
               if (entry.registration != null) Text(entry.registration!),
-              Text(entry.service + ': ' + entry.concern),
+              Text(bookingServiceLabel(entry.service) + ': ' + entry.concern),
               Text(entry.startAt.toLocal().toString().substring(0,16)
                 + ' (' + DateTime.now().timeZoneName + ')'),
               Text(entry.durationMinutes.toString() + ' min'),
@@ -296,7 +296,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(entry.workshopName,
                 style: Theme.of(context).textTheme.titleMedium),
-              Text(entry.service),
+              Text(bookingServiceLabel(entry.service)),
               Text(entry.startAt.toLocal().toString().substring(0,16)
                 + ' (' + DateTime.now().timeZoneName + ')'),
               Text(bookingStatusLabel(entry.status),

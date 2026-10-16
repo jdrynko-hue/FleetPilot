@@ -33,6 +33,21 @@ void main() {
       'Requested');
   });
 
+  test('service labels cover every API code without changing identifiers', () {
+    for (final language in supportedLanguages) {
+      final labels = GarageBookingService.values.map(
+        (service) => bookingServiceLabel(service, language: language),
+      ).toSet();
+      expect(labels, hasLength(GarageBookingService.values.length), reason: language);
+      expect(labels.any((label) => label.startsWith('bookingService')), false);
+      expect(labels.any((label) => label.trim().isEmpty), false);
+    }
+    expect(bookingServiceLabel('brakes', language: 'pl'), 'Układ hamulcowy');
+    expect(bookingServiceLabel('diagnostics', language: 'de'), 'Diagnose');
+    expect(bookingServiceLabel('unknown', language: 'pl'), 'Inne');
+    expect(bookingServiceLabel('brakes', language: 'unknown'), 'Brakes');
+  });
+
   for (final language in supportedLanguages) {
     testWidgets('$language customer and workshop show the same readable status',
       (tester) async {
@@ -53,6 +68,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(find.byKey(Key(
         'customer_booking_status_' + fixture.bookingId))).data, expected);
+      expect(find.text(bookingServiceLabel('brakes', language: language)), findsOneWidget);
+      expect(find.text('brakes'), findsNothing);
       expect(find.text('cancellationRequested'), findsNothing);
       expect(tester.takeException(), isNull);
     });

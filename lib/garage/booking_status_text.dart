@@ -13,3 +13,19 @@ String bookingStatusLabel(GarageBookingStatus status, {String? language}) {
   };
   return GarageUiText.get(key, language: language);
 }
+
+/// API identifiers remain stable; only user-facing service text is translated.
+String bookingServiceLabel(String service, {String? language}) {
+  final key = switch (service) {
+    'diagnostics' => 'bookingServiceDiagnostics',
+    'maintenance' => 'bookingServiceMaintenance',
+    'brakes' => 'bookingServiceBrakes',
+    'tyres' => 'bookingServiceTyres',
+    'inspection' => 'bookingServiceInspection',
+    'electrical' => 'bookingServiceElectrical',
+    'bodywork' => 'bookingServiceBodywork',
+    'other' => 'bookingServiceOther',
+    _ => 'bookingServiceOther',
+  };
+  return GarageUiText.get(key, language: language);
+}

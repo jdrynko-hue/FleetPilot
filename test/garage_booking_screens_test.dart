@@ -124,7 +124,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('booking_model')),'Focus');
     await tester.tap(find.byKey(const Key('booking_service')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('brakes').last);
+    await tester.tap(find.text('Brakes').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('booking_concern')),
         'Noisy front brakes');
@@ -286,7 +286,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('booking_model')), 'Focus');
     await tester.tap(find.byKey(const Key('booking_service')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('brakes').last);
+    await tester.tap(find.text('Brakes').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('booking_concern')), 'Noisy brakes');
     await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
@@ -476,7 +476,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('booking_model')), 'Focus');
     await tester.tap(find.byKey(const Key('booking_service')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('brakes').last);
+    await tester.tap(find.text('Brakes').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('booking_concern')), 'Noisy brakes');
     await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
