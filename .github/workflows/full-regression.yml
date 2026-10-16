@@ -53,5 +53,14 @@ jobs:
       - run: flutter pub get
       - name: Analyze full source tree
         run: flutter analyze --no-fatal-infos
+      - name: Verify vehicle insurance with UK daylight-saving dates
+        env:
+          TZ: Europe/London
+        run: flutter test test/vehicle_insurance_test.dart --reporter expanded
       - name: Run all Flutter tests
         run: flutter test --reporter expanded
+      - name: Compile Flutter web for QA without deployment
+        run: >-
+          flutter build web --release
+          --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only

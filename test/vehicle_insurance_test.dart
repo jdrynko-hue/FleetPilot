@@ -110,16 +110,35 @@ void main() {
           },
       ]), 200, headers: {'content-type': 'application/json'});
     });
-    final client = SupabaseClient('https://fleet-test.invalid', 'test-anon', httpClient: transport);
-    addTearDown(client.dispose);
-    addTearDown(transport.close);
+    final client = SupabaseClient(
+      'https://fleet-test.invalid', 'test-anon', httpClient: transport,
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+    );
+    var closed = false;
+    addTearDown(() async {
+      if (!closed) await tester.runAsync(client.dispose);
+      transport.close();
+    });
     await tester.pumpWidget(MaterialApp(home: VehiclesScreen(
       company: CompanyMembership(companyId: 'fleet-a', companyName: 'Fleet A', role: 'viewer', currency: 'GBP'),
       canManage: false, refreshToken: 0, onDataChanged: () {},
       repository: FleetRepository(client),
     )));
+    // The SDK owns a JSON isolate, whose messages need the real event loop.
+    // Pumping Flutter's fake clock alone cannot settle its first response.
+    for (var i = 0; i < 100 && find.byType(VehicleListTile).evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 30));
+    }
     await tester.pumpAndSettle();
     expect(find.byType(VehicleListTile), findsNWidgets(5));
+    for (final width in [320.0, 390.0, 412.0]) {
+      tester.view.physicalSize = Size(width, 2200);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'Vehicles width $width');
+    }
+    tester.view.physicalSize = const Size(1200, 2200);
+    await tester.pumpAndSettle();
     expect(find.textContaining('Date not set'), findsOneWidget);
     expect(find.text('Insurance: within 30 days / overdue (3)'), findsOneWidget);
     await tester.tap(find.byType(FilterChip));
@@ -136,5 +155,7 @@ void main() {
     expect(find.byType(VehicleListTile), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
-  });
+    await tester.runAsync(client.dispose);
+    closed = true;
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
