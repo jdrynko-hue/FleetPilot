@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
 const markup = readFileSync(
-  new URL('../web/garage-pricing-preview/index.html', import.meta.url), 'utf8',
+  new URL('../design/garage-pricing-preview/index.html', import.meta.url), 'utf8',
 );
 const script = markup.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 assert.ok(script, 'Preview needs the pricing script');
