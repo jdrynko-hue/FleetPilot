@@ -3,14 +3,14 @@ name: Garage subscription pricing UX safety checks
 on:
   pull_request:
     paths:
-      - 'web/garage-pricing-preview/**'
+      - 'design/garage-pricing-preview/**'
       - 'tests/garage_pricing_preview_test.*'
       - '.github/workflows/garage-pricing-preview.yml'
   push:
     branches:
       - 'design/garage-subscription-pricing-ux-20261015'
     paths:
-      - 'web/garage-pricing-preview/**'
+      - 'design/garage-pricing-preview/**'
       - 'tests/garage_pricing_preview_test.*'
       - '.github/workflows/garage-pricing-preview.yml'
 
