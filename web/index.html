@@ -134,6 +134,9 @@ details p{margin:12px 0 0;color:#536b80;font-size:14px;line-height:1.75}
 
 /* Planned connected ecosystem; staged until the combined Fleet + Garage launch. */
 .ecosystem-section{background:#f7fbff}.ecosystem-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.ecosystem-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:27px;box-shadow:0 8px 28px #0f294509}.ecosystem-no{display:inline-block;color:#1d68b5;background:#e8f2fb;padding:5px 10px;border-radius:7px;font-weight:800;font-size:12px;margin-bottom:18px}.ecosystem-card h3{margin:0 0 10px;font-size:20px}.ecosystem-card p{margin:0;color:#536b80;font-size:14px;line-height:1.75}.ecosystem-bridge{background:#0f304e;color:#fff;margin-top:20px;padding:25px 28px;border-radius:16px}.ecosystem-bridge h3{margin:0 0 8px;font-size:19px}.ecosystem-bridge p{margin:0;color:#d9e9f7;font-size:14px;line-height:1.8}.ecosystem-status{background:#edf5fb;margin-top:18px}@media(max-width:760px){.ecosystem-grid{grid-template-columns:1fr}.ecosystem-card{padding:23px}.ecosystem-bridge{padding:22px}}
+
+.hero h1:lang(pl){overflow-wrap:normal;word-break:normal;hyphens:none}
+#hero-vehicle-line{display:block;width:max-content;white-space:nowrap}
 </style>
 
 
@@ -195,12 +198,47 @@ body{overflow-wrap:anywhere}
   const items=document.querySelectorAll('[data-en][data-pl]');
   const selector=document.getElementById('site-language');
   const stepWords={pl:'KROK',en:'STEP',de:'SCHRITT',sk:'KROK',cs:'KROK',hu:'LÉPÉS',ro:'PAS',es:'PASO',fr:'ÉTAPE',it:'PASSO',uk:'КРОК',pt:'PASSO'};
+
+  let headingWidth=-1;
+  function fitVehicleHeading(force=false){
+    const heading=document.querySelector('.hero h1');
+    const line=document.getElementById('hero-vehicle-line');
+    if(!heading||!line)return;
+    const width=heading.clientWidth;
+    if(!force&&width===headingWidth)return;
+    headingWidth=width;
+    heading.style.fontSize='';
+    const base=parseFloat(getComputedStyle(heading).fontSize);
+    const needed=line.getBoundingClientRect().width;
+    if(needed>width&&width>0)heading.style.fontSize=(base*width/needed*0.99)+'px';
+  }
+  function groupVehicleHeading(lang){
+    const heading=document.querySelector('.hero h1');
+    if(!heading)return;
+    heading.style.fontSize='';headingWidth=-1;
+    const prefix='Auta. Vany. Ciężarówki.';
+    if(lang==='pl'&&heading.textContent.startsWith(prefix)){
+      const rest=heading.textContent.slice(prefix.length).trim();
+      const line=document.createElement('span');
+      line.id='hero-vehicle-line';line.textContent=prefix;
+      heading.replaceChildren(line,document.createTextNode(rest));
+      fitVehicleHeading(true);
+    }
+  }
+  if(window.ResizeObserver){
+    const heading=document.querySelector('.hero h1');
+    if(heading)new ResizeObserver(()=>fitVehicleHeading()).observe(heading);
+  }
+  window.addEventListener('resize',()=>fitVehicleHeading());
+  if(document.fonts)document.fonts.ready.then(()=>fitVehicleHeading(true));
+
   function canonical(value){const language=(value||'').toLowerCase().split('-')[0];return supported.includes(language)?language:null;}
   function translate(language){
     const lang=canonical(language)||'en';
     document.documentElement.lang=lang;
     items.forEach(el=>{const translation=el.getAttribute('data-'+lang);el.textContent=translation===null?el.getAttribute('data-en'):translation;});
     document.querySelectorAll('.step > b').forEach((el,i)=>{el.textContent=stepWords[lang]+' '+String(i+1).padStart(2,'0');});
+    groupVehicleHeading(lang);
     selector.value=lang;
     document.title=lang==='pl'?'Flotaryx — Fleet i Garage (w przygotowaniu)':'Flotaryx — '+selector.options[selector.selectedIndex].text+' | Fleet & Garage (coming soon)';
     try{window.localStorage.setItem('fleetpilot_site_lang',lang);}catch(error){}
