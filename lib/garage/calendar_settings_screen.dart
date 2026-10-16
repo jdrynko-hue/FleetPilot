@@ -60,6 +60,8 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
   bool _busy = true;
   String? _notice;
   int _version = 0;
+  int _scope = 0;
+  BuildContext? _dialogContext;
 
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl,String en) => _pl ? pl : en;
@@ -71,21 +73,63 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
   @override
   void initState() { super.initState(); _reload(); }
   @override
-  void dispose() { _version++; super.dispose(); }
+  void didUpdateWidget(covariant GarageCalendarSettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadHours != widget.loadHours ||
+        oldWidget.loadResources != widget.loadResources ||
+        oldWidget.loadMechanics != widget.loadMechanics ||
+        oldWidget.setHours != widget.setHours ||
+        oldWidget.addResource != widget.addResource ||
+        oldWidget.setResourceActive != widget.setResourceActive ||
+        oldWidget.assignMechanic != widget.assignMechanic) {
+      _scope++;
+      final dialog = _dialogContext;
+      if (dialog != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (dialog.mounted && ModalRoute.of(dialog)?.isCurrent == true) {
+            Navigator.of(dialog).pop();
+          }
+        });
+      }
+      _reload();
+    }
+  }
+  @override
+  void dispose() { _scope++; _version++; super.dispose(); }
+
+  Future<T?> _scopedDialog<T>({required BuildContext context,
+      required WidgetBuilder builder}) async {
+    BuildContext? opened;
+    try {
+      return await showDialog<T>(context: context, builder: (dialogContext) {
+        opened = dialogContext;
+        _dialogContext = dialogContext;
+        return builder(dialogContext);
+      });
+    } finally {
+      if (_dialogContext == opened) _dialogContext = null;
+    }
+  }
 
   Future<void> _reload() async {
     if (!mounted) return;
     final version = ++_version;
+    final loadHours = widget.loadHours;
+    final loadResources = widget.loadResources;
+    final loadMechanics = widget.loadMechanics;
+    bool current() => mounted && version == _version;
     setState(() {
       _busy = true; _notice = null;
       _hours = const []; _resources = const []; _mechanics = const [];
     });
     try {
-      final hours = await widget.loadHours();
-      final resources = await widget.loadResources();
-      final mechanics = widget.loadMechanics == null
+      final hours = await loadHours();
+      if (!current()) return;
+      final resources = await loadResources();
+      if (!current()) return;
+      final mechanics = loadMechanics == null
           ? <GarageRosterMechanic>[]
-          : await widget.loadMechanics!();
+          : await loadMechanics();
       if (!mounted || version != _version) return;
       setState(() {
         _hours = List.unmodifiable(hours);
@@ -113,8 +157,12 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
 
   Future<void> _changeHours(int weekday) async {
     if (_busy) return;
+    final scope = _scope;
+    final version = _version;
+    final setHours = widget.setHours;
+    bool current() => mounted && scope == _scope && version == _version && !_busy;
     final existing = _hours.where((h)=>h.isoWeekday==weekday).firstOrNull;
-    final enable = await showDialog<bool?>(context:context,
+    final enable = await _scopedDialog<bool?>(context:context,
       builder:(context)=>AlertDialog(
         title:Text(tr('Godziny otwarcia','Opening hours')),
         content:Text(tr(
@@ -134,16 +182,16 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
             onPressed:()=>Navigator.pop(context,true),
             child:Text(tr('Ustaw godziny','Set hours'))),
         ]));
-    if (!mounted || enable == null) return;
+    if (!current() || enable == null) return;
     var opens = existing?.opensAt ?? '08:00:00';
     var closes = existing?.closesAt ?? '17:00:00';
     if (enable) {
       final first = await showTimePicker(context:context,
         initialTime:_parse(opens));
-      if (first == null || !mounted) return;
+      if (first == null || !current()) return;
       final last = await showTimePicker(context:context,
         initialTime:_parse(closes));
-      if (last == null || !mounted) return;
+      if (last == null || !current()) return;
       opens = _format(first);
       closes = _format(last);
       if (opens.compareTo(closes)>=0) {
@@ -152,13 +200,16 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
         return;
       }
     }
-    await _mutate(() => widget.setHours(weekday,opens,closes,enable));
+    await _mutate(() => setHours(weekday,opens,closes,enable));
   }
 
   Future<void> _newResource() async {
     if (_busy) return;
+    final scope = _scope;
+    final version = _version;
+    final addResource = widget.addResource;
     var enteredName = '';
-    final name = await showDialog<String>(context:context,
+    final name = await _scopedDialog<String>(context:context,
       builder:(context) {
         return AlertDialog(
           title:Text(tr('Dodaj stanowisko','Add workshop bay')),
@@ -177,18 +228,21 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
           ],
         );
       });
-    if (!mounted || name == null) return;
+    if (!mounted || scope != _scope || version != _version || _busy || name == null) return;
     if (name.length < 2 || name.length > 70) {
       setState(()=>_notice=tr('Podaj nazwę od 2 do 70 znaków.',
         'Enter a bay name of 2 to 70 characters.'));
       return;
     }
-    await _mutate(() async { await widget.addResource(name); return true; });
+    await _mutate(() async { await addResource(name); return true; });
   }
 
   Future<void> _toggle(GarageCalendarResource resource) async {
     if (_busy) return;
-    final allow = await showDialog<bool>(context:context,
+    final scope = _scope;
+    final version = _version;
+    final setResourceActive = widget.setResourceActive;
+    final allow = await _scopedDialog<bool>(context:context,
       builder:(context)=>AlertDialog(
         title:Text(tr('Zmień dostępność stanowiska','Update bay status')),
         content:Text(resource.active
@@ -204,14 +258,17 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
             onPressed:()=>Navigator.pop(context,true),
             child:Text(tr('Potwierdź','Confirm'))),
         ]));
-    if (!mounted || allow != true) return;
-    await _mutate(()=>widget.setResourceActive(resource.id,!resource.active));
+    if (!mounted || scope != _scope || version != _version || _busy || allow != true) return;
+    await _mutate(()=>setResourceActive(resource.id,!resource.active));
   }
 
   /// Staff list stays restricted to owners; confirmation is rechecked by SQL.
   Future<void> _chooseMechanic(GarageCalendarResource resource) async {
     if (_busy || widget.assignMechanic == null) return;
-    final selected = await showDialog<String>(
+    final scope = _scope;
+    final version = _version;
+    final assignMechanic = widget.assignMechanic!;
+    final selected = await _scopedDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(tr('Mechanik stanowiska', 'Assign bay mechanic')),
@@ -246,14 +303,15 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
         ],
       ),
     );
-    if (!mounted || selected == null || _busy) return;
+    if (!mounted || scope != _scope || version != _version || selected == null || _busy) return;
     final mechanicId = selected == '__unassigned__' ? null : selected;
     if (resource.mechanicUserId == mechanicId) return;
-    await _mutate(() => widget.assignMechanic!(resource.id, mechanicId));
+    await _mutate(() => assignMechanic(resource.id, mechanicId));
   }
 
   Future<void> _mutate(Future<bool> Function() write) async {
     if (_busy) return;
+    final scope = _scope;
     setState(() {
       _busy=true; _notice=null; _resources=const [];
       _hours=const []; _mechanics=const [];
@@ -262,9 +320,11 @@ class _GarageCalendarSettingsState extends State<GarageCalendarSettingsScreen> {
     try {
       if (!await write()) throw const FormatException('Not confirmed');
     } catch (_) { failed=true; }
-    if (mounted) {
-      await _reload();
-      if (mounted && failed) setState(() => _notice=tr(
+    if (mounted && scope == _scope) {
+      final reload = _reload();
+      final version = _version;
+      await reload;
+      if (mounted && scope == _scope && version == _version && failed) setState(() => _notice=tr(
         'Zmiana nie została potwierdzona. Sprawdź grafik i spróbuj ponownie.',
         'Change not confirmed. Check your calendar and retry.'));
     }
