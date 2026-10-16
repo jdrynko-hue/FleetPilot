@@ -6,7 +6,7 @@ enum PortalEntry { fleet, garage, customer }
 PortalEntry? portalEntryFromUri(Uri uri) => switch (uri.queryParameters['portal']) {
   'fleet' => PortalEntry.fleet,
   'garage' => PortalEntry.garage,
-  'customer' => PortalEntry.customer,
+  'customer' || 'search' => PortalEntry.customer,
   _ => null,
 };
 

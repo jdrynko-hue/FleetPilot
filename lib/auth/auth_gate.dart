@@ -118,7 +118,8 @@ class _AuthGateState extends State<AuthGate> {
     final invite = Uri.base.queryParameters['invite'];
     if (AppConfig.ecosystemQaEnabled && (invite == null || invite.isEmpty)) {
       return EcosystemGate.forClient(
-        Supabase.instance.client, preferredPortal: _portal, key: ValueKey(_user!.id));
+        Supabase.instance.client, preferredPortal: _portal,
+        customerSearchFirst: Uri.base.queryParameters['portal'] == 'search', key: ValueKey(_user!.id));
     }
     return CompanyGate(key: ValueKey(_user!.id));
   }

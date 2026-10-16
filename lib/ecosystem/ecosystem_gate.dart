@@ -13,7 +13,7 @@ class EcosystemGate extends StatefulWidget {
   const EcosystemGate({required this.loadAccess,
     required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, this.preferredPortal, super.key});
 
-  factory EcosystemGate.forClient(SupabaseClient client, {Key? key, PortalEntry? preferredPortal}) {
+  factory EcosystemGate.forClient(SupabaseClient client, {Key? key, PortalEntry? preferredPortal, bool customerSearchFirst = false}) {
     final userId = client.auth.currentUser?.id;
     return EcosystemGate(key: key, preferredPortal: preferredPortal,
         createWorkshopBuilder: (routeContext) => GarageCreateWorkspaceScreen.forClient(
@@ -24,7 +24,7 @@ class EcosystemGate extends StatefulWidget {
         destinationBuilder: (destination) =>
           destination.module == EcosystemModule.fleet
             ? const CompanyGate()
-            : EcosystemModuleHub(client: client, destination: destination),
+            : EcosystemModuleHub(client: client, destination: destination, customerSearchFirst: customerSearchFirst),
       );
   }
 
