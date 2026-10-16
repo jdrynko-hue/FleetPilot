@@ -341,4 +341,165 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('workshop switch hides old customer email and late inbox',
+      (tester) async {
+    final pending = Completer<List<GarageBookingInboxItem>>();
+    final oldLoad = () => pending.future;
+    final newLoad = () async => <GarageBookingInboxItem>[];
+    final respond = (String id, bool accept) async =>
+        GarageBookingStatus.confirmed;
+    final cancel = (String id) async {};
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: oldLoad, respond: respond, confirmCancellation: cancel,
+    )));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: newLoad, respond: respond, confirmCancellation: cancel,
+    )));
+    await tester.pumpAndSettle();
+    pending.complete([workshopRequest()]);
+    await tester.pumpAndSettle();
+    expect(find.text('private@example.test'), findsNothing);
+    expect(find.text('Private Person'), findsNothing);
+    expect(find.byKey(const Key('workshop_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('private booking scope discards late old customer history',
+      (tester) async {
+    final pending = Completer<List<GarageBookingSummary>>();
+    final oldLoad = () => pending.future;
+    final newLoad = () async => <GarageBookingSummary>[];
+    final cancel = (String id) async => GarageBookingStatus.withdrawn;
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: oldLoad, cancel: cancel,
+    )));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: newLoad, cancel: cancel,
+    )));
+    await tester.pumpAndSettle();
+    pending.complete([myRequest()]);
+    await tester.pumpAndSettle();
+    expect(find.text(shop.name), findsNothing);
+    expect(find.byKey(const Key('customer_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('switching workshop while confirmation open blocks old action',
+      (tester) async {
+    var oldCalls = 0;
+    var newCalls = 0;
+    final oldLoad = () async => [workshopRequest()];
+    final newLoad = () async => <GarageBookingInboxItem>[];
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: oldLoad,
+      respond: (id, accept) async {
+        oldCalls++;
+        return GarageBookingStatus.confirmed;
+      },
+      confirmCancellation: (id) async {},
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('workshop_booking_accept_' + bookingId)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: newLoad,
+      respond: (id, accept) async {
+        newCalls++;
+        return GarageBookingStatus.confirmed;
+      },
+      confirmCancellation: (id) async {},
+    )));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('workshop_booking_confirm')));
+    await tester.pumpAndSettle();
+    expect(oldCalls, 0);
+    expect(newCalls, 0);
+    expect(find.byKey(const Key('workshop_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('switching customer during cancellation dialog blocks old RPC',
+      (tester) async {
+    var oldCalls = 0;
+    var newCalls = 0;
+    final oldLoad = () async => [myRequest()];
+    final newLoad = () async => <GarageBookingSummary>[];
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: oldLoad,
+      cancel: (id) async {
+        oldCalls++;
+        return GarageBookingStatus.withdrawn;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('customer_booking_cancel_' + bookingId)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: newLoad,
+      cancel: (id) async {
+        newCalls++;
+        return GarageBookingStatus.withdrawn;
+      },
+    )));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('customer_booking_confirm_cancel')));
+    await tester.pumpAndSettle();
+    expect(oldCalls, 0);
+    expect(newCalls, 0);
+    expect(find.byKey(const Key('customer_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('uncertain booking submit prevents a duplicate request',
+      (tester) async {
+    var submissions = 0;
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop,
+      pickTime: (_) async => DateTime.now().add(const Duration(days: 2)),
+      submit: ({
+        required workspaceId, required customerName,
+        required vehicleMake, required vehicleModel,
+        required service, required concern, required desiredStart,
+        registration,
+      }) async {
+        submissions++;
+        throw StateError('private server details');
+      },
+    ));
+    await tester.enterText(find.byKey(const Key('booking_name')), 'Private Person');
+    await tester.enterText(find.byKey(const Key('booking_make')), 'Ford');
+    await tester.enterText(find.byKey(const Key('booking_model')), 'Focus');
+    await tester.tap(find.byKey(const Key('booking_service')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('brakes').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_concern')), 'Noisy brakes');
+    await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
+    await tester.tap(find.byKey(const Key('booking_pick_time')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.tap(find.byKey(const Key('booking_send')));
+    await tester.pumpAndSettle();
+    expect(submissions, 1);
+    expect(find.textContaining('Request outcome is uncertain'), findsOneWidget);
+    expect(find.textContaining('private server details'), findsNothing);
+    expect(find.byKey(const Key('booking_sent_notice')), findsNothing);
+    // The error makes the long mobile ListView taller. Scroll to the
+    // disabled action before inspecting the lazily built button.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('booking_send')), 160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('booking_send')),
+    );
+    expect(button.onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
 }
