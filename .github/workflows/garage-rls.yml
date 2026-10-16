@@ -15,6 +15,7 @@ on:
       - 'tests/repairbridge_fleet_fixture.sql'
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
+      - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
       - 'tests/garage_resource_calendar_e2e.mjs'
@@ -36,6 +37,7 @@ on:
       - 'tests/repairbridge_fleet_fixture.sql'
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
+      - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
       - 'tests/garage_resource_calendar_e2e.mjs'
@@ -54,6 +56,10 @@ jobs:
   garage-rls:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [isolation, incremental-upgrade]
     services:
       postgres:
         image: postgres:16
@@ -80,6 +86,7 @@ jobs:
           fi
           psql --version
       - name: Test Garage tenant boundaries in disposable PostgreSQL
+        if: matrix.suite == 'isolation'
         shell: bash
         run: |
           psql -h 127.0.0.1 -p 5432 -U postgres -d garage_qa \
@@ -92,6 +99,12 @@ jobs:
             -f tests/garage_consumer_bookings_rls.sql \
             -f tests/garage_resource_calendar_rls.sql \
             -f tests/garage_mechanic_roster_rls.sql
+      - name: Rehearse booking upgrade with existing data
+        if: matrix.suite == 'incremental-upgrade'
+        shell: bash
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d garage_qa \
+            -v ON_ERROR_STOP=1 -f tests/garage_booking_incremental_upgrade.sql
 
   garage-supabase-e2e:
     runs-on: ubuntu-latest
