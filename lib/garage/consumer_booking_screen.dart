@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
 import 'booking_time_text.dart';
@@ -202,9 +201,7 @@ Future<DateTime?> pickBookingTime(BuildContext context) async {
       day: day.day, hour: time.hour, minute: time.minute);
   if (selected == null) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-      AppLocale.language.value == 'pl'
-        ? 'Ta godzina nie istnieje lub występuje dwukrotnie z powodu zmiany czasu. Wybierz inną godzinę.'
-        : 'This local time does not exist or occurs twice because the clocks change. Choose another time.')));
+      GarageUiText.get('bookingInvalidLocalTime'))));
   }
   return selected;
 }
@@ -237,9 +234,6 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _uncertain = false;
   int _generation = 0;
   String _requestKey = newBookingRequestKey();
-
-  bool get _pl => AppLocale.language.value == 'pl';
-  String tr(String pl, String en) => _pl ? pl : en;
 
   @override
   void didUpdateWidget(covariant GarageBookingRequestScreen oldWidget) {
@@ -282,7 +276,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       validator: (value) {
         final n = value?.trim().length ?? 0;
         return (optional && n == 0) || (n >= min && n <= limit)
-          ? null : tr('Uzupełnij prawidłowo pole.', 'Enter a valid value.');
+          ? null : GarageUiText.get('bookingInvalidField');
       });
 
   Future<void> _pick() async {
@@ -305,8 +299,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
     if (when == null ||
         when.isBefore(DateTime.now().add(const Duration(hours: 1))) ||
         when.isAfter(DateTime.now().add(const Duration(days: 90)))) {
-      setState(() => _error = tr('Wybierz termin w ciągu 90 dni.',
-          'Select a time within 90 days.'));
+      setState(() => _error = 'bookingChooseWithin90Days');
       return;
     }
     final gen = ++_generation;
@@ -334,14 +327,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       if (mounted && gen == _generation) {
         setState(() {
           _uncertain = true;
-          _error = tr(
-            'Nie można potwierdzić wysłania. Sprawdź „Moje terminy” '
-            'przed ponownym wysłaniem zgłoszenia. '
-            'Wróć do listy warsztatów.',
-            'Request outcome is uncertain. Check My appointments '
-            'before submitting another request. '
-            'Return to the workshop list.',
-          );
+          _error = 'bookingRequestUncertain';
         });
       }
     } finally {
@@ -356,30 +342,26 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       padding: const EdgeInsets.all(16),
       children: _sent ? [
         const Icon(Icons.mark_email_read_outlined, size: 48),
-        Text(tr('Prośba wysłana — termin NIE jest potwierdzony.',
-            'Request sent — your appointment is NOT confirmed.'),
+        Text(GarageUiText.get('bookingRequestSent'),
           key: const Key('booking_sent_notice')),
         OutlinedButton(key: const Key('booking_done'),
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(tr('Gotowe', 'Done'))),
+          child: Text(GarageUiText.get('bookingDone'))),
       ] : [
-        Text(tr('Zgłoszenie jest bezpłatne. Warsztat potwierdzi termin '
-            'i ewentualną wycenę osobno.',
-            'The request is free. The workshop will confirm the time '
-            'and any estimate separately.'),
+        Text(GarageUiText.get('bookingRequestDisclaimer'),
           key: const Key('booking_request_disclaimer')),
         const SizedBox(height: 8),
-        Text(tr('Wpisz czas według strefy urządzenia '
-            '(${(_when ?? DateTime.now()).toLocal().timeZoneName}); warsztat: ${widget.shop.timeZone}.',
-            'Enter a time in your device zone '
-            '(${(_when ?? DateTime.now()).toLocal().timeZoneName}); workshop: ${widget.shop.timeZone}.'),
+        Text(GarageUiText.format('bookingDeviceZoneHint', {
+          'deviceZone': (_when ?? DateTime.now()).toLocal().timeZoneName,
+          'workshopZone': widget.shop.timeZone,
+        }),
           key: const Key('booking_time_zone_hint')),
         const SizedBox(height: 16),
         Form(key: _form, child: Column(children: [
-          _field('booking_name', tr('Imię i nazwisko', 'Full name'), _name),
-          _field('booking_make', tr('Marka', 'Make'), _make, limit: 80, min: 1),
-          _field('booking_model', tr('Model', 'Model'), _model, limit: 80, min: 1),
-          _field('booking_registration', tr('Rejestracja (opcjonalnie)', 'Registration (optional)'),
+          _field('booking_name', GarageUiText.get('bookingCustomerName'), _name),
+          _field('booking_make', GarageUiText.get('bookingVehicleMake'), _make, limit: 80, min: 1),
+          _field('booking_model', GarageUiText.get('bookingVehicleModel'), _model, limit: 80, min: 1),
+          _field('booking_registration', GarageUiText.get('bookingRegistration'),
               _registration, limit: 30, min: 1, optional: true),
           DropdownButtonFormField<String>(
             key: const Key('booking_service'),
@@ -391,28 +373,27 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
                 child: Text(bookingServiceLabel(service), maxLines: 1,
                   overflow: TextOverflow.ellipsis))).toList(),
             decoration: InputDecoration(border: const OutlineInputBorder(),
-              labelText: tr('Usługa', 'Service')),
+              labelText: GarageUiText.get('bookingService')),
             items: widget.shop.services.map((service) =>
               DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service),
                 maxLines: 2, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (value) => setState(() => _service = value),
             validator: (value) => value == null
-                ? tr('Wybierz usługę.', 'Choose a service.') : null,
+                ? GarageUiText.get('bookingChooseService') : null,
           ),
           const SizedBox(height: 10),
-          _field('booking_concern', tr('Opisz problem', 'Describe the issue'),
+          _field('booking_concern', GarageUiText.get('bookingConcern'),
               _concern, limit: 1000, min: 3, lines: 3),
         ])),
         OutlinedButton(
           key: const Key('booking_pick_time'), onPressed: _busy ? null : _pick,
           child: Text(_when == null
-            ? tr('Wybierz datę i godzinę', 'Choose date and time')
+            ? GarageUiText.get('bookingPickTime')
             : bookingLocalTimeLabel(_when!))),
-        if (_error != null) Text(_error!, key: const Key('booking_request_error')),
+        if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
         FilledButton(key: const Key('booking_send'),
           onPressed: _busy || _uncertain ? null : _send,
-          child: Text(_busy ? tr('Wysyłanie…', 'Sending…') :
-            tr('Wyślij prośbę (bez rezerwacji)', 'Send request (not booked)'))),
+          child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
       ],
     )),
   );
