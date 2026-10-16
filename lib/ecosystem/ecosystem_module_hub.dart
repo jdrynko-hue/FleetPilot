@@ -12,6 +12,7 @@ import '../garage/media_repository.dart';
 import '../garage/resource_calendar_repository.dart';
 import '../garage/resource_calendar_screen.dart';
 import '../garage/workshop_quotes_screen.dart';
+import '../garage/repair_requests_screen.dart';
 import 'ecosystem_access.dart';
 
 /// Connects the existing repository-backed screens; no fixture IDs or mock data.
@@ -48,6 +49,9 @@ class EcosystemModuleHub extends StatelessWidget {
             bookings: bookings, workspaceId: destination.workspaceId!),
         pl ? 'Zlecenia i kosztorysy' : 'Work orders and estimates': () =>
           GarageWorkshopQuotesScreen.forClient(client: client,
+            workspaceId: destination.workspaceId!),
+        pl ? 'Zgłoszenia flot' : 'Fleet repair requests': () =>
+          GarageRepairRequestsScreen.forClient(client: client,
             workspaceId: destination.workspaceId!),
         pl ? 'Zgłoszenia klientów' : 'Customer requests': () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,

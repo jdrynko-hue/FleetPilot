@@ -29,6 +29,18 @@ class GarageRepairBridgeRepository {
     }
   }
 
+  /// Server authorization remains authoritative; filter again for the open shop.
+  Future<List<GarageRepairRequest>> requests(String workspaceId) async {
+    _signedIn();
+    requireId(workspaceId, 'workspaceId');
+    final user = client.auth.currentUser!.id;
+    final data = await client.rpc('garage_fleet_requests_for_me');
+    if (client.auth.currentUser?.id != user) {
+      throw StateError('Account changed');
+    }
+    return GarageRepairRequest.parseList(data, workspaceId);
+  }
+
   Future<String> requestConnection(String companyId, String workspaceId) async {
     _signedIn();
     requireId(companyId, 'companyId');
@@ -317,5 +329,39 @@ class GarageRepairBridgeSnapshot {
       throw FormatException('Invalid $key');
     }
     return value;
+  }
+}
+
+/// The inbox intentionally contains no private Fleet description or registration.
+class GarageRepairRequest {
+  const GarageRepairRequest(this.id, this.companyId, this.workspaceId,
+      this.title, this.status);
+  final String id;
+  final String companyId;
+  final String workspaceId;
+  final String title;
+  final String status;
+
+  static List<GarageRepairRequest> parseList(Object? data, String workspaceId) {
+    GarageRepairBridgeRepository.requireId(workspaceId, 'workspaceId');
+    if (data is! List) throw const FormatException('Invalid repair inbox');
+    final rows = <GarageRepairRequest>[];
+    final ids = <String>{};
+    for (final row in data) {
+      if (row is! Map) throw const FormatException('Invalid repair request');
+      final id = GarageRepairBridgeSnapshot._uuidField(row, 'request_id');
+      final company = GarageRepairBridgeSnapshot._uuidField(row, 'company_id');
+      final shop = GarageRepairBridgeSnapshot._uuidField(row, 'workspace_id');
+      final title = GarageRepairBridgeSnapshot._requiredText(row, 'issue_title');
+      final status = row['request_status'];
+      if (!const {'sent', 'accepted'}.contains(status) || !ids.add(id)) {
+        throw const FormatException('Invalid repair request status or duplicate');
+      }
+      if (shop == workspaceId) {
+        rows.add(GarageRepairRequest(id, company, shop, title, status as String));
+      }
+    }
+    rows.sort((a, b) => a.id.compareTo(b.id));
+    return List.unmodifiable(rows);
   }
 }
