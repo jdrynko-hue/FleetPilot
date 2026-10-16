@@ -7,6 +7,18 @@ import 'package:fleetpilot/core/app_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/auth/email_callback.dart';
 
+class CallbackPkceStorage extends GotrueAsyncStorage {
+  final _items = <String, String>{};
+  @override
+  Future<String?> getItem({required String key}) async => _items[key];
+  @override
+  Future<void> setItem({required String key, required String value}) async {
+    _items[key] = value;
+  }
+  @override
+  Future<void> removeItem({required String key}) async { _items.remove(key); }
+}
+
 void main() {
   const qa = 'https://fyestmquqvkdebxxbcky.supabase.co';
   const preview = 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/';
@@ -45,7 +57,8 @@ void main() {
       }) : '{}', 200, headers: {'content-type': 'application/json'});
     });
     final client = SupabaseClient('https://callback-test.invalid', 'test-anon',
-      httpClient: transport, authOptions: const AuthClientOptions(autoRefreshToken: false));
+      httpClient: transport, authOptions: AuthClientOptions(autoRefreshToken: false,
+        pkceAsyncStorage: CallbackPkceStorage()));
     addTearDown(() async { await client.dispose(); transport.close(); });
     final repository = FleetRepository(client);
     await repository.signUp(email: 'callback@example.test', password: 'fixture-only-password', portal: 'garage');
