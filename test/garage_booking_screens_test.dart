@@ -71,6 +71,34 @@ void main() {
     });
   }
 
+  testWidgets('selected request time includes its own zone before submission', (tester) async {
+    final when = DateTime.utc(2026, 11, 20, 10);
+    var submissions = 0;
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop, pickTime: (_) async => when,
+      submit: ({required workspaceId, required customerName,
+        required vehicleMake, required vehicleModel, required service,
+        required concern, required desiredStart, required requestKey, registration}) async {
+        submissions++;
+        return bookingId;
+      },
+    ));
+    final picker = find.byKey(const Key('booking_pick_time'));
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    final local = when.toLocal();
+    expect(find.descendant(of: picker, matching: find.text(
+      '${local.toString().substring(0, 16)} (${local.timeZoneName})')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('booking_time_zone_hint')), -300);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const Key('booking_time_zone_hint'))).data,
+      contains('(${local.timeZoneName}); workshop: Europe/London'));
+    expect(submissions, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('search failure purges previously listed shops', (tester) async {
     var fail=false;
     await render(tester,GarageBookingSearchScreen(

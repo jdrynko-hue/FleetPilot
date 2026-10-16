@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'resource_calendar_repository.dart';
+import 'booking_time_text.dart';
 
 /// Staging-only Garage scheduler: explicit bay selection and private calendar.
 /// Kept outside production Fleet navigation until the ecosystem release.
@@ -221,8 +222,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
                           style: Theme.of(context).textTheme.titleMedium),
                         Text(request.service + ' — ' + request.vehicleMake
                             + ' ' + request.vehicleModel),
-                        Text(request.startAt.toLocal().toString().substring(0,16)
-                            + ' (' + DateTime.now().timeZoneName + ')'),
+                        Text(bookingLocalTimeLabel(request.startAt)),
                         DropdownButtonFormField<String>(
                           key: Key('garage_calendar_select_' + request.id),
                           value: _selection[request.id],
@@ -257,7 +257,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
                 child: ListTile(
                   title: Text(booking.customerName),
                   subtitle: Text(
-                    booking.startAt.toLocal().toString().substring(0,16)
+                    bookingLocalTimeLabel(booking.startAt)
                     + ' — ' + (booking.resourceName ??
                         tr('Starsza rezerwacja', 'Legacy booking'))),
                   trailing: booking.status == 'cancellation_requested'

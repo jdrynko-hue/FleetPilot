@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
+import 'booking_time_text.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -324,9 +325,10 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
           key: const Key('booking_request_disclaimer')),
         const SizedBox(height: 8),
         Text(tr('Wpisz czas według strefy urządzenia '
-            '(${DateTime.now().timeZoneName}); warsztat: ${widget.shop.timeZone}.',
+            '(${(_when ?? DateTime.now()).toLocal().timeZoneName}); warsztat: ${widget.shop.timeZone}.',
             'Enter a time in your device zone '
-            '(${DateTime.now().timeZoneName}); workshop: ${widget.shop.timeZone}.')),
+            '(${(_when ?? DateTime.now()).toLocal().timeZoneName}); workshop: ${widget.shop.timeZone}.'),
+          key: const Key('booking_time_zone_hint')),
         const SizedBox(height: 16),
         Form(key: _form, child: Column(children: [
           _field('booking_name', tr('Imię i nazwisko', 'Full name'), _name),
@@ -360,7 +362,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
           key: const Key('booking_pick_time'), onPressed: _busy ? null : _pick,
           child: Text(_when == null
             ? tr('Wybierz datę i godzinę', 'Choose date and time')
-            : _when!.toLocal().toString().substring(0, 16))),
+            : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(_error!, key: const Key('booking_request_error')),
         FilledButton(key: const Key('booking_send'),
           onPressed: _busy || _uncertain ? null : _send,
