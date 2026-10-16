@@ -167,7 +167,12 @@ class _FleetShellState extends State<FleetShell> {
         final body = IndexedStack(
           key: ValueKey(_membership.companyId),
           index: _index,
-          children: pages,
+          // IndexedStack keeps inactive pages mounted. Only the visible tab
+          // participates in route Hero animations (each page has an add FAB).
+          children: [
+            for (var i = 0; i < pages.length; i++)
+              HeroMode(enabled: i == _index, child: pages[i]),
+          ],
         );
 
         return Scaffold(
