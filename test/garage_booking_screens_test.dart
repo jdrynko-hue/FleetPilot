@@ -54,6 +54,7 @@ void main() {
       testWidgets('single $operation confirmation rejects stale list=$refreshDuringDialog',
           (tester) async {
         var writes = 0;
+        final writtenIds = <String>[];
         var loads = 0;
         final customer = operation == 'customer';
         final actionKey = customer
@@ -67,7 +68,7 @@ void main() {
           ? GarageMyBookingsScreen(
               loadBookings: () async { loads++; return [myRequest()]; },
               cancel: (id) async {
-                expect(id, bookingId); writes++;
+                writtenIds.add(id); writes++;
                 return GarageBookingStatus.withdrawn;
               })
           : GarageBookingWorkshopScreen(
@@ -78,11 +79,10 @@ void main() {
                     : GarageBookingStatus.requested)];
               },
               respond: (id, accept) async {
-                debugPrint('test write callback');
-                expect(id, bookingId); writes++;
+                writtenIds.add(id); writes++;
                 return accept ? GarageBookingStatus.confirmed : GarageBookingStatus.declined;
               },
-              confirmCancellation: (id) async { expect(id, bookingId); writes++; }));
+              confirmCancellation: (id) async { writtenIds.add(id); writes++; }));
         // Invoke saved callbacks before the dialog's first rendered frame.
         final action = tester.widget<ButtonStyleButton>(find.byKey(Key(actionKey))).onPressed!;
         final refresh = tester.widget<IconButton>(find.byKey(Key(refreshKey))).onPressed!;
@@ -96,8 +96,8 @@ void main() {
         }
         await tester.tap(find.byKey(Key(confirmKey)));
         await tester.pumpAndSettle();
-        debugPrint('test observed writes=$writes loads=$loads');
         expect(writes, refreshDuringDialog ? 0 : 1);
+        expect(writtenIds, refreshDuringDialog ? isEmpty : [bookingId]);
         expect(find.byType(AlertDialog), findsNothing);
         // Dismissal/completion releases the lock for a fresh explicit intent.
         final next = tester.widget<ButtonStyleButton>(find.byKey(Key(actionKey))).onPressed!;
