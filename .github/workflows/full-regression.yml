@@ -78,7 +78,7 @@ jobs:
         run: cp web/app/index.html web/index.html
       - name: Compile connected Flutter web for QA without deployment
         run: >-
-          flutter build web --release --base-href "/app/"
+          flutter build web --release --no-web-resources-cdn --base-href "/app/"
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
@@ -105,3 +105,10 @@ jobs:
               assert (output / name).is_file() and (output / name).stat().st_size > 0, name
           print('PASS: QA portal entry, /app/ base and bootstrap assets')
           PY
+      - name: Preserve the self-contained QA portal for private preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-web-portal
+          path: build/web
+          if-no-files-found: error
+          retention-days: 3
