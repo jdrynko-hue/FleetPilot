@@ -44,6 +44,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   bool _searched = false;
   int _scope = 0;
   bool _busy = false;
+  bool _opening = false;
   String? _error;
   int _generation = 0;
 
@@ -67,6 +68,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       _city.clear();
       _error = null;
       _busy = false;
+      _opening = false;
     }
   }
 
@@ -88,6 +90,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       return;
     }
     final gen = ++_generation;
+    _opening = false;
     final search = widget.search;
     setState(() { _busy = true; _shops = const []; _searched = false; _error = null; });
     try {
@@ -113,14 +116,33 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _open(GarageBookingWorkshop shop) async {
+    if (_busy || _opening) return;
     final generation = _generation;
-    if (widget.beforeRequest != null && !await widget.beforeRequest!()) return;
-    if (!mounted || generation != _generation) return;
-    await Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (_) => GarageBookingRequestScreen(
-        shop: shop, submit: widget.submit, pickTime: widget.pickTime),
-    ));
-    if (mounted) await _search();
+    var handedOff = false;
+    setState(() => _opening = true);
+    try {
+      final allowed = widget.beforeRequest == null || await widget.beforeRequest!();
+      if (!mounted || generation != _generation) return;
+      if (!allowed) {
+        // Login handoff may still be animating out. Keep this intent locked;
+        // only an explicit new search or a new scope can start another one.
+        handedOff = true;
+        return;
+      }
+      await Navigator.of(context).push<void>(MaterialPageRoute(
+        builder: (_) => GarageBookingRequestScreen(
+          shop: shop, submit: widget.submit, pickTime: widget.pickTime),
+      ));
+      if (mounted && generation == _generation) await _search();
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'bookingSearchFailed');
+      }
+    } finally {
+      if (mounted && generation == _generation && !handedOff) {
+        setState(() => _opening = false);
+      }
+    }
   }
 
   @override
@@ -179,7 +201,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
                 Text(shop.services.map((service) => bookingServiceLabel(service)).join(', ')),
                 Text(GarageUiText.format('bookingWorkshopZone', {'zone': shop.timeZone})),
                 OutlinedButton(key: Key('booking_open_${shop.workspaceId}'),
-                  onPressed: _busy ? null : () => _open(shop),
+                  onPressed: _busy || _opening ? null : () => _open(shop),
                   child: Text(GarageUiText.get('bookingRequestTime'))),
               ]),
           ),
