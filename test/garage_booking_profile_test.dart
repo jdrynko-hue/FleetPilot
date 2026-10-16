@@ -64,7 +64,8 @@ void main() {
     await pressSave(tester);
     await tester.tap(find.byKey(const Key('booking_profile_confirm'))); await tester.pumpAndSettle();
     expect(writes,1); expect(find.textContaining('PRIVATE DETAIL'),findsNothing);
-    expect(tester.widget<FilledButton>(find.byKey(const Key('booking_profile_save'))).onPressed,isNull);
+    expect(find.byKey(const Key('booking_profile_save')),findsNothing);
+    expect(find.byKey(const Key('booking_profile_city')),findsNothing);
     await tester.tap(find.byKey(const Key('booking_profile_reload'))); await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('booking_profile_save'))); await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(find.byKey(const Key('booking_profile_save'))).onPressed,isNotNull);

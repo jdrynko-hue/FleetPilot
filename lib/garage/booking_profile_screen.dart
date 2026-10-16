@@ -108,7 +108,8 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
       }
     } catch (_) {
       if (mounted && scope == _scope) setState(() {
-        _uncertain = true;
+        _uncertain = true; _loaded = false;
+        _city.clear(); _zone.clear(); _services = {}; _listed = false;
         _notice = GarageUiText.get('bookingSaveUncertain');
       });
     } finally {
