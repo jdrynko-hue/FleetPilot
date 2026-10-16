@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -210,4 +212,133 @@ void main() {
     expect(find.byKey(Key('customer_booking_cancel_'+bookingId)),findsNothing);
     expect(tester.takeException(),isNull);
   });
+
+  testWidgets('search ignores stale results after changing directory scope',
+      (tester) async {
+    final pending = Completer<List<GarageBookingWorkshop>>();
+    final BookingSubmit submit = ({
+      required workspaceId, required customerName, required vehicleMake,
+      required vehicleModel, required service, required concern,
+      required desiredStart, registration,
+    }) async => bookingId;
+    const otherShop = GarageBookingWorkshop(
+      workspaceId: '00000000-0000-4000-8000-000000000102',
+      name: 'Second Workshop', city: 'Luton', country: 'GB',
+      timeZone: 'Europe/London', services: ['diagnostics'],
+    );
+    await render(tester, GarageBookingSearchScreen(
+      search: ({city}) => pending.future,
+      submit: submit,
+    ));
+    await tester.tap(find.byKey(const Key('booking_search_submit')));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingSearchScreen(
+      search: ({city}) async => [otherShop],
+      submit: submit,
+    )));
+    await tester.pumpAndSettle();
+    pending.complete([shop]);
+    await tester.pumpAndSettle();
+    expect(find.text(shop.name), findsNothing);
+    await tester.tap(find.byKey(const Key('booking_search_submit')));
+    await tester.pumpAndSettle();
+    expect(find.text(otherShop.name), findsOneWidget);
+    expect(find.text(shop.name), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('booking form clears customer details on workshop scope change',
+      (tester) async {
+    final pending = Completer<String>();
+    var oldSubmissions = 0;
+    var newSubmissions = 0;
+    final BookingTimePicker picker = (_) async =>
+        DateTime.now().add(const Duration(days: 2));
+    final BookingSubmit oldSubmit = ({
+      required workspaceId, required customerName, required vehicleMake,
+      required vehicleModel, required service, required concern,
+      required desiredStart, registration,
+    }) {
+      oldSubmissions++;
+      expect(workspaceId, shop.workspaceId);
+      return pending.future;
+    };
+    const otherShop = GarageBookingWorkshop(
+      workspaceId: '00000000-0000-4000-8000-000000000102',
+      name: 'Second Workshop', city: 'Luton', country: 'GB',
+      timeZone: 'Europe/London', services: ['diagnostics'],
+    );
+    final BookingSubmit newSubmit = ({
+      required workspaceId, required customerName, required vehicleMake,
+      required vehicleModel, required service, required concern,
+      required desiredStart, registration,
+    }) async {
+      newSubmissions++;
+      expect(workspaceId, otherShop.workspaceId);
+      return bookingId;
+    };
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop, submit: oldSubmit, pickTime: picker,
+    ));
+    await tester.enterText(find.byKey(const Key('booking_name')), 'Private Person');
+    await tester.enterText(find.byKey(const Key('booking_make')), 'Ford');
+    await tester.enterText(find.byKey(const Key('booking_model')), 'Focus');
+    await tester.tap(find.byKey(const Key('booking_service')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('brakes').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_concern')), 'Noisy brakes');
+    await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
+    await tester.tap(find.byKey(const Key('booking_pick_time')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.tap(find.byKey(const Key('booking_send')));
+    await tester.pump();
+    expect(oldSubmissions, 1);
+    await tester.pumpWidget(MaterialApp(home: GarageBookingRequestScreen(
+      shop: otherShop, submit: newSubmit, pickTime: picker,
+    )));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextFormField>(
+      find.byKey(const Key('booking_name'))).controller!.text, isEmpty);
+    expect(tester.widget<TextFormField>(
+      find.byKey(const Key('booking_concern'))).controller!.text, isEmpty);
+    expect(find.byKey(const Key('booking_sent_notice')), findsNothing);
+    pending.complete(bookingId);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking_sent_notice')), findsNothing);
+    expect(newSubmissions, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('old workshop date picker result cannot populate new booking',
+      (tester) async {
+    final pending = Completer<DateTime?>();
+    final BookingSubmit submit = ({
+      required workspaceId, required customerName, required vehicleMake,
+      required vehicleModel, required service, required concern,
+      required desiredStart, registration,
+    }) async => bookingId;
+    const otherShop = GarageBookingWorkshop(
+      workspaceId: '00000000-0000-4000-8000-000000000102',
+      name: 'Second Workshop', city: 'Luton', country: 'GB',
+      timeZone: 'Europe/London', services: ['diagnostics'],
+    );
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop, submit: submit, pickTime: (_) => pending.future,
+    ));
+    await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
+    await tester.tap(find.byKey(const Key('booking_pick_time')));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingRequestScreen(
+      shop: otherShop, submit: submit,
+      pickTime: (_) async => DateTime.now().add(const Duration(days: 3)),
+    )));
+    await tester.pumpAndSettle();
+    pending.complete(DateTime.now().add(const Duration(days: 2)));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose date and time'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
