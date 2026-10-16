@@ -146,10 +146,12 @@ class _ConnectionsState extends State<GarageBridgeConnectionsScreen> {
             'Revoke workshop connection?')),
         content: Text(_tr(
           'Flota i warsztat stracą możliwość dalszej wymiany zgłoszeń. '
+          'Połączenia nie można przywrócić z panelu: powrót wymaga osobnego procesu zgody. '
           'Wcześniejsza historia pozostanie w audycie. '
           'Jeśli operacja się nie potwierdzi, sprawdź status przed kolejną próbą.',
           'The fleet and workshop will lose access to shared repair requests. '
-          'Past actions remain in the audit log. '
+          'This connection cannot be restored from the app; reconnecting requires '
+          'a separate consent process. Past actions remain in the audit log. '
           'If the outcome is uncertain, check the connection before retrying.',
         )),
         actions: [
