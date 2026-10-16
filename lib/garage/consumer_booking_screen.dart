@@ -55,7 +55,8 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.search != widget.search ||
         oldWidget.submit != widget.submit ||
-        oldWidget.pickTime != widget.pickTime) {
+        oldWidget.pickTime != widget.pickTime ||
+        oldWidget.beforeRequest != widget.beforeRequest) {
       // Repository callbacks define the authenticated directory scope.
       // Invalidate old in-flight results and never show another scope's shops.
       _generation++;
@@ -112,8 +113,9 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _open(GarageBookingWorkshop shop) async {
+    final generation = _generation;
     if (widget.beforeRequest != null && !await widget.beforeRequest!()) return;
-    if (!mounted) return;
+    if (!mounted || generation != _generation) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
       builder: (_) => GarageBookingRequestScreen(
         shop: shop, submit: widget.submit, pickTime: widget.pickTime),
@@ -243,7 +245,8 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.shop.workspaceId != widget.shop.workspaceId ||
         oldWidget.submit != widget.submit ||
-        oldWidget.pickTime != widget.pickTime) {
+        oldWidget.pickTime != widget.pickTime ||
+        oldWidget.beforeRequest != widget.beforeRequest) {
       // Never reuse private customer details, service selection, or
       // submission outcome for a different workshop/account scope.
       _generation++;

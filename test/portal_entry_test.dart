@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/auth/portal_entry.dart';
+import 'package:fleetpilot/garage/consumer_booking_screen.dart';
+import 'package:fleetpilot/garage/consumer_booking_repository.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
@@ -59,4 +61,24 @@ void main() {
     expect(find.byKey(const Key('ecosystem_retry')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('guest discovery requires login before opening a request form', (tester) async {
+    var loginRequired = false;
+    var submitted = false;
+    await tester.pumpWidget(MaterialApp(home: GarageBookingSearchScreen(
+      search: ({city}) async => const [GarageBookingWorkshop(
+        workspaceId: '00000000-0000-4000-8000-000000000101', name: 'Workshop',
+        city: 'Luton', country: 'GB', timeZone: 'Europe/London', services: ['brakes'])],
+      submit: ({required workspaceId, required customerName, required vehicleMake,
+        required vehicleModel, required service, required concern, required desiredStart,
+        required requestKey, registration}) async { submitted = true; return 'unused'; },
+      beforeRequest: () async { loginRequired = true; return false; })));
+    await tester.tap(find.byKey(const Key('booking_search_submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(OutlinedButton).last);
+    await tester.pumpAndSettle();
+    expect(loginRequired, isTrue);
+    expect(submitted, isFalse);
+    expect(find.byType(GarageBookingRequestScreen), findsNothing);
+  });
+
 }
