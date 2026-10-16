@@ -14,6 +14,37 @@ import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
+  final today = DateTime.now();
+  late SupabaseClient client;
+  late MockClient transport;
+  setUpAll(() async {
+
+    transport = MockClient((request) async {
+      expect(request.url.path, '/rest/v1/vehicles');
+      expect(request.url.queryParameters['company_id'], 'eq.fleet-a');
+      expect(request.url.queryParameters['is_active'], 'eq.true');
+      return http.Response(jsonEncode([
+        for (final days in <int?>[-1, 0, 30, 31, null])
+          {
+            'id': 'car-$days', 'company_id': 'fleet-a',
+            'registration': 'CAR $days', 'mileage': 1000, 'status': 'available',
+            'insurance_expiry_date': days == null ? null :
+                DateTime(today.year, today.month, today.day + days).toIso8601String().substring(0, 10),
+          },
+      ]), 200, headers: {'content-type': 'application/json'});
+    });
+    client = SupabaseClient(
+      'https://fleet-test.invalid', 'test-anon', httpClient: transport,
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+    );
+    // Initialize the SDK JSON worker outside the widget fake clock.
+    await FleetRepository(client).fetchVehicles('fleet-a');
+  });
+  tearDownAll(() async {
+    await client.dispose();
+    transport.close();
+  });
+
   tearDown(() => AppLocale.language.value = 'en');
 
   test('insurance window includes day 30, today and overdue, not missing dates', () {
@@ -95,30 +126,6 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final today = DateTime.now();
-    final transport = MockClient((request) async {
-      expect(request.url.path, '/rest/v1/vehicles');
-      expect(request.url.queryParameters['company_id'], 'eq.fleet-a');
-      expect(request.url.queryParameters['is_active'], 'eq.true');
-      return http.Response(jsonEncode([
-        for (final days in <int?>[-1, 0, 30, 31, null])
-          {
-            'id': 'car-$days', 'company_id': 'fleet-a',
-            'registration': 'CAR $days', 'mileage': 1000, 'status': 'available',
-            'insurance_expiry_date': days == null ? null :
-                DateTime(today.year, today.month, today.day + days).toIso8601String().substring(0, 10),
-          },
-      ]), 200, headers: {'content-type': 'application/json'});
-    });
-    final client = SupabaseClient(
-      'https://fleet-test.invalid', 'test-anon', httpClient: transport,
-      authOptions: const AuthClientOptions(autoRefreshToken: false),
-    );
-    var closed = false;
-    addTearDown(() async {
-      if (!closed) await tester.runAsync(client.dispose);
-      transport.close();
-    });
     await tester.pumpWidget(MaterialApp(home: VehiclesScreen(
       company: CompanyMembership(companyId: 'fleet-a', companyName: 'Fleet A', role: 'viewer', currency: 'GBP'),
       canManage: false, refreshToken: 0, onDataChanged: () {},
@@ -131,7 +138,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 30));
     }
     await tester.pumpAndSettle();
-    expect(find.byType(VehicleListTile), findsNWidgets(5));
+    expect(find.byType(VehicleListTile), findsNWidgets(5),
+      reason: tester.widgetList<Text>(find.byType(Text)).map((text) => text.data).join(' | '));
     for (final width in [320.0, 390.0, 412.0]) {
       tester.view.physicalSize = Size(width, 2200);
       await tester.pumpAndSettle();
@@ -155,7 +163,5 @@ void main() {
     expect(find.byType(VehicleListTile), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.runAsync(client.dispose);
-    closed = true;
   }, timeout: const Timeout(Duration(seconds: 60)));
 }
