@@ -33,6 +33,8 @@ class MobileLoginTest(unittest.TestCase):
                 self.assertIn('@media(max-width:760px)', content)
                 self.assertIn('min-height:44px', content)
                 self.assertIn('nav-compact-label', content)
+                self.assertIn('.nav-compact-label{font-size:12px;display:inline}', content)
+                self.assertIn('flex-wrap:wrap', content)
 
                 # Text content uses the same 12-language switching mechanism as
                 # the rest of the landing page.
