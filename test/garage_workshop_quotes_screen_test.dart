@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fleetpilot/core/localization.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/garage/quote_order_repository.dart';
 import 'package:fleetpilot/garage/workshop_quotes_screen.dart';
@@ -6,6 +7,27 @@ import 'package:fleetpilot/garage/workshop_quote_publisher.dart';
 
 const id = '00000000-0000-4000-8000-000000000001';
 void main() {
+  tearDown(() => AppLocale.language.value = 'en');
+
+  for (final language in ['pl', 'es']) {
+    testWidgets('work orders show localized status in $language', (tester) async {
+      AppLocale.language.value = language;
+      await tester.pumpWidget(MaterialApp(home: GarageWorkshopQuotesScreen(
+        loadOrders: () async => const [
+          GarageQuoteOrder(id: id, complaint: 'Brakes', status: 'awaiting_parts'),
+        ],
+        loadCurrency: (_) async =>
+          const GarageQuoteCurrencySelection('GBP', locked: false),
+        publish: (_, __, ___) async => 1,
+      )));
+      await tester.pumpAndSettle();
+      expect(find.text(language == 'pl'
+        ? 'Oczekuje na części' : 'En espera de piezas'), findsOneWidget);
+      expect(find.text('awaiting parts'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   test('quote order listing rejects unknown and unscoped values', () {
     expect(GarageQuoteOrderRepository.parseOrders([
       {'id':id,'complaint':'Brakes','status':'diagnosing'}
