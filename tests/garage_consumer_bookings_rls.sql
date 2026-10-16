@@ -2,6 +2,7 @@
 -- Installs 007 only in ephemeral CI database.
 \set ON_ERROR_STOP on
 \ir ../supabase/garage_staging/007_private_customer_bookings.sql
+\ir ../supabase/garage_staging/011_booking_request_replay.sql
 
 INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('00000000-0000-4000-8000-000000000031','customer-a@example.test',now()),
@@ -109,6 +110,11 @@ BEGIN
    '00000000-0000-4000-8000-000000000101','Customer A','BMW',
    '118i','AB12 CDE','brakes','Grinding brakes',now()+interval '2 days');
  PERFORM set_config('booking.qa.a',v::text,false);
+ IF public.garage_booking_request(
+   '00000000-0000-4000-8000-000000000101',' Customer A ','BMW',
+   '118i','AB12 CDE','brakes','Grinding brakes',now()+interval '2 days')<>v THEN
+   RAISE EXCEPTION 'Identical replay did not return existing ID'; END IF;
+
  IF (SELECT count(*) FROM public.garage_booking_my_requests())<>1 THEN
    RAISE EXCEPTION 'Customer booking list missing request'; END IF;
  IF (SELECT status FROM public.garage_booking_my_requests() LIMIT 1)<>'requested' THEN
@@ -139,6 +145,13 @@ BEGIN
  IF NOT denied THEN RAISE EXCEPTION 'Customer B cancelled Customer A'; END IF;
 END $$;
 COMMIT;
+
+DO $$
+BEGIN
+ IF (SELECT count(*) FROM public.garage_booking_events
+     WHERE booking_id=current_setting('booking.qa.a')::uuid AND action='requested')<>1 THEN
+   RAISE EXCEPTION 'Replay duplicated booking audit event'; END IF;
+END $$;
 
 -- Wrong workshop is not allowed to view booking details or confirm.
 BEGIN;

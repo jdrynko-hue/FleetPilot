@@ -101,9 +101,30 @@ async function book(user,name,start=tomorrow){
  p_start_at:start
  });
 }
+// Eight first submissions race before any booking exists for this customer.
+const charlie=await signup('charlie');
+const parallelStart=new Date(Date.now()+96*60*60*1000).toISOString();
+const firstRace=await Promise.all(Array.from({length:8},()=>book(charlie,'Charlie Example',parallelStart)));
+const firstId=good(firstRace[0],'parallel first request');
+for(const result of firstRace) assert.equal(good(result,'parallel first replay'),firstId);
+assert.equal(good(await rpc(charlie,'garage_booking_my_requests'),'race inbox').length,1);
+assert.equal(good(await rpc(charlie,'garage_booking_cancel',{p_booking:firstId}),'withdraw race fixture'),'withdrawn');
+// Replays must not consume the daily quota; five distinct writes remain the limit.
+let quotaId;
+for(let i=0;i<4;i++) {
+ const start=new Date(Date.now()+(120+i*24)*60*60*1000).toISOString();
+ quotaId=good(await book(charlie,'Charlie Example',start),'distinct request within quota');
+ assert.equal(good(await book(charlie,'Charlie Example',start),'replay at quota'),quotaId);
+ good(await rpc(charlie,'garage_booking_cancel',{p_booking:quotaId}),'withdraw quota fixture');
+}
+denied(await book(charlie,'Charlie Example',parallelStart),'sixth distinct request over quota');
 const a=good(await book(alice,'Alice Example'),'Alice requested slot');
 assert.match(a,/^[0-9a-f-]{36}$/);
-denied(await book(alice,'Alice Example'),'repeat same booking');
+// Real parallel HTTP transactions must converge on the first committed row.
+const replays=await Promise.all(Array.from({length:8},()=>book(alice,'Alice Example')));
+for(const replay of replays)
+ assert.equal(good(replay,'concurrent identical replay'),a);
+denied(await book(alice,'Changed Name'),'same slot with different payload');
 const b=good(await book(bob,'Bob Example'),'Bob requested same slot');
 const c=good(await book(bob,'Bob Example',slot2),'Bob requested other slot');
 assert.equal(good(await rpc(alice,'garage_booking_my_requests'),'Alice own inbox').length,1);
@@ -145,5 +166,6 @@ assert.equal(good(await rpc(ownerA,'garage_booking_configure',{
 }),'unlist shop'),true);
 assert.deepEqual(good(await rpc(null,'garage_booking_discover',{
  p_city:'Dunstable'}),'unlisted garage hidden'),[]);
+assert.equal(good(await book(bob,'Bob Example',slot2),'existing confirmed replay after unlist'),c);
 denied(await book(alice,'Alice Example'),'unlisted garage refuses requests');
 console.log('PASS local Supabase Garage consumer bookings: listing consent, tenant isolation, verified sessions, collision, cancellation, unlisting');
