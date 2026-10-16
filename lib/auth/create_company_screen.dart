@@ -12,11 +12,12 @@ typedef FleetCreationHandler = Future<void> Function({
 });
 
 class CreateCompanyScreen extends StatefulWidget {
-  const CreateCompanyScreen({required this.onCreated, this.allowCancel = false, this.createCompany, super.key});
+  const CreateCompanyScreen({required this.onCreated, this.allowCancel = false, this.createCompany, this.currentAccountId, super.key});
 
   final VoidCallback onCreated;
   final bool allowCancel;
   final FleetCreationHandler? createCompany;
+  final String? Function()? currentAccountId;
 
   @override
   State<CreateCompanyScreen> createState() => _CreateCompanyScreenState();
@@ -42,6 +43,12 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
 
   Future<void> _create() async {
     if (!_canCreate) return;
+    final repository = widget.createCompany == null ? FleetRepository() : null;
+    String? accountId() => widget.currentAccountId != null
+        ? widget.currentAccountId!()
+        : repository?.currentUser?.id;
+    final submittingAccount = accountId();
+    bool current() => mounted && accountId() == submittingAccount;
     final currency = _countryCurrency!;
     setState(() => _busy = true);
     try {
@@ -52,15 +59,15 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
           currency: currency,
         );
       } else {
-        await FleetRepository().createCompany(
+        await repository!.createCompany(
           name: _name.text.trim(),
           country: _country,
           currency: currency,
         );
       }
-      widget.onCreated();
+      if (current()) widget.onCreated();
     } catch (error) {
-      if (!mounted) return;
+      if (!current()) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
