@@ -14,6 +14,7 @@ void main() {
     test('membership response is scoped to account after $transition', () async {
       var account = 1;
       final started = Completer<void>();
+      late http.Request membershipRequest;
       final response = Completer<http.Response>();
       String userId() => '00000000-0000-4000-8000-00000000000$account';
       final transport = MockClient((request) async {
@@ -38,6 +39,7 @@ void main() {
         expect(request.url.path, '/rest/v1/company_members');
         expect(request.url.queryParameters['user_id'],
             'eq.00000000-0000-4000-8000-000000000001');
+        membershipRequest = request;
         started.complete();
         return response.future;
       });
@@ -58,7 +60,8 @@ void main() {
       response.complete(http.Response(jsonEncode([
         {'company_id': 'old-fleet', 'role': 'owner',
           'companies': {'name': 'Original fleet', 'currency': 'GBP'}},
-      ]), 200, headers: {'content-type': 'application/json'}));
+      ]), 200, request: membershipRequest,
+          headers: {'content-type': 'application/json'}));
       final memberships = await pending;
       if (transition == 'switch' || transition == 'logout') {
         expect(memberships, isEmpty);
