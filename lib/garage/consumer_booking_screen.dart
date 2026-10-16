@@ -19,7 +19,7 @@ typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
 class GarageBookingSearchScreen extends StatefulWidget {
   const GarageBookingSearchScreen({
     required this.search, required this.submit,
-    this.pickTime = pickBookingTime, super.key,
+    this.pickTime = pickBookingTime, this.beforeRequest, super.key,
   });
 
   factory GarageBookingSearchScreen.forRepository(
@@ -31,6 +31,7 @@ class GarageBookingSearchScreen extends StatefulWidget {
   final BookingSearch search;
   final BookingSubmit submit;
   final BookingTimePicker pickTime;
+  final Future<bool> Function()? beforeRequest;
 
   @override
   State<GarageBookingSearchScreen> createState() => _GarageBookingSearchState();
@@ -54,7 +55,8 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.search != widget.search ||
         oldWidget.submit != widget.submit ||
-        oldWidget.pickTime != widget.pickTime) {
+        oldWidget.pickTime != widget.pickTime ||
+        oldWidget.beforeRequest != widget.beforeRequest) {
       // Repository callbacks define the authenticated directory scope.
       // Invalidate old in-flight results and never show another scope's shops.
       _generation++;
@@ -111,6 +113,9 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _open(GarageBookingWorkshop shop) async {
+    final generation = _generation;
+    if (widget.beforeRequest != null && !await widget.beforeRequest!()) return;
+    if (!mounted || generation != _generation) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
       builder: (_) => GarageBookingRequestScreen(
         shop: shop, submit: widget.submit, pickTime: widget.pickTime),

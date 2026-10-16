@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 import 'forgot_password_screen.dart';
 import 'password_policy.dart';
+import 'portal_entry.dart';
+import '../core/app_config.dart';
 import '../data/fleet_repository.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.portal, this.onPortalChanged, this.onFindWorkshop});
+
+  final PortalEntry? portal;
+  final ValueChanged<PortalEntry>? onPortalChanged;
+  final VoidCallback? onFindWorkshop;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -137,6 +143,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
+                        if (AppConfig.ecosystemQaEnabled)
+                          PortalEntryPicker(selected: widget.portal,
+                            onSelected: _busy ? null : widget.onPortalChanged,
+                            onFindWorkshop: _busy ? null : widget.onFindWorkshop),
+                        if (!AppConfig.ecosystemQaEnabled || _registerMode)
                         Text(
                           _registerMode
                               ? tr('create_account')
