@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'auth/auth_gate.dart';
 import 'core/app_config.dart';
 import 'core/localization.dart';
+import 'core/material_localization.dart';
 import 'core/theme.dart';
 
 class FleetPilotApp extends StatelessWidget {
@@ -23,6 +24,9 @@ class FleetPilotApp extends StatelessWidget {
         return MaterialApp(
           key: ValueKey(language),
           title: 'Flotaryx',
+          locale: materialLocale(language),
+          supportedLocales: supportedMaterialLocales,
+          localizationsDelegates: materialLocalizationDelegates,
           debugShowCheckedModeBanner: false,
           theme: buildFleetPilotTheme(),
           home: AppConfig.isConfigured

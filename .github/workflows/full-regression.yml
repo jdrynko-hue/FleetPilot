@@ -53,6 +53,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Preserve the resolved public dependency lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-resolved-lockfile
+          path: pubspec.lock
+          if-no-files-found: error
+          retention-days: 3
       - name: Analyze full source tree
         run: flutter analyze --no-fatal-infos
       - name: Verify insurance and booking labels with UK daylight-saving dates
