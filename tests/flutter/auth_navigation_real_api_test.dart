@@ -106,6 +106,12 @@ void main() {
       await tester.tap(finder);
       await tester.pump(const Duration(milliseconds: 300));
     }
+    Future<void> back() async {
+      final controls = find.byType(BackButton).hitTestable();
+      await see(controls, 'active back control');
+      await tester.tap(controls.last);
+      await tester.pump(const Duration(milliseconds: 300));
+    }
     Future<void> login(SupabaseClient actor) async {
       await see(find.byType(LoginScreen), 'login screen');
       await tester.enterText(find.byType(TextFormField).at(0), actor.auth.currentUser!.email!);
@@ -134,8 +140,8 @@ void main() {
       await see(find.text(names[i]), 'own workshop fleet');
       expect(find.text(names[1-i]), findsNothing);
       if (i == 0) {
-        await tap(find.byType(BackButton).hitTestable().last);
-        await tap(find.byType(BackButton).hitTestable().last);
+        await back();
+        await back();
         await see(find.byKey(Key('ecosystem_${shops[1]}')), 'return to workshop chooser');
       }
     }
