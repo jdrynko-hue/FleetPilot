@@ -80,7 +80,7 @@ UWAGA: publiczne stawki Stripe **dla kont PL / UE** (np. 1,5% + 1 zł / €0,25)
 4. Rozdzielić „Zaloguj” od „Utwórz warsztat”; jeśli onboarding jeszcze niedostępny, nie sugerować aktywnego przycisku zapłaty.
 5. Pełne tłumaczenia 12 języków i formatu waluty z istniejącym przełącznikiem strony przed wdrożeniem na produkcję.
 6. Priorytet QA: pytania o okres/plan/VAT, porównanie kwot, koszyki, limity stanowisk, dostęp po anulowaniu, różne waluty.
-7. Szczegółowy szkic HTML: `web/garage-pricing-preview/index.html` — tylko lokalny podgląd w branchu, niezależny od publicznej strony.
+7. Szczegółowy szkic HTML: `design/garage-pricing-preview/index.html` — tylko lokalny podgląd w branchu, niezależny od publicznej strony.
 
 ## 7. Decyzja właściciela
 **ZATWIERDZONE ZAŁOŻENIE MODELU:** stały abonament Garage, **0% prowizji od rezerwacji**.
