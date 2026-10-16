@@ -7,7 +7,6 @@ import 'package:fleetpilot/garage/garage_ui_text.dart';
 import 'package:fleetpilot/garage/quote_currency_picker.dart';
 import 'package:fleetpilot/garage/quote_order_repository.dart';
 import 'package:fleetpilot/garage/workshop_quotes_screen.dart';
-import 'package:fleetpilot/garage/workshop_quote_publisher.dart';
 import 'package:fleetpilot/garage/repair_requests_screen.dart';
 import 'package:fleetpilot/garage/repair_bridge_repository.dart';
 import 'garage_repair_bridge_repository_test.dart' as fixture;
