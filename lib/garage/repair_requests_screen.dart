@@ -182,6 +182,7 @@ class GarageRepairRequestDetailScreen extends StatefulWidget {
 
 class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
   GarageRepairBridgeSnapshot? _snapshot;
+  String? _assignedEmail;
   bool _busy = true;
   String? _error;
   int _generation = 0;
@@ -206,10 +207,27 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
 
   Future<void> _refresh() async {
     final generation = ++_generation;
-    setState(() { _busy = true; _snapshot = null; _error = null; });
+    setState(() { _busy = true; _snapshot = null; _assignedEmail = null; _error = null; });
     try {
       final data = await _loadScoped();
-      if (mounted && generation == _generation) setState(() => _snapshot = data);
+      if (mounted && generation == _generation) {
+        setState(() => _snapshot = data);
+      }
+      // Staff contact is resolved only against the authorized workshop roster.
+      // Failed roster lookups never expose the ID or block the repair itself.
+      if (data.mechanicUserId != null && widget.loadMechanics != null) {
+        try {
+          final roster = await widget.loadMechanics!();
+          final matching = roster.where((m) =>
+              m.userId == data.mechanicUserId).toList();
+          if (mounted && generation == _generation &&
+              matching.length == 1) {
+            setState(() => _assignedEmail = matching.single.email);
+          }
+        } catch (_) {
+          // Keep the assignment boolean without showing private contacts.
+        }
+      }
     } catch (_) {
       if (mounted && generation == _generation) setState(() => _error = _tr(
         'Nie udało się pobrać zgłoszenia. Sprawdź dostęp i odśwież.',
@@ -406,6 +424,27 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
     if (mounted) await _refresh();
   }
 
+  String _eventLabel(GarageRepairBridgeEvent event) => switch (event.action) {
+    'request_sent' => _tr('Wysłano zgłoszenie', 'Request sent'),
+    'request_accepted' => _tr('Warsztat przyjął zgłoszenie', 'Workshop accepted'),
+    'quote_approved' => _tr('Zatwierdzono kosztorys', 'Estimate approved'),
+    'progress_updated' => _tr('Zmieniono etap naprawy', 'Repair status changed'),
+    'connection_revoked' => _tr('Wycofano połączenie', 'Connection revoked'),
+    _ => _tr('Zdarzenie', 'Event'),
+  };
+
+  String? _eventDescription(GarageRepairBridgeEvent event) {
+    if (event.action == 'quote_approved') {
+      return '${_tr('Wersja kosztorysu', 'Estimate revision')}: '
+          '${event.details['revision']}';
+    }
+    if (event.action == 'progress_updated') {
+      return '${_status(event.details['from'] as String)} → '
+          '${_status(event.details['to'] as String)}';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _snapshot;
@@ -431,6 +470,17 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
               child: Text(_tr('Przyjmij naprawę', 'Accept repair'))),
           if (data.workOrderStatus != null) Text(_status(data.workOrderStatus!),
             key: const Key('repair_current_status')),
+          if (data.mechanicAssigned != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              key: const Key('repair_assigned_mechanic'),
+              leading: const Icon(Icons.engineering_outlined),
+              title: Text(_tr('Przypisany mechanik', 'Assigned mechanic')),
+              subtitle: Text(data.mechanicAssigned!
+                ? (_assignedEmail ?? _tr('Mechanik przypisany',
+                    'Mechanic assigned'))
+                : _tr('Jeszcze nie przypisano', 'Not assigned yet')),
+            ),
           if (widget.approve != null && data.needsFleetApproval)
             FilledButton(key: const Key('repair_review_quote'), onPressed: _busy ? null : _openQuote,
               child: Text(_tr('Sprawdź i zatwierdź kosztorys', 'Review and approve estimate'))),
@@ -452,6 +502,33 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
           if (data.workOrderId != null && widget.accept != null)
             Text(_tr('Zlecenie znajdziesz w „Zlecenia i kosztorysy”.',
               'Find the work order in “Work orders and estimates”.')),
+          const SizedBox(height: 12),
+          ExpansionTile(
+            key: const Key('repair_event_timeline'),
+            title: Text(_tr('Historia naprawy', 'Repair timeline')),
+            subtitle: Text(_tr(
+              'Zdarzenia: ${data.events.length}',
+              'Events: ${data.events.length}')),
+            children: [
+              for (var i = 0; i < data.events.length; i++)
+                Builder(builder: (context) {
+                  final event = data.events[i];
+                  final time = event.occurredAt.toLocal();
+                  final material = MaterialLocalizations.of(context);
+                  final timestamp = '${material.formatMediumDate(time)} · '
+                    '${material.formatTimeOfDay(TimeOfDay.fromDateTime(time))}';
+                  final details = _eventDescription(event);
+                  return ListTile(
+                    key: Key('repair_timeline_event_$i'),
+                    dense: true,
+                    leading: const Icon(Icons.history),
+                    title: Text(_eventLabel(event)),
+                    subtitle: Text(details == null ? timestamp
+                      : '$timestamp · $details'),
+                  );
+                }),
+            ],
+          ),
         ],
       ])),
     );
