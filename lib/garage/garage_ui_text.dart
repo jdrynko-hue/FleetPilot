@@ -168,7 +168,7 @@ class GarageUiText {
       'Nie udało się sprawdzić dostępu.',
       'Spróbuj ponownie',
       'Waluta kosztorysu',
-      'Kwoty są zapisywane w wybranej walucie.',
+      'Kwota będzie zapisana w wybranej walucie.',
       'Kosztorysy warsztatu',
       'Nowy kosztorys',
       'Dodaj pozycję',
