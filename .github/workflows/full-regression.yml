@@ -82,6 +82,7 @@ jobs:
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
+          --dart-define=QA_AUTH_CALLBACK_URL=https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/
       - name: Verify the compiled QA portal can bootstrap at its real path
         run: |
           python3 - <<'PY'

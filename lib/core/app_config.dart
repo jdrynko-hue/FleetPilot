@@ -1,4 +1,5 @@
 class AppConfig {
+  static const qaAuthCallback = String.fromEnvironment('QA_AUTH_CALLBACK_URL');
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabasePublishableKey = String.fromEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',

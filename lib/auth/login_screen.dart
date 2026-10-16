@@ -48,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _email.text.trim(),
           password: _password.text,
           locale: _language,
+          portal: widget.portal?.name,
         );
                 if (!signedIn && mounted) {
           await showDialog<void>(
