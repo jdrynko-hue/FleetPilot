@@ -117,6 +117,17 @@ deny(await rpc(foreign,'garage_booking_confirm_slot',{
 assert.equal(good(await rpc(owner,'garage_booking_confirm_slot',{
  p_booking:a,p_resource:bay1
 }),'bay 1 booking'),'confirmed');
+for(const replay of await Promise.all(Array.from({length:8},()=>rpc(owner,'garage_booking_confirm_slot',{
+ p_booking:a,p_resource:bay1})))) assert.equal(good(replay,'parallel same-bay replay'),'confirmed');
+assert.equal(good(await rpc(owner,'garage_booking_respond',{
+ p_booking:a,p_confirm:true}),'compatibility replay with several bays'),'confirmed');
+deny(await rpc(owner,'garage_booking_confirm_slot',{
+ p_booking:a,p_resource:bay2}),'cannot move bay through confirmation replay');
+deny(await rpc(foreign,'garage_booking_confirm_slot',{
+ p_booking:a,p_resource:bay1}),'foreign workshop cannot replay confirmed state');
+deny(await rpc(customerA,'garage_booking_confirm_slot',{
+ p_booking:a,p_resource:bay1}),'customer cannot act as workshop on replay');
+
 deny(await rpc(owner,'garage_booking_confirm_slot',{
  p_booking:b,p_resource:bay1
 }),'same bay duplicate');
@@ -144,7 +155,7 @@ deny(await rpc(owner,'garage_booking_resource_active',{
 }),'cannot disable bay with future confirmed booking');
 const aliceNotices=good(await rpc(customerA,'garage_booking_my_notifications'),
  'customer A notifications');
-assert.ok(aliceNotices.some(x=>x.event_action==='confirmed'&&x.booking_id===a));
+assert.equal(aliceNotices.filter(x=>x.event_action==='confirmed'&&x.booking_id===a).length,1);
 assert.ok(aliceNotices.every(x=>x.booking_id===a||x.booking_id===early));
 deny(await rpc(customerB,'garage_booking_mark_notification_read',{
  p_id:aliceNotices.find(x=>x.event_action==='confirmed').id
@@ -161,6 +172,11 @@ deny(await rpc(owner,'garage_booking_confirm_slot',{
 assert.equal(good(await rpc(owner,'garage_booking_confirm_cancellation',{
  p_booking:a
 }),'workshop confirms cancellation'),'cancelled');
+deny(await rpc(owner,'garage_booking_confirm_slot',{
+ p_booking:a,p_resource:bay1}),'cannot resurrect cancelled booking through replay');
+deny(await rpc(owner,'garage_booking_respond',{
+ p_booking:a,p_confirm:true}),'legacy replay cannot resurrect cancelled booking');
+
 assert.equal(good(await rpc(owner,'garage_booking_confirm_slot',{
  p_booking:c,p_resource:bay1
 }),'released bay available'),'confirmed');
@@ -190,4 +206,13 @@ const raceCalendar=good(await rpc(owner,'garage_booking_calendar',{
 }),'concurrent booking calendar');
 assert.equal(raceCalendar.filter(i=>i.resource_id===bay2).length,1,
   'Only one confirmed booking exists for racing same resource');
+const raceC = good(await book(customerC,'Parallel first decision',tomorrowSlot),'first decision race');
+for(const result of await Promise.all(Array.from({length:8},()=>rpc(owner,'garage_booking_confirm_slot',{
+ p_booking:raceC,p_resource:bay1})))) assert.equal(good(result,'parallel first decision'),'confirmed');
+const declined=good(await book(customerC,'Parallel decline',new Date(start.getTime()+2*86400000).toISOString()),'decline race request');
+for(const result of await Promise.all(Array.from({length:6},()=>rpc(owner,'garage_booking_respond',{
+ p_booking:declined,p_confirm:false})))) assert.equal(good(result,'parallel decline replay'),'declined');
+deny(await rpc(owner,'garage_booking_respond',{p_booking:declined,p_confirm:true}),'conflicting decision after decline');
+deny(await rpc(foreign,'garage_booking_respond',{p_booking:declined,p_confirm:false}),'foreign declined replay');
+
 console.log('PASS local Supabase Garage calendar: working hours, capacity, shared mechanics, cancellation holds, user-scoped private notifications');

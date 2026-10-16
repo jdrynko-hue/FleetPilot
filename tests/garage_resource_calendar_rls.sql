@@ -1,6 +1,7 @@
 -- Runs in disposable PostgreSQL after 007 regression. No production data.
 \set ON_ERROR_STOP on
 \ir ../supabase/garage_staging/008_resource_calendar_notifications.sql
+\ir ../supabase/garage_staging/014_booking_confirmation_replay.sql
 
 DO $$
 BEGIN
@@ -136,6 +137,19 @@ BEGIN
   current_setting('calendar.qa.a')::uuid,
   current_setting('calendar.qa.bay1')::uuid)<>'confirmed'
  THEN RAISE EXCEPTION 'First resource confirmation failed'; END IF;
+ IF public.garage_booking_confirm_slot(
+   current_setting('calendar.qa.a')::uuid,
+   current_setting('calendar.qa.bay1')::uuid)<>'confirmed'
+ THEN RAISE EXCEPTION 'Same-bay confirmation replay failed'; END IF;
+ IF public.garage_booking_respond(current_setting('calendar.qa.a')::uuid,true)<>'confirmed'
+ THEN RAISE EXCEPTION 'Compatibility confirmation replay failed'; END IF;
+ denied:=false;
+ BEGIN
+  PERFORM public.garage_booking_confirm_slot(
+   current_setting('calendar.qa.a')::uuid,current_setting('calendar.qa.bay2')::uuid);
+ EXCEPTION WHEN OTHERS THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Replay changed confirmed resource'; END IF;
+
  denied:=false;
  BEGIN
   PERFORM public.garage_booking_confirm_slot(
@@ -234,3 +248,19 @@ BEGIN
 END $$;
 COMMIT;
 SELECT 'Garage resource hours, capacity, per-bay conflicts and notifications: PASS' AS result;
+
+-- Administrative assertions only: client RPCs still cannot read raw audit rows.
+DO $$
+DECLARE b uuid:=current_setting('calendar.qa.a')::uuid;
+BEGIN
+ IF (SELECT count(*) FROM public.garage_booking_events
+     WHERE booking_id=b AND action='confirmed')<>1 THEN
+  RAISE EXCEPTION 'Confirmation replay duplicated audit event'; END IF;
+ IF (SELECT count(*) FROM public.garage_booking_notifications
+     WHERE booking_id=b AND event_action='confirmed')<>1 THEN
+  RAISE EXCEPTION 'Confirmation replay duplicated customer notification'; END IF;
+ IF (SELECT count(*) FROM public.garage_work_orders
+     WHERE workspace_id='00000000-0000-4000-8000-000000000101'
+       AND complaint='Book Bay One')<>1 THEN
+  RAISE EXCEPTION 'Confirmation replay duplicated work order'; END IF;
+END $$;
