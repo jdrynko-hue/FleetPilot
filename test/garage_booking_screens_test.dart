@@ -69,6 +69,40 @@ void main() {
     });
   }
 
+  testWidgets('service filter narrows city results without implying free slots',
+      (tester) async {
+    var searches = 0;
+    await render(tester, GarageBookingSearchScreen(
+      search: ({city}) async { searches++; return [shop]; },
+      submit: ({
+        required workspaceId, required customerName,
+        required vehicleMake, required vehicleModel, required service,
+        required concern, required desiredStart, registration,
+      }) async => bookingId,
+    ), width: 320);
+    await tester.tap(find.byKey(const Key('booking_search_submit')));
+    await tester.pumpAndSettle();
+    expect(searches, 1);
+    expect(find.byKey(Key('booking_open_' + shop.workspaceId)), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('booking_search_service')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tyres').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking_search_no_service')), findsOneWidget);
+    expect(find.byKey(Key('booking_open_' + shop.workspaceId)), findsNothing);
+    expect(searches, 1); // Filtering must not fabricate API results.
+
+    await tester.tap(find.byKey(const Key('booking_search_service')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Brakes').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking_open_' + shop.workspaceId)), findsOneWidget);
+    expect(find.byKey(const Key('booking_search_count')), findsOneWidget);
+    expect(find.byKey(const Key('booking_not_guaranteed')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('search failure purges previously listed shops', (tester) async {
     var fail=false;
     await render(tester,GarageBookingSearchScreen(
