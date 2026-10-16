@@ -78,4 +78,63 @@ void main() {
     expect(writes, 0);
     expect(find.byKey(const Key('repair_accept')), findsNothing);
   });
+  testWidgets('progress confirms transition and reads status back', (tester) async {
+    var current = 'in_progress';
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId, orderStatus: current)),
+      progress: (status) async { writes++; current = status; return status; },
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('repair_progress_collected')), findsNothing);
+    await tester.tap(find.byKey(const Key('repair_progress_ready')));
+    await tester.pumpAndSettle();
+    expect(writes, 0);
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+    await tester.pumpAndSettle();
+    expect(writes, 1);
+    expect(find.byKey(const Key('repair_progress_ready')), findsNothing);
+    expect(find.byKey(const Key('repair_progress_collected')), findsOneWidget);
+  });
+  testWidgets('concurrent status change prevents stale progress write', (tester) async {
+    var loads = 0;
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId,
+        orderStatus: ++loads == 1 ? 'in_progress' : 'collected')),
+      progress: (status) async { writes++; return status; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('repair_progress_ready')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+    await tester.pumpAndSettle();
+    expect(writes, 0);
+    expect(find.byType(OutlinedButton), findsNothing);
+  });
+  testWidgets('Fleet review approves exact revision through Fleet callback', (tester) async {
+    int? approved;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId, orderStatus: 'awaiting_approval',
+        estimate: fixture.quote(approved: approved != null))),
+      approve: (revision) async { approved = revision; return revision; },
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('repair_accept')), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    await tester.tap(find.byKey(const Key('repair_review_quote')));
+    await tester.pumpAndSettle();
+    final buttons = find.byType(FilledButton);
+    await tester.ensureVisible(buttons.first);
+    await tester.tap(buttons.first);
+    await tester.pumpAndSettle();
+    expect(approved, isNull);
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pumpAndSettle();
+    expect(approved, 1);
+  });
+
 }

@@ -41,6 +41,15 @@ class GarageRepairBridgeRepository {
     return GarageRepairRequest.parseList(data, workspaceId);
   }
 
+  Future<List<GarageRepairRequest>> fleetRequests(String companyId) async {
+    _signedIn();
+    requireId(companyId, 'companyId');
+    final user = client.auth.currentUser!.id;
+    final data = await client.rpc('garage_fleet_requests_for_me');
+    if (client.auth.currentUser?.id != user) throw StateError('Account changed');
+    return GarageRepairRequest.parseList(data, companyId, fleet: true);
+  }
+
   Future<String> requestConnection(String companyId, String workspaceId) async {
     _signedIn();
     requireId(companyId, 'companyId');
@@ -348,7 +357,7 @@ class GarageRepairRequest {
   final String title;
   final String status;
 
-  static List<GarageRepairRequest> parseList(Object? data, String workspaceId) {
+  static List<GarageRepairRequest> parseList(Object? data, String workspaceId, {bool fleet = false}) {
     GarageRepairBridgeRepository.requireId(workspaceId, 'workspaceId');
     if (data is! List) throw const FormatException('Invalid repair inbox');
     final rows = <GarageRepairRequest>[];
@@ -363,7 +372,7 @@ class GarageRepairRequest {
       if (!const {'sent', 'accepted'}.contains(status) || !ids.add(id)) {
         throw const FormatException('Invalid repair request status or duplicate');
       }
-      if (shop == workspaceId) {
+      if ((fleet ? company : shop) == workspaceId) {
         rows.add(GarageRepairRequest(id, company, shop, title, status as String));
       }
     }

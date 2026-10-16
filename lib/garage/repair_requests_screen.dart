@@ -3,13 +3,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/localization.dart';
 import 'repair_bridge_repository.dart';
+import 'customer_quote_screen.dart';
 
 /// QA module only. The RPC checks current membership and active connections.
 class GarageRepairRequestsScreen extends StatefulWidget {
-  const GarageRepairRequestsScreen({required this.load, this.loadDetail, this.accept, super.key});
+  const GarageRepairRequestsScreen({required this.load, this.loadDetail, this.accept, this.approve, this.progress, super.key});
 
   factory GarageRepairRequestsScreen.forClient({
-    required SupabaseClient client, required String workspaceId,
+    required SupabaseClient client, required String workspaceId, bool fleet = false,
   }) {
     final user = client.auth.currentUser?.id;
     final repository = GarageRepairBridgeRepository(client);
@@ -21,7 +22,8 @@ class GarageRepairRequestsScreen extends StatefulWidget {
     return GarageRepairRequestsScreen(
       load: () async {
         checkAccount();
-        final rows = await repository.requests(workspaceId);
+        final rows = fleet ? await repository.fleetRequests(workspaceId)
+          : await repository.requests(workspaceId);
         checkAccount();
         return rows;
       },
@@ -31,11 +33,23 @@ class GarageRepairRequestsScreen extends StatefulWidget {
         checkAccount();
         return data;
       },
-      accept: (row) async {
+      accept: fleet ? null : (row) async {
         checkAccount();
         final id = await repository.acceptRepairRequest(row.id);
         checkAccount();
         return id;
+      },
+      approve: !fleet ? null : (row, revision) async {
+        checkAccount();
+        final value = await repository.approveQuote(row.id, revision);
+        checkAccount();
+        return value;
+      },
+      progress: fleet ? null : (row, status) async {
+        checkAccount();
+        final value = await repository.updateProgress(row.id, status);
+        checkAccount();
+        return value;
       },
     );
   }
@@ -43,6 +57,8 @@ class GarageRepairRequestsScreen extends StatefulWidget {
   final Future<List<GarageRepairRequest>> Function() load;
   final Future<GarageRepairBridgeSnapshot> Function(GarageRepairRequest)? loadDetail;
   final Future<String> Function(GarageRepairRequest)? accept;
+  final Future<int> Function(GarageRepairRequest, int)? approve;
+  final Future<String> Function(GarageRepairRequest, String)? progress;
 
   @override
   State<GarageRepairRequestsScreen> createState() => _RepairRequestsState();
@@ -81,7 +97,7 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(_tr('Zgłoszenia flot', 'Fleet repair requests')),
+      title: Text(_tr('Naprawy Fleet ↔ Garage', 'Fleet ↔ Garage repairs')),
       actions: [IconButton(
         tooltip: _tr('Odśwież', 'Refresh'),
         onPressed: _loading ? null : _refresh,
@@ -97,8 +113,8 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
             TextButton(onPressed: _refresh,
               child: Text(_tr('Spróbuj ponownie', 'Try again'))),
           ] else if (_rows.isEmpty)
-            Text(_tr('Brak zgłoszeń flot dla tego warsztatu.',
-                'No fleet repair requests for this workshop.')),
+            Text(_tr('Brak zgłoszeń napraw dla wybranego konta.',
+                'No repair requests for this account scope.')),
           for (final row in _rows)
             Card(child: ListTile(
               onTap: widget.loadDetail == null ? null : () async {
@@ -106,6 +122,8 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
                   builder: (_) => GarageRepairRequestDetailScreen(
                     request: row, load: () => widget.loadDetail!(row),
                     accept: widget.accept == null ? null : () => widget.accept!(row),
+                    approve: widget.approve == null ? null : (revision) => widget.approve!(row, revision),
+                    progress: widget.progress == null ? null : (status) => widget.progress!(row, status),
                   ),
                 ));
                 if (mounted) _refresh();
@@ -122,10 +140,12 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
 
 class GarageRepairRequestDetailScreen extends StatefulWidget {
   const GarageRepairRequestDetailScreen({required this.request,
-    required this.load, this.accept, super.key});
+    required this.load, this.accept, this.approve, this.progress, super.key});
   final GarageRepairRequest request;
   final Future<GarageRepairBridgeSnapshot> Function() load;
   final Future<String> Function()? accept;
+  final Future<int> Function(int)? approve;
+  final Future<String> Function(String)? progress;
   @override
   State<GarageRepairRequestDetailScreen> createState() => _RepairDetailState();
 }
@@ -205,6 +225,73 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
     }
   }
 
+  static List<String> nextStatuses(String? status) => switch (status) {
+    'in_progress' => ['awaiting_parts', 'ready'],
+    'awaiting_parts' => ['in_progress', 'ready'],
+    'ready' => ['collected'],
+    _ => [],
+  };
+
+  String _status(String status) => switch (status) {
+    'received' => _tr('Przyjęto', 'Received'),
+    'diagnosing' => _tr('Diagnostyka', 'Diagnosing'),
+    'awaiting_approval' => _tr('Oczekuje na zgodę', 'Awaiting approval'),
+    'awaiting_parts' => _tr('Oczekuje na części', 'Awaiting parts'),
+    'in_progress' => _tr('W naprawie', 'In progress'),
+    'ready' => _tr('Gotowy do odbioru', 'Ready for collection'),
+    'collected' => _tr('Odebrano', 'Collected'),
+    'cancelled' => _tr('Anulowano', 'Cancelled'),
+    _ => status,
+  };
+
+  Future<void> _updateProgress(String target) async {
+    if (_busy || widget.progress == null ||
+        !nextStatuses(_snapshot?.workOrderStatus).contains(target)) return;
+    final previous = _snapshot!.workOrderStatus;
+    setState(() => _busy = true);
+    final generation = _generation;
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: Text(_tr('Zmień status naprawy', 'Update repair status')),
+      content: Text(_status(target)),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false),
+        child: Text(_tr('Anuluj', 'Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true),
+          child: Text(_tr('Potwierdź', 'Confirm')))],
+    ));
+    if (!mounted || generation != _generation) return;
+    if (confirmed != true) { setState(() => _busy = false); return; }
+    try {
+      final latest = await _loadScoped();
+      if (!mounted || generation != _generation) return;
+      if (latest.workOrderStatus != previous ||
+          !nextStatuses(latest.workOrderStatus).contains(target)) {
+        await _refresh();
+        return;
+      }
+      final result = await widget.progress!(target);
+      if (result != target) throw const FormatException('Unexpected repair status');
+      if (mounted && generation == _generation) await _refresh();
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() { _snapshot = null; _busy = false;
+        _error = _tr('Nie potwierdzono statusu. Odśwież przed kolejną zmianą.',
+          'Status was not confirmed. Refresh before another change.'); });
+    }
+  }
+
+  Future<void> _openQuote() async {
+    if (_busy || widget.approve == null || !_snapshot!.needsFleetApproval) return;
+    setState(() => _busy = true);
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => GarageCustomerQuoteScreen(
+      loadQuote: () async {
+        final data = await _loadScoped();
+        return data.workOrderStatus == 'awaiting_approval' ? data.quote : null;
+      },
+      approveRevision: widget.approve!,
+    )));
+    if (mounted) await _refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _snapshot;
@@ -228,7 +315,16 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
           if (data.status == 'sent' && widget.accept != null)
             FilledButton(key: const Key('repair_accept'), onPressed: _busy ? null : _accept,
               child: Text(_tr('Przyjmij naprawę', 'Accept repair'))),
-          if (data.workOrderId != null)
+          if (data.workOrderStatus != null) Text(_status(data.workOrderStatus!)),
+          if (widget.approve != null && data.needsFleetApproval)
+            FilledButton(key: const Key('repair_review_quote'), onPressed: _busy ? null : _openQuote,
+              child: Text(_tr('Sprawdź i zatwierdź kosztorys', 'Review and approve estimate'))),
+          if (widget.progress != null)
+            for (final status in nextStatuses(data.workOrderStatus))
+              OutlinedButton(key: Key('repair_progress_$status'),
+                onPressed: _busy ? null : () => _updateProgress(status),
+                child: Text(_status(status))),
+          if (data.workOrderId != null && widget.accept != null)
             Text(_tr('Zlecenie znajdziesz w „Zlecenia i kosztorysy”.',
               'Find the work order in “Work orders and estimates”.')),
         ],

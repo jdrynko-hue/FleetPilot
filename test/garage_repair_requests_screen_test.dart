@@ -19,6 +19,12 @@ void main() {
     expect(() => GarageRepairRequest.parseList([
       {...row(shop, shop), 'request_status': 'unknown'}], shop), throwsFormatException);
   });
+  test('Fleet inbox is scoped by company independently of workshop', () {
+    final rows = GarageRepairRequest.parseList([
+      row(shop, shop), {...row(other, other), 'company_id': shop},
+    ], other, fleet: true);
+    expect(rows.map((r) => r.id), [shop]);
+  });
   testWidgets('failure clears data and offers retry without exposing server error', (tester) async {
     var calls = 0;
     await tester.pumpWidget(MaterialApp(home: GarageRepairRequestsScreen(load: () async {
