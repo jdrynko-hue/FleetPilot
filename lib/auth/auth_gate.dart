@@ -8,6 +8,9 @@ import '../core/app_config.dart';
 import '../ecosystem/ecosystem_gate.dart';
 import 'company_gate.dart';
 import 'login_screen.dart';
+import 'portal_entry.dart';
+import '../garage/consumer_booking_screen.dart';
+import '../garage/consumer_booking_repository.dart';
 import 'password_recovery_screen.dart';
 import 'auth_link_error_screen.dart';
 import 'auth_redirect_error.dart';
@@ -32,11 +35,13 @@ class _AuthGateState extends State<AuthGate> {
   User? _user;
   bool _passwordRecovery = false;
   bool _authLinkError = false;
+  PortalEntry? _portal;
 
   @override
   void initState() {
     super.initState();
     _user = _repository.currentUser;
+    _portal = portalEntryFromUri(Uri.base);
     _authLinkError = widget.authLinkErrorOnLaunch || hasAuthRedirectError(Uri.base);
     // The redirect may be consumed during Supabase.initialize, before the
     // listener is attached. Preserve the explicit URL recovery marker.
@@ -45,6 +50,9 @@ class _AuthGateState extends State<AuthGate> {
         (widget.recoveryLinkOnLaunch ||
             Uri.base.fragment.contains('type=recovery') ||
             Uri.base.queryParameters['type'] == 'recovery');
+    if (AppConfig.ecosystemQaEnabled && Uri.base.queryParameters['portal'] == 'search') {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _findWorkshop());
+    }
     _subscription = _repository.authChanges.listen((state) {
       if (!mounted) return;
       if (_user?.id != state.session?.user.id) {
@@ -58,6 +66,19 @@ class _AuthGateState extends State<AuthGate> {
         }
       });
     });
+  }
+
+  void _findWorkshop() {
+    if (!mounted || _user != null || _authLinkError || _passwordRecovery) return;
+    final repository = GarageBookingRepository(Supabase.instance.client);
+    Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) =>
+      GarageBookingSearchScreen(search: repository.findWorkshops,
+        submit: repository.request,
+        beforeRequest: () async {
+          Navigator.of(context).pop();
+          if (mounted) setState(() => _portal = PortalEntry.customer);
+          return false;
+        })));
   }
 
   @override
@@ -88,12 +109,16 @@ class _AuthGateState extends State<AuthGate> {
         },
       );
     }
-    if (_user == null) return const LoginScreen();
+    if (_user == null) return LoginScreen(
+      portal: _portal,
+      onPortalChanged: (entry) => setState(() => _portal = entry),
+      onFindWorkshop: AppConfig.ecosystemQaEnabled ? _findWorkshop : null,
+    );
     // Fleet invitation handling keeps priority, including its explicit errors.
     final invite = Uri.base.queryParameters['invite'];
     if (AppConfig.ecosystemQaEnabled && (invite == null || invite.isEmpty)) {
       return EcosystemGate.forClient(
-        Supabase.instance.client, key: ValueKey(_user!.id));
+        Supabase.instance.client, preferredPortal: _portal, key: ValueKey(_user!.id));
     }
     return CompanyGate(key: ValueKey(_user!.id));
   }

@@ -19,7 +19,7 @@ typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
 class GarageBookingSearchScreen extends StatefulWidget {
   const GarageBookingSearchScreen({
     required this.search, required this.submit,
-    this.pickTime = pickBookingTime, super.key,
+    this.pickTime = pickBookingTime, this.beforeRequest, super.key,
   });
 
   factory GarageBookingSearchScreen.forRepository(
@@ -31,6 +31,7 @@ class GarageBookingSearchScreen extends StatefulWidget {
   final BookingSearch search;
   final BookingSubmit submit;
   final BookingTimePicker pickTime;
+  final Future<bool> Function()? beforeRequest;
 
   @override
   State<GarageBookingSearchScreen> createState() => _GarageBookingSearchState();
@@ -111,6 +112,8 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _open(GarageBookingWorkshop shop) async {
+    if (widget.beforeRequest != null && !await widget.beforeRequest!()) return;
+    if (!mounted) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
       builder: (_) => GarageBookingRequestScreen(
         shop: shop, submit: widget.submit, pickTime: widget.pickTime),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/company_gate.dart';
+import '../auth/portal_entry.dart';
 import '../garage/garage_ui_text.dart';
 import '../garage/create_workspace_screen.dart';
 import 'ecosystem_access.dart';
@@ -10,11 +11,11 @@ import 'ecosystem_module_hub.dart';
 /// QA-only entry point. A private customer is never forced to create a fleet.
 class EcosystemGate extends StatefulWidget {
   const EcosystemGate({required this.loadAccess,
-    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, super.key});
+    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, this.preferredPortal, super.key});
 
-  factory EcosystemGate.forClient(SupabaseClient client, {Key? key}) {
+  factory EcosystemGate.forClient(SupabaseClient client, {Key? key, PortalEntry? preferredPortal}) {
     final userId = client.auth.currentUser?.id;
-    return EcosystemGate(key: key,
+    return EcosystemGate(key: key, preferredPortal: preferredPortal,
         createWorkshopBuilder: (routeContext) => GarageCreateWorkspaceScreen.forClient(
           client: client, onCreated: () => Navigator.of(routeContext).pop()),
         isCurrentAccount: () => userId != null && client.auth.currentUser?.id == userId,
@@ -27,6 +28,7 @@ class EcosystemGate extends StatefulWidget {
       );
   }
 
+  final PortalEntry? preferredPortal;
   final Future<EcosystemAccess> Function() loadAccess;
   final Widget Function(EcosystemDestination) destinationBuilder;
   final Future<void> Function() signOut;
@@ -39,6 +41,7 @@ class EcosystemGate extends StatefulWidget {
 class _EcosystemGateState extends State<EcosystemGate> {
   late Future<EcosystemAccess?> _access;
   bool _signingOut = false;
+  bool _handledEntry = false;
   String? _error;
   @override
   void initState() { super.initState(); _access = _loadAccess(); }
@@ -93,6 +96,23 @@ class _EcosystemGateState extends State<EcosystemGate> {
           ]));
         }
         final access = snapshot.requireData!;
+        if (!_handledEntry && _current) {
+          _handledEntry = true;
+          EcosystemDestination? destination;
+          if (widget.preferredPortal == PortalEntry.fleet) {
+            destination = const EcosystemDestination(EcosystemModule.fleet);
+          } else if (widget.preferredPortal == PortalEntry.customer) {
+            destination = const EcosystemDestination(EcosystemModule.customer);
+          } else if (widget.preferredPortal == PortalEntry.garage && access.garages.length == 1) {
+            destination = access.garages.single;
+          }
+          if (destination != null) {
+            final target = destination;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _current && !_signingOut) _open(target);
+            });
+          }
+        }
         return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(padding: const EdgeInsets.all(20), children: [
             Text(GarageUiText.get('chooseModule'),
