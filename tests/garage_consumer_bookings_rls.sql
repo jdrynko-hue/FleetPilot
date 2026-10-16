@@ -3,6 +3,7 @@
 \set ON_ERROR_STOP on
 \ir ../supabase/garage_staging/007_private_customer_bookings.sql
 \ir ../supabase/garage_staging/011_booking_request_replay.sql
+\ir ../supabase/garage_staging/012_booking_cancellation_replay.sql
 
 INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('00000000-0000-4000-8000-000000000031','customer-a@example.test',now()),
@@ -205,10 +206,8 @@ DECLARE denied boolean:=false;
 BEGIN
  IF public.garage_booking_cancel(current_setting('booking.qa.a')::uuid)
    <>'cancellation_requested' THEN RAISE EXCEPTION 'Cancellation request failed'; END IF;
- BEGIN
-  PERFORM public.garage_booking_cancel(current_setting('booking.qa.a')::uuid);
- EXCEPTION WHEN OTHERS THEN denied:=true; END;
- IF NOT denied THEN RAISE EXCEPTION 'Repeated cancellation succeeded'; END IF;
+ IF public.garage_booking_cancel(current_setting('booking.qa.a')::uuid)
+   <>'cancellation_requested' THEN RAISE EXCEPTION 'Cancellation replay failed'; END IF;
 END $$;
 COMMIT;
 
@@ -220,10 +219,41 @@ DO $$
 BEGIN
  IF public.garage_booking_confirm_cancellation(current_setting('booking.qa.a')::uuid)
   <>'cancelled' THEN RAISE EXCEPTION 'Cancellation not accepted'; END IF;
+ IF public.garage_booking_confirm_cancellation(current_setting('booking.qa.a')::uuid)
+  <>'cancelled' THEN RAISE EXCEPTION 'Staff cancellation replay failed'; END IF;
  IF EXISTS (
   SELECT 1 FROM public.garage_booking_shop_inbox(
    '00000000-0000-4000-8000-000000000101') WHERE status='cancellation_requested'
  ) THEN RAISE EXCEPTION 'Processed cancellation remained in active inbox'; END IF;
+END $$;
+COMMIT;
+
+-- Terminal replays must not leak state to another customer or workshop.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000032',true);
+DO $$
+DECLARE denied boolean:=false;
+BEGIN
+ BEGIN
+  PERFORM public.garage_booking_cancel(current_setting('booking.qa.a')::uuid);
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Other customer replayed cancellation'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+DO $$
+DECLARE denied boolean:=false;
+BEGIN
+ BEGIN
+  PERFORM public.garage_booking_confirm_cancellation(current_setting('booking.qa.a')::uuid);
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Other workshop replayed cancellation'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000031',true);
+DO $$
+BEGIN
+ IF public.garage_booking_cancel(current_setting('booking.qa.a')::uuid)<>'cancelled' THEN
+  RAISE EXCEPTION 'Customer terminal cancellation replay failed'; END IF;
 END $$;
 COMMIT;
 
