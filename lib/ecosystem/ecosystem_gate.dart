@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/company_gate.dart';
-import '../core/localization.dart';
+import '../garage/garage_ui_text.dart';
 import 'ecosystem_access.dart';
 import 'ecosystem_module_hub.dart';
 
@@ -36,7 +36,6 @@ class _EcosystemGateState extends State<EcosystemGate> {
   late Future<EcosystemAccess?> _access;
   bool _signingOut = false;
   String? _error;
-  bool get pl => AppLocale.language.value == 'pl';
   @override
   void initState() { super.initState(); _access = _loadAccess(); }
   Future<EcosystemAccess?> _loadAccess() async {
@@ -59,9 +58,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
     setState(() { _signingOut = true; _error = null; });
     try { await widget.signOut(); }
     catch (_) {
-      if (mounted) setState(() => _error = pl
-        ? 'Nie udało się wylogować. Spróbuj ponownie.'
-        : 'Could not sign out. Please retry.');
+      if (mounted) setState(() => _error = GarageUiText.get('signOutFailed'));
     } finally { if (mounted) setState(() => _signingOut = false); }
   }
   Widget _tile(String id, String title, IconData icon,
@@ -75,9 +72,9 @@ class _EcosystemGateState extends State<EcosystemGate> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Flotaryx'), actions: [
       IconButton(key: const Key('ecosystem_refresh'), onPressed: _signingOut ? null : _reload,
-        tooltip: pl ? 'Odśwież' : 'Refresh', icon: const Icon(Icons.refresh)),
+        tooltip: GarageUiText.get('refresh'), icon: const Icon(Icons.refresh)),
       IconButton(key: const Key('ecosystem_logout'), onPressed: _signingOut ? null : _logout,
-        tooltip: pl ? 'Wyloguj' : 'Sign out', icon: const Icon(Icons.logout)),
+        tooltip: GarageUiText.get('signOut'), icon: const Icon(Icons.logout)),
     ]),
     body: FutureBuilder<EcosystemAccess?>(future: _access,
       builder: (context, snapshot) {
@@ -86,26 +83,26 @@ class _EcosystemGateState extends State<EcosystemGate> {
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(pl ? 'Nie udało się sprawdzić dostępu.' : 'Could not verify access.'),
+            Text(GarageUiText.get('accessFailed')),
             FilledButton(key: const Key('ecosystem_retry'), onPressed: _reload,
-              child: Text(pl ? 'Spróbuj ponownie' : 'Retry')),
+              child: Text(GarageUiText.get('retry'))),
           ]));
         }
         final access = snapshot.requireData!;
         return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(pl ? 'Wybierz moduł' : 'Choose a module',
+            Text(GarageUiText.get('chooseModule'),
               style: Theme.of(context).textTheme.headlineSmall),
             if (_error != null) Text(_error!),
             _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
-              (pl ? 'Utwórz flotę' : 'Create a fleet'), Icons.local_shipping_outlined,
+              GarageUiText.get('createFleet'), Icons.local_shipping_outlined,
               const EcosystemDestination(EcosystemModule.fleet)),
             for (final garage in access.garages)
               _tile('ecosystem_${garage.workspaceId}',
                 garage.module == EcosystemModule.mechanic
-                  ? (pl ? 'Moje zlecenia' : 'My assigned jobs') : 'Flotaryx Garage',
+                  ? GarageUiText.get('myAssignedJobs') : 'Flotaryx Garage',
                 Icons.build_outlined, garage, subtitle: garage.name),
-            _tile('ecosystem_customer', pl ? 'Rezerwacje warsztatów' : 'Workshop bookings',
+            _tile('ecosystem_customer', GarageUiText.get('workshopBookings'),
               Icons.calendar_month_outlined,
               const EcosystemDestination(EcosystemModule.customer)),
           ]),
