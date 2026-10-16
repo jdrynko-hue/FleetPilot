@@ -85,7 +85,7 @@ void main() {
         cancel: (_) async => GarageBookingStatus.withdrawn), width: 320);
       expect(tester.widget<Text>(find.byKey(const Key('customer_booking_error'))).data,
         GarageUiText.get('customerBookingsLoadFailed'));
-      expect(find.text(GarageUiText.get('customerBookingsEmpty')), findsOneWidget);
+      expect(find.byKey(const Key('customer_booking_empty')), findsNothing);
       expect(find.byKey(Key('customer_booking_item_${fixture.bookingId}')), findsNothing);
       expect(tester.takeException(), isNull);
     });
