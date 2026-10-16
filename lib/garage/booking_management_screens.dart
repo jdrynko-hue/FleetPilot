@@ -284,7 +284,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
         Text(GarageUiText.get('customerBookingsDisclaimer')),
         if (error != null) Text(GarageUiText.get(error!),
           key: const Key('customer_booking_error')),
-        if (items.isEmpty) Text(GarageUiText.get('customerBookingsEmpty'),
+        if (items.isEmpty && error == null) Text(GarageUiText.get('customerBookingsEmpty'),
           key: const Key('customer_booking_empty')),
         for (final entry in items) Card(
           key: Key('customer_booking_item_' + entry.id),
