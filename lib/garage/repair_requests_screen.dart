@@ -4,16 +4,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/localization.dart';
 import 'repair_bridge_repository.dart';
 import 'customer_quote_screen.dart';
+import 'order_actions_repository.dart';
+import 'resource_calendar_repository.dart';
 
 /// QA module only. The RPC checks current membership and active connections.
 class GarageRepairRequestsScreen extends StatefulWidget {
-  const GarageRepairRequestsScreen({required this.load, this.loadDetail, this.accept, this.approve, this.progress, super.key});
+  const GarageRepairRequestsScreen({required this.load, this.loadDetail, this.accept, this.approve, this.progress, this.advance, this.loadMechanics, this.assign, super.key});
 
   factory GarageRepairRequestsScreen.forClient({
-    required SupabaseClient client, required String workspaceId, bool fleet = false,
+    required SupabaseClient client, required String workspaceId, bool fleet = false, bool canAssign = false,
   }) {
     final user = client.auth.currentUser?.id;
     final repository = GarageRepairBridgeRepository(client);
+    final actions = GarageOrderActionsRepository(client);
     void checkAccount() {
       if (user == null || client.auth.currentUser?.id != user) {
         throw StateError('Account changed');
@@ -45,6 +48,24 @@ class GarageRepairRequestsScreen extends StatefulWidget {
         checkAccount();
         return value;
       },
+      advance: fleet ? null : (snapshot, target) async {
+        checkAccount();
+        final value = await actions.advance(snapshot.workspaceId, snapshot.workOrderId!, target);
+        checkAccount();
+        return value;
+      },
+      loadMechanics: fleet || !canAssign ? null : () async {
+        checkAccount();
+        final rows = await GarageResourceCalendarRepository(client).mechanics(workspaceId);
+        checkAccount();
+        return rows;
+      },
+      assign: fleet || !canAssign ? null : (snapshot, mechanic) async {
+        checkAccount();
+        final value = await actions.assign(snapshot.workspaceId, snapshot.workOrderId!, mechanic);
+        checkAccount();
+        return value;
+      },
       progress: fleet ? null : (row, status) async {
         checkAccount();
         final value = await repository.updateProgress(row.id, status);
@@ -59,6 +80,9 @@ class GarageRepairRequestsScreen extends StatefulWidget {
   final Future<String> Function(GarageRepairRequest)? accept;
   final Future<int> Function(GarageRepairRequest, int)? approve;
   final Future<String> Function(GarageRepairRequest, String)? progress;
+  final Future<String> Function(GarageRepairBridgeSnapshot, String)? advance;
+  final Future<List<GarageRosterMechanic>> Function()? loadMechanics;
+  final Future<String> Function(GarageRepairBridgeSnapshot, String)? assign;
 
   @override
   State<GarageRepairRequestsScreen> createState() => _RepairRequestsState();
@@ -124,6 +148,9 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
                     accept: widget.accept == null ? null : () => widget.accept!(row),
                     approve: widget.approve == null ? null : (revision) => widget.approve!(row, revision),
                     progress: widget.progress == null ? null : (status) => widget.progress!(row, status),
+                    advance: widget.advance,
+                    loadMechanics: widget.loadMechanics,
+                    assign: widget.assign,
                   ),
                 ));
                 if (mounted) _refresh();
@@ -140,12 +167,15 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
 
 class GarageRepairRequestDetailScreen extends StatefulWidget {
   const GarageRepairRequestDetailScreen({required this.request,
-    required this.load, this.accept, this.approve, this.progress, super.key});
+    required this.load, this.accept, this.approve, this.progress, this.advance, this.loadMechanics, this.assign, super.key});
   final GarageRepairRequest request;
   final Future<GarageRepairBridgeSnapshot> Function() load;
   final Future<String> Function()? accept;
   final Future<int> Function(int)? approve;
   final Future<String> Function(String)? progress;
+  final Future<String> Function(GarageRepairBridgeSnapshot, String)? advance;
+  final Future<List<GarageRosterMechanic>> Function()? loadMechanics;
+  final Future<String> Function(GarageRepairBridgeSnapshot, String)? assign;
   @override
   State<GarageRepairRequestDetailScreen> createState() => _RepairDetailState();
 }
@@ -279,6 +309,90 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
     }
   }
 
+  bool _canAdvance(GarageRepairBridgeSnapshot data, String target) =>
+      data.status == 'accepted' && data.workOrderId != null &&
+      (target == 'diagnosing' ? data.workOrderStatus == 'received' :
+        target == 'in_progress' && data.workOrderStatus == 'awaiting_approval' &&
+          data.quote?.approved == true);
+
+  Future<void> _advance(String target) async {
+    if (_busy || widget.advance == null || _snapshot == null ||
+        !_canAdvance(_snapshot!, target)) return;
+    setState(() => _busy = true);
+    final generation = _generation;
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: Text(target == 'diagnosing' ? _tr('Rozpocznij diagnostykę', 'Begin diagnosis')
+        : _tr('Rozpocznij naprawę', 'Start approved repair')),
+      content: Text(target == 'diagnosing'
+        ? _tr('Diagnostyka umożliwi przygotowanie kosztorysu.', 'Diagnosis enables estimate preparation.')
+        : _tr('Wymagana jest zgoda na aktualny kosztorys i przypisany mechanik.',
+            'Current estimate approval and an assigned mechanic are required.')),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_tr('Anuluj', 'Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_tr('Potwierdź', 'Confirm')))],
+    ));
+    if (!mounted || generation != _generation) return;
+    if (confirmed != true) { setState(() => _busy = false); return; }
+    try {
+      final data = await _loadScoped();
+      if (!mounted || generation != _generation) return;
+      if (_canAdvance(data, target)) {
+        final result = await widget.advance!(data, target);
+        if (result != target) throw const FormatException('Unexpected repair status');
+      }
+      if (mounted && generation == _generation) await _refresh();
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() { _snapshot = null; _busy = false;
+        _error = _tr('Nie potwierdzono operacji. Sprawdź przypisanie mechanika i odśwież.',
+          'Operation was not confirmed. Check mechanic assignment and refresh.'); });
+    }
+  }
+
+  Future<void> _assign() async {
+    if (_busy || widget.assign == null || widget.loadMechanics == null) return;
+    setState(() => _busy = true);
+    final generation = _generation;
+    try {
+      final mechanics = await widget.loadMechanics!();
+      if (!mounted || generation != _generation) return;
+      String? selected;
+      final mechanic = await showDialog<String>(context: context, builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: Text(_tr('Przypisz mechanika', 'Assign mechanic')),
+          content: SizedBox(width: 320, child: mechanics.isEmpty
+            ? Text(_tr('Brak potwierdzonych kont mechaników.', 'No verified mechanic accounts.'))
+            : DropdownButtonFormField<String>(
+              isExpanded: true, initialValue: selected,
+              decoration: InputDecoration(labelText: _tr('Mechanik', 'Mechanic')),
+              items: [for (final item in mechanics) DropdownMenuItem(value: item.userId,
+                child: Text(item.email, overflow: TextOverflow.ellipsis))],
+              onChanged: (value) => update(() => selected = value),
+            )),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(_tr('Anuluj', 'Cancel'))),
+            FilledButton(onPressed: selected == null ? null : () => Navigator.pop(context, selected),
+              child: Text(_tr('Przypisz', 'Assign')))],
+        ),
+      ));
+      if (!mounted || generation != _generation) return;
+      if (mechanic == null) { setState(() => _busy = false); return; }
+      if (!mechanics.any((row) => row.userId == mechanic)) throw const FormatException('Invalid mechanic');
+      final latest = await _loadScoped();
+      if (!mounted || generation != _generation) return;
+      if (latest.status != 'accepted' || latest.workOrderId == null ||
+          const {'collected', 'cancelled'}.contains(latest.workOrderStatus)) {
+        await _refresh(); return;
+      }
+      final result = await widget.assign!(latest, mechanic);
+      if (result != mechanic) throw const FormatException('Unexpected mechanic');
+      if (mounted && generation == _generation) await _refresh();
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() { _snapshot = null; _busy = false;
+        _error = _tr('Nie potwierdzono przypisania. Odśwież przed kolejną próbą.',
+          'Assignment was not confirmed. Refresh before trying again.'); });
+    }
+  }
+
   Future<void> _openQuote() async {
     if (_busy || widget.approve == null || !_snapshot!.needsFleetApproval) return;
     setState(() => _busy = true);
@@ -319,6 +433,16 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
           if (widget.approve != null && data.needsFleetApproval)
             FilledButton(key: const Key('repair_review_quote'), onPressed: _busy ? null : _openQuote,
               child: Text(_tr('Sprawdź i zatwierdź kosztorys', 'Review and approve estimate'))),
+          if (widget.advance != null)
+            for (final target in ['diagnosing', 'in_progress'])
+              if (_canAdvance(data, target))
+                FilledButton(key: Key('repair_advance_$target'), onPressed: _busy ? null : () => _advance(target),
+                  child: Text(target == 'diagnosing' ? _tr('Rozpocznij diagnostykę', 'Begin diagnosis')
+                    : _tr('Rozpocznij naprawę', 'Start approved repair'))),
+          if (widget.assign != null && data.status == 'accepted' &&
+              !const {'collected', 'cancelled'}.contains(data.workOrderStatus))
+            OutlinedButton(key: const Key('repair_assign'), onPressed: _busy ? null : _assign,
+              child: Text(_tr('Przypisz mechanika', 'Assign mechanic'))),
           if (widget.progress != null)
             for (final status in nextStatuses(data.workOrderStatus))
               OutlinedButton(key: Key('repair_progress_$status'),

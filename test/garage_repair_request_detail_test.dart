@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/garage/repair_bridge_repository.dart';
 import 'package:fleetpilot/garage/repair_requests_screen.dart';
 import 'garage_repair_bridge_repository_test.dart' as fixture;
+import 'package:fleetpilot/garage/resource_calendar_repository.dart';
 
 const row = GarageRepairRequest(fixture.requestId, fixture.companyId,
     fixture.workshopId, 'Brakes', 'sent');
@@ -135,6 +136,74 @@ void main() {
     await tester.tap(find.byKey(const Key('garage_quote_confirm')));
     await tester.pumpAndSettle();
     expect(approved, 1);
+  });
+
+  testWidgets('diagnosis requires confirmation and fresh accepted order', (tester) async {
+    var status = 'received';
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId, orderStatus: status)),
+      advance: (data, target) async {
+        expect(data.workOrderId, fixture.orderId);
+        writes++; status = target; return target;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('repair_advance_diagnosing')));
+    await tester.pumpAndSettle();
+    expect(writes, 0);
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+    await tester.pumpAndSettle();
+    expect(writes, 1);
+    expect(find.byKey(const Key('repair_advance_diagnosing')), findsNothing);
+  });
+  testWidgets('unapproved current estimate cannot start repair', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId, orderStatus: 'awaiting_approval',
+        estimate: fixture.quote())), advance: (_, target) async => target,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('repair_advance_in_progress')), findsNothing);
+  });
+  testWidgets('new unapproved revision during start confirmation prevents write', (tester) async {
+    var loads = 0;
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status: 'accepted', workOrderId: fixture.orderId, orderStatus: 'awaiting_approval',
+        estimate: fixture.quote(approved: ++loads == 1))),
+      advance: (_, target) async { writes++; return target; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('repair_advance_in_progress')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+    await tester.pumpAndSettle();
+    expect(writes, 0);
+    expect(find.byKey(const Key('repair_advance_in_progress')), findsNothing);
+  });
+  testWidgets('owner must choose a verified mechanic before assigning', (tester) async {
+    String? assigned;
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row, load: () async => accepted(),
+      loadMechanics: () async => const [GarageRosterMechanic(userId: fixture.issueId, email: 'mechanic@example.test')],
+      assign: (data, mechanic) async { assigned = mechanic; return mechanic; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('repair_assign')));
+    await tester.pumpAndSettle();
+    final confirm = find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton));
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('mechanic@example.test').last);
+    await tester.pumpAndSettle();
+    expect(assigned, isNull);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(assigned, fixture.issueId);
   });
 
 }

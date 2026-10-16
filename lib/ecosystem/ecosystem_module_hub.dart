@@ -52,7 +52,7 @@ class EcosystemModuleHub extends StatelessWidget {
             workspaceId: destination.workspaceId!),
         pl ? 'Zgłoszenia flot' : 'Fleet repair requests': () =>
           GarageRepairRequestsScreen.forClient(client: client,
-            workspaceId: destination.workspaceId!),
+            workspaceId: destination.workspaceId!, canAssign: destination.canConfigure),
         pl ? 'Zgłoszenia klientów' : 'Customer requests': () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,
             workspaceId: destination.workspaceId!),
