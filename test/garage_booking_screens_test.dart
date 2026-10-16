@@ -78,6 +78,7 @@ void main() {
                     : GarageBookingStatus.requested)];
               },
               respond: (id, accept) async {
+                debugPrint('test write callback');
                 expect(id, bookingId); writes++;
                 return accept ? GarageBookingStatus.confirmed : GarageBookingStatus.declined;
               },
@@ -95,6 +96,7 @@ void main() {
         }
         await tester.tap(find.byKey(Key(confirmKey)));
         await tester.pumpAndSettle();
+        debugPrint('test observed writes=$writes loads=$loads');
         expect(writes, refreshDuringDialog ? 0 : 1);
         expect(find.byType(AlertDialog), findsNothing);
         // Dismissal/completion releases the lock for a fresh explicit intent.

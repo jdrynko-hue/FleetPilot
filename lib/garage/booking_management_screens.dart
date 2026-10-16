@@ -116,7 +116,8 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
           throw const FormatException('Unexpected booking response');
         }
       }
-    } catch (_) {
+    } catch (e) {
+      assert(() { debugPrint('confirmation failure type: ${e.runtimeType}'); return true; }());
       failed = true;
     } finally {
       if (mounted && scope == scopeVersion) {
@@ -273,7 +274,8 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
           result != GarageBookingStatus.cancelled) {
         throw const FormatException('Unexpected cancellation state');
       }
-    } catch (_) {
+    } catch (e) {
+      assert(() { debugPrint('customer failure type: ${e.runtimeType}'); return true; }());
       failed = true;
     } finally {
       if (mounted && scope == scopeVersion) {
