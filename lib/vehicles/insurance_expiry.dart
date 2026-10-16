@@ -22,11 +22,16 @@ bool insuranceReminderDue(DateTime? expiry, DateTime today) =>
 
 /// Stable per-vehicle, per-policy reminder identity for idempotent delivery.
 /// A renewed policy receives a different key even if its vehicle ID is unchanged.
+/// A backend must enforce uniqueness on this key atomically; generating the
+/// same string twice does not itself prevent duplicate notifications.
 String insuranceReminderKey({
   required String vehicleId,
   required DateTime expiry,
   required int daysBefore,
 }) {
+  if (vehicleId.trim().isEmpty) {
+    throw ArgumentError.value(vehicleId, 'vehicleId', 'Vehicle ID is required');
+  }
   if (!const {30, 14, 7, 1, 0}.contains(daysBefore)) {
     throw ArgumentError.value(daysBefore, 'daysBefore', 'Unsupported reminder stage');
   }
