@@ -100,6 +100,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
     } finally {
       confirming = false;
     }
+    assert(() { debugPrint('confirmation guard: mounted=$mounted scope=${scope == scopeVersion} list=${listingVersion == version} accepted=$accepted busy=$busy'); return true; }());
     if (!mounted || scope != scopeVersion || listingVersion != version ||
         accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
@@ -260,6 +261,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     } finally {
       confirming = false;
     }
+    assert(() { debugPrint('customer confirmation guard: mounted=$mounted scope=${scope == scopeVersion} list=${listingVersion == version} accepted=$accepted busy=$busy'); return true; }());
     if (!mounted || scope != scopeVersion || listingVersion != version ||
         accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
