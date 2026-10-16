@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/localization.dart';
 import 'garage_currencies.dart';
+import 'garage_ui_text.dart';
 import 'quote_currency_picker.dart';
 import 'quote_order_repository.dart';
 import 'workshop_quote_publisher.dart';
@@ -43,8 +43,18 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   bool _loading = true;
   String? _error;
   int _version = 0;
-  bool get _pl => AppLocale.language.value == 'pl';
-  String _tr(String pl, String en) => _pl ? pl : en;
+
+  String _statusLabel(String status) => switch (status) {
+    'received' => GarageUiText.get('received'),
+    'diagnosing' => GarageUiText.get('diagnosing'),
+    'awaiting_approval' => GarageUiText.get('awaitingApproval'),
+    'awaiting_parts' => GarageUiText.get('awaitingParts'),
+    'in_progress' => GarageUiText.get('inProgress'),
+    'ready' => GarageUiText.get('readyCollection'),
+    'collected' => GarageUiText.get('collected'),
+    'cancelled' => GarageUiText.get('cancelled'),
+    _ => status,
+  };
 
   @override
   void initState() { super.initState(); _refresh(); }
@@ -61,10 +71,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
       }
     } catch (_) {
       if (mounted && _version == current) {
-        setState(() => _error = _tr(
-          'Nie udało się pobrać zleceń. Sprawdź uprawnienia.',
-          'Could not load work orders. Verify your access.',
-        ));
+        setState(() => _error = GarageUiText.get('quoteLoadError'));
       }
     } finally {
       if (mounted && _version == current) {
@@ -87,25 +94,22 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(_tr('Kosztorysy warsztatu', 'Workshop estimates')),
+    appBar: AppBar(title: Text(GarageUiText.get('workshopEstimates')),
       actions: [IconButton(key: const Key('quote_orders_refresh'),
         icon: const Icon(Icons.refresh), onPressed: _loading ? null : _refresh)]),
     body: SafeArea(child: _loading
       ? const Center(child: CircularProgressIndicator())
       : ListView(padding: const EdgeInsets.all(16), children: [
-        Text(_tr('Kosztorys publikuje właściciel lub doradca. '
-          'Klient albo menedżer floty musi zatwierdzić aktualną wersję.',
-          'An owner or adviser publishes the estimate. The customer or fleet '
-          'manager must approve its current revision.')),
+        Text(GarageUiText.get('quoteIntro')),
         if (_error != null) Text(_error!, key: const Key('quote_orders_error')),
-        if (_orders.isEmpty) Text(_tr('Brak dostępnych zleceń.', 'No work orders.'),
+        if (_orders.isEmpty) Text(GarageUiText.get('quoteNoOrders'),
           key: const Key('quote_orders_empty')),
         for (final order in _orders) Card(
           child: ListTile(
             key: Key('quote_order_${order.id}'),
             title: Text(order.complaint, maxLines: 3,
               overflow: TextOverflow.ellipsis),
-            subtitle: Text(order.status.replaceAll('_',' ')),
+            subtitle: Text(_statusLabel(order.status)),
             trailing: order.canQuote
               ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
             onTap: order.canQuote ? () => _open(order) : null,
@@ -169,8 +173,6 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   bool _publishing = false;
   bool _uncertain = false;
   int? _published;
-  bool get _pl => AppLocale.language.value == 'pl';
-  String _tr(String pl, String en) => _pl ? pl : en;
 
   @override
   void initState() { super.initState(); _loadCurrency(); }
@@ -187,9 +189,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       GarageCurrencies.digits(currency.code);
       if (mounted) setState(() => _currency = currency);
     } catch (_) {
-      if (mounted) setState(() => _error = _tr(
-        'Nie można potwierdzić waluty kosztorysu. Nie publikuj.',
-        'Could not verify estimate currency. Publishing is blocked.'));
+      if (mounted) setState(() => _error = GarageUiText.get('quoteCurrencyBlocked'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -204,9 +204,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       lines = _lines.map((line) => line.toLine(currency)).toList(growable: false);
       GarageWorkshopQuotePublisher.payload(currency: currency, lines: lines);
     } catch (_) {
-      setState(() => _error = _tr(
-        'Sprawdź opisy, ilości i wartości pozycji.',
-        'Check item descriptions, quantities and amounts.'));
+      setState(() => _error = GarageUiText.get('quoteInvalidLines'));
       return;
     }
     final total = lines.fold<int>(0, (sum, line) =>
@@ -214,19 +212,17 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
     final accepted = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(_tr('Opublikować kosztorys?', 'Publish estimate?')),
-        content: Text(_tr('Pozycji: ${lines.length}. Razem: '
-          '${GarageCurrencies.formatMinor(currency, total)}. '
-          'Każda zmiana wymaga nowej zgody klienta lub floty.',
-          '${lines.length} items. Total: '
-          '${GarageCurrencies.formatMinor(currency, total)}. '
-          'Changes require a new customer or fleet approval.')),
+        title: Text(GarageUiText.get('quotePublishQuestion')),
+        content: Text(GarageUiText.format('quoteConfirmTotals', {
+          'count': lines.length,
+          'total': GarageCurrencies.formatMinor(currency, total),
+        })),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-            child: Text(_tr('Wróć', 'Back'))),
+            child: Text(GarageUiText.get('quoteBack'))),
           FilledButton(key: const Key('garage_editor_confirm'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(_tr('Opublikuj', 'Publish'))),
+            child: Text(GarageUiText.get('quotePublish'))),
         ],
       ),
     );
@@ -240,10 +236,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       // could create a second revision and invalidate existing approval.
       if (mounted) setState(() {
         _uncertain = true;
-        _error = _tr('Nie udało się potwierdzić publikacji. '
-            'Wróć do listy, sprawdź historię zlecenia przed kolejną próbą.',
-            'Publication outcome is uncertain. Return to the order list '
-            'and verify its history before trying again.');
+        _error = GarageUiText.get('quoteUncertain');
       });
     } finally {
       if (mounted) setState(() => _publishing = false);
@@ -256,7 +249,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                Expanded(child: Text(_tr('Pozycja ${index+1}', 'Item ${index+1}'),
+                Expanded(child: Text(GarageUiText.format('itemNumber', {'number': index + 1}),
                   style: Theme.of(context).textTheme.titleMedium)),
                 if (_lines.length > 1) IconButton(
                   key: Key('quote_remove_$index'),
@@ -269,39 +262,37 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                 key: Key('quote_type_$index'),
                 initialValue: draft.type,
                 isExpanded: true,
-                decoration: InputDecoration(labelText: _tr('Typ', 'Type')),
-                items: const [
-                  DropdownMenuItem(value: 'labour', child: Text('Labour')),
-                  DropdownMenuItem(value: 'part', child: Text('Part')),
-                  DropdownMenuItem(value: 'other', child: Text('Other')),
-                ],
+                decoration: InputDecoration(labelText: GarageUiText.get('quoteType')),
+                items: [
+                   DropdownMenuItem(value: 'labour', child: Text(GarageUiText.get('quoteLabour'))),
+                   DropdownMenuItem(value: 'part', child: Text(GarageUiText.get('quotePart'))),
+                   DropdownMenuItem(value: 'other', child: Text(GarageUiText.get('quoteOther'))),
+                 ],
                 onChanged: (v) { if (v != null) draft.type = v; },
               ),
               TextField(controller: draft.description,
                 key: Key('quote_description_$index'),
                 maxLength: 500, decoration: InputDecoration(
-                  labelText: _tr('Opis', 'Description'))),
+                  labelText: GarageUiText.get('quoteDescription'))),
               TextField(controller: draft.quantity,
                 key: Key('quote_quantity_$index'),
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: _tr('Ilość', 'Quantity'))),
+                decoration: InputDecoration(labelText: GarageUiText.get('quoteQuantity'))),
               TextField(controller: draft.unitPrice,
                 key: Key('quote_unit_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
-                decoration: InputDecoration(labelText: _tr(
-                  'Cena jednostkowa ($currency)', 'Unit price ($currency)'))),
+                decoration: InputDecoration(labelText: GarageUiText.format('quoteUnitPrice', {'currency': currency}))),
               TextField(controller: draft.tax,
                 key: Key('quote_tax_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
-                decoration: InputDecoration(labelText: _tr(
-                  'Podatek łącznie ($currency)', 'Line tax ($currency)'))),
+                decoration: InputDecoration(labelText: GarageUiText.format('quoteLineTax', {'currency': currency}))),
             ])));
 
   @override
   Widget build(BuildContext context) {
     final currency = _currency;
     return Scaffold(
-      appBar: AppBar(title: Text(_tr('Nowy kosztorys', 'New estimate'))),
+      appBar: AppBar(title: Text(GarageUiText.get('newEstimate'))),
       body: SafeArea(child: _loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 112), children: [
@@ -309,16 +300,13 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
             style: Theme.of(context).textTheme.titleMedium),
           if (_error != null) Text(_error!, key: const Key('quote_editor_error')),
           if (_published != null) ...[
-            Text(_tr('Opublikowano wersję $_published. '
-              'Oczekuje na akceptację.', 'Published revision $_published. '
-              'Awaiting approval.'), key: const Key('quote_editor_success')),
+            Text(GarageUiText.format('quotePublishedStatus', {'revision': _published!}),
+              key: const Key('quote_editor_success')),
             FilledButton(onPressed: () => Navigator.pop(context),
-              child: Text(_tr('Powrót do zleceń', 'Back to orders'))),
+              child: Text(GarageUiText.get('quoteBackToOrders'))),
           ] else if (currency != null && !_uncertain) ...[
             if (currency.locked)
-              Text(_tr('Waluta wcześniejszej wyceny: ${currency.code}. '
-                'Nie można jej zmieniać.', 'Existing estimate currency: '
-                '${currency.code}. It cannot be changed.'))
+              Text(GarageUiText.format('quoteCurrencyLocked', {'currency': currency.code}))
             else GarageQuoteCurrencyPicker(
               currency: currency.code,
               onChanged: (v) => setState(() => _currency =
@@ -329,12 +317,12 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
               key: const Key('quote_add_line'),
               onPressed: _publishing || _lines.length >= 50 ? null :
                 () => setState(() => _lines.add(_QuoteDraft())),
-              icon: const Icon(Icons.add), label: Text(_tr('Dodaj pozycję','Add item'))),
+              icon: const Icon(Icons.add), label: Text(GarageUiText.get('addQuoteItem'))),
             const SizedBox(height: 12),
             FilledButton(key: const Key('quote_publish'),
               onPressed: _publishing ? null : _publish,
-              child: Text(_publishing ? _tr('Publikowanie…','Publishing…') :
-                _tr('Opublikuj kosztorys','Publish estimate'))),
+              child: Text(_publishing ? GarageUiText.get('quotePublishing') :
+                GarageUiText.get('publishEstimate'))),
           ],
         ])),
     );
