@@ -1,35 +1,43 @@
-# Flotaryx Fleet + Garage — iPhone connected staging release gate
+# Connected staging and physical-device release gates
 
-Status: **NOT PUBLISHED / NOT APPROVED FOR HOSTING** (2026-10-14).
+This document describes required checks. It is not an audit of any hosted
+project, evidence that a check passed, or permission to deploy. Keep runtime
+security findings, database inventories, test credentials and customer records
+out of public repository files and pull-request descriptions.
 
-## What already works
+## Disposable browser fixtures
 
-- Existing connected UI in `web/demo/connected/index.html` uses real RPCs for Fleet → Garage requests, Garage quotes, Fleet approval, mechanic repair progress, and private customer booking confirmation.
-- Chromium and WebKit regression uses a disposable local Supabase with synthetic actors, strictly loopback URLs, and no Stripe Live or customer data.
-- The PR #57 screenshot artifact is **visual evidence**, not an interactive hosted beta. Screenshot files do not contain credentials.
+Local `/qa-config.js` fixtures can contain synthetic users' short-lived JWTs.
+Keep them on loopback with the existing host and cross-origin protections.
+Never upload these fixtures to public hosting, expose them through a public
+tunnel or open LAN, or widen their localhost allowlist to arbitrary HTTPS sites.
+A passing disposable test does not establish hosted schema or security parity.
 
-## Hard blockers to sharing a connected iPhone URL
+## Before a controlled QA installation
 
-1. **Hosted QA is unsafe:** the RLS on `fleet_documents`, `driver_vehicle_checks`, and `vehicle_change_requests` is OFF; anon and authenticated privileges are too broad. Do not point any preview or browser to hosted QA.
-2. **Never publish the current local test config:** `/qa-config.js` injects multiple short-lived JWTs for automated synthetic roles. This is acceptable only on loopback with the current host and cross-origin protections. It must **not** be uploaded to a public static site, opened through a public tunnel, or made available over an open LAN. Do not merely change the localhost allowlist to allow any HTTPS origin.
-3. **QA schema parity not approved:** the security, Storage, driver and invite migrations from PR #49–#54 remain draft and must be reviewed and validated against existing QA metadata and separately controlled data-integrity tests.
-4. **No privileged keys client-side:** staging frontend must never contain Supabase `service_role` or secret keys, synthetic users' passwords, private Garage media tokens, or other users' JWTs.
+- Review the exact source, target catalogue, migration history and dependencies.
+  Preserve fail-closed drift checks instead of deleting them to make SQL run.
+- Check RLS, effective role privileges, tenant foreign keys, private Storage,
+  definer-function authorization and existing-data integrity against that source.
+- Rehearse the incremental upgrade with existing synthetic records as well as
+  a fresh installation. Bound lock waits, apply atomically where appropriate,
+  verify data preservation and record the migration and post-install checks.
+- Keep QA and production separate. Do not reset hosted databases or copy
+  disposable Auth/Fleet fixtures into them. A CI result authorizes no deployment.
 
-## Required staging architecture (future PR, gated)
+## Before sharing a connected staging URL
 
-- Separate authenticated **HTTPS** staging origin, not public production `flotaryx.com`. Disable indexing and previews; require tester identity to access the site.
-- Real frontend components from Fleet and Garage; authentication per role using Supabase Auth sessions, **not** a pre-baked `cfg.roles` map. A browser stores only its own Auth session.
-- Scoped Supabase publishable key only. Each role/tenant must be authorized server-side by RLS and reviewed RPCs. Invite-only synthetic actors from distinct fleets and workshops.
-- Use separate staging-only backend or approved hosted QA after all security gates. No production project URL or copied customer records.
-- Auth, Storage and REST end-to-end checks with actual Safari on an iPhone, not only WebKit desktop emulation.
-- Four-role scripted scenario: report issue → Garage receive/quote → Fleet approve → mechanic start/finish → customer request visit → Garage confirm. Include cross-tenant negative cases, failed payment/no Stripe Live, and deletion/expiration behavior for synthetic records.
-- Backend isolated credentials and site access policies; short session lifetimes, rate limits, emergency disable, audit logging and an expiration/cleanup process.
-- Hosting/DNS/cost approval where applicable **before** creating external resources. Do not activate paid services without user authorization.
-
-## Release decision
-
-A green screenshot, catalog check or local E2E alone does **not** authorize hosted rollout.
-The reviewer must separately approve (a) code and all relevant SQL migrations,
-(b) real QA integrity, (c) RLS/security-advisor closure, (d) real authenticated
-role and tenant testing, (e) iPhone Safari usability, and (f) external service cost.
-Until then, **DO NOT CONNECT HOSTED QA OR DEPLOY PUBLICLY**.
+- Use a separate authenticated HTTPS origin with indexing disabled and access
+  limited to testers. Obtain approval for hosting, DNS and costs when applicable.
+- Use real per-user Supabase Auth sessions and only a publishable client key.
+  Never ship service-role/secret keys, test passwords, media tokens or a map of
+  other users' JWTs. Enforce authorization in RLS and reviewed RPCs.
+- Run the full issue, quote, approval, repair and customer-booking journey with
+  distinct fleets and workshops. Include cross-tenant denials, cancellation,
+  uncertain-response replay, session expiry and synthetic-record cleanup.
+- Verify Auth, REST, private Storage and usability on a physical iPhone using
+  Safari and a physical Android device. Desktop mobile emulation is additional
+  evidence and does not replace these checks.
+- Review security-advisor findings with their intended access model. Require
+  documented release evidence before any production merge or public rollout.
+  Do not activate Stripe Live, paid services or mass email through these tests.
