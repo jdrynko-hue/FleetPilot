@@ -70,6 +70,32 @@ void main() {
     }
   });
 
+  test('reminder delivery identity is stable and changes on renewal', () {
+    final first = insuranceReminderKey(
+      vehicleId: 'fleet/a:vehicle 1', expiry: DateTime(2026, 11, 15),
+      daysBefore: 30,
+    );
+    expect(first, insuranceReminderKey(
+      vehicleId: 'fleet/a:vehicle 1', expiry: DateTime(2026, 11, 15, 23),
+      daysBefore: 30,
+    ));
+    expect(first, isNot(insuranceReminderKey(
+      vehicleId: 'fleet/a:vehicle 1', expiry: DateTime(2027, 11, 15),
+      daysBefore: 30,
+    )));
+    expect(first, isNot(insuranceReminderKey(
+      vehicleId: 'fleet/a:vehicle 2', expiry: DateTime(2026, 11, 15),
+      daysBefore: 30,
+    )));
+    expect(first, isNot(insuranceReminderKey(
+      vehicleId: 'fleet/a:vehicle 1', expiry: DateTime(2026, 11, 15),
+      daysBefore: 14,
+    )));
+    expect(() => insuranceReminderKey(
+      vehicleId: 'car', expiry: DateTime(2026, 11, 15), daysBefore: -1,
+    ), throwsArgumentError);
+  });
+
   testWidgets('expiry text distinguishes missing, upcoming, today and expired', (tester) async {
     final today = DateTime(2026, 10, 16);
     for (final days in <int?>[null, -1, 0, 7, 14, 30, 31]) {
