@@ -38,7 +38,7 @@ void main() {
 
   testWidgets('module picker labels adapt to supported non-English locale',
       (tester) async {
-    final client = SupabaseClient('https://example.supabase.co', 'test-anon');
+    final client = SupabaseClient('https://example.supabase.co', 'test-anon', authOptions: const AuthClientOptions(autoRefreshToken: false));
     addTearDown(client.dispose);
     for (final language in ['de', 'es', 'ro']) {
       AppLocale.language.value = language;
