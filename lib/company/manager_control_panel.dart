@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants.dart';
 import '../core/app_config.dart';
 import '../garage/repair_requests_screen.dart';
+import '../garage/bridge_connections_screen.dart';
 import '../core/localization.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -318,6 +319,14 @@ class _ManagerControlPanelState extends State<ManagerControlPanel> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
               children: [
+                if (AppConfig.ecosystemQaEnabled && canManageForRole(widget.company.role))
+                  Card(child: ListTile(title: Text(_t('Połączenia z warsztatami', 'Workshop connections')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
+                      builder: (_) => GarageBridgeConnectionsScreen.forClient(client: _client,
+                        scopeId: widget.company.companyId, fleet: true),
+                    )),
+                  )),
                 if (AppConfig.ecosystemQaEnabled && canManageForRole(widget.company.role))
                   Card(child: ListTile(
                     title: Text(_t('Naprawy Fleet ↔ Garage', 'Fleet ↔ Garage repairs')),

@@ -50,6 +50,15 @@ class GarageRepairBridgeRepository {
     return GarageRepairRequest.parseList(data, companyId, fleet: true);
   }
 
+  Future<List<GarageFleetConnection>> connections(String scopeId, {required bool fleet}) async {
+    _signedIn();
+    requireId(scopeId, 'scopeId');
+    final user = client.auth.currentUser!.id;
+    final rows = await client.rpc('garage_fleet_connection_labels_for_me');
+    if (client.auth.currentUser?.id != user) throw StateError('Account changed');
+    return GarageFleetConnection.parseList(rows, scopeId, fleet: fleet);
+  }
+
   Future<String> requestConnection(String companyId, String workspaceId) async {
     _signedIn();
     requireId(companyId, 'companyId');
@@ -377,6 +386,33 @@ class GarageRepairRequest {
       }
     }
     rows.sort((a, b) => a.id.compareTo(b.id));
+    return List.unmodifiable(rows);
+  }
+}
+
+class GarageFleetConnection {
+  const GarageFleetConnection(this.companyId, this.workspaceId, this.status,
+    this.companyName, this.workspaceName);
+  final String companyId, workspaceId, status, companyName, workspaceName;
+  static List<GarageFleetConnection> parseList(Object? data, String scopeId, {required bool fleet}) {
+    GarageRepairBridgeRepository.requireId(scopeId, 'scopeId');
+    if (data is! List) throw const FormatException('Invalid connections');
+    final rows = <GarageFleetConnection>[];
+    final pairs = <String>{};
+    for (final row in data) {
+      if (row is! Map) throw const FormatException('Invalid connection');
+      final company = GarageRepairBridgeSnapshot._uuidField(row, 'company_id');
+      final shop = GarageRepairBridgeSnapshot._uuidField(row, 'workspace_id');
+      final status = GarageRepairBridgeSnapshot._requiredText(row, 'status');
+      final companyName = GarageRepairBridgeSnapshot._requiredText(row, 'company_name');
+      final shopName = GarageRepairBridgeSnapshot._requiredText(row, 'workspace_name');
+      if (!const {'pending', 'active', 'revoked'}.contains(status) || !pairs.add('$company/$shop')) {
+        throw const FormatException('Invalid connection status or duplicate');
+      }
+      if ((fleet ? company : shop) == scopeId) {
+        rows.add(GarageFleetConnection(company, shop, status, companyName, shopName));
+      }
+    }
     return List.unmodifiable(rows);
   }
 }
