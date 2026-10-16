@@ -1,4 +1,17 @@
+import 'dart:math';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// One random key per form intent; never reused across account/workshop scopes.
+String newBookingRequestKey() {
+  final random = Random.secure();
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+}
 
 /// Garage consumer booking is a workshop-reviewed preference, not an instant
 /// confirmed reservation. Staging only: do not link public navigation before
@@ -285,9 +298,11 @@ class GarageBookingRepository {
     required String concern,
     required DateTime desiredStart,
     String? registration,
+    String? requestKey,
   }) async {
     _requireSignIn();
     _id(workspaceId);
+    if (requestKey != null) _id(requestKey);
     if (customerName.trim().length < 2 || customerName.length > 120 ||
         vehicleMake.trim().isEmpty || vehicleMake.length > 80 ||
         vehicleModel.trim().isEmpty || vehicleModel.length > 80 ||
@@ -299,7 +314,9 @@ class GarageBookingRepository {
         desiredStart.isAfter(DateTime.now().add(const Duration(days:90)))) {
       throw ArgumentError('Invalid booking preference');
     }
-    final raw = await client.rpc('garage_booking_request', params: {
+    final raw = await client.rpc(requestKey == null
+        ? 'garage_booking_request' : 'garage_booking_request_once', params: {
+      if (requestKey != null) 'p_request_key': requestKey,
       'p_workspace': workspaceId,
       'p_name': customerName.trim(),
       'p_make': vehicleMake.trim(),
