@@ -14,6 +14,32 @@ import 'garage_repair_bridge_repository_test.dart' as fixture;
 void main() {
   tearDown(() => AppLocale.language.value = 'en');
 
+  test('published quote and approval text interpolates values across 12 locales', () {
+    for (final language in supportedLanguages) {
+      final totals = GarageUiText.format('quoteConfirmTotals',
+        {'count': 2, 'total': 'GBP 45.00'}, language: language);
+      expect(totals, contains('2'), reason: language);
+      expect(totals, contains('GBP 45.00'), reason: language);
+      expect(totals, isNot(contains('{count}')), reason: language);
+      expect(totals, isNot(contains('{total}')), reason: language);
+      final status = GarageUiText.format('quotePublishedStatus',
+        {'revision': 3}, language: language);
+      expect(status, contains('3'), reason: language);
+      expect(status, isNot(contains('{revision}')), reason: language);
+      final locked = GarageUiText.format('quoteCurrencyLocked',
+        {'currency': 'EUR'}, language: language);
+      expect(locked, contains('EUR'), reason: language);
+      for (final key in [
+        'quoteLoadError', 'quoteIntro', 'quoteNoOrders',
+        'quoteCurrencyBlocked', 'quoteInvalidLines',
+        'quoteUncertain', 'quoteBackToOrders',
+      ]) {
+        expect(GarageUiText.get(key, language: language), isNotEmpty,
+          reason: '$language $key');
+      }
+    }
+  });
+
   test('quote editor labels and currency placeholders are present in every language', () {
     for (final locale in supportedLanguages) {
       for (final key in [
