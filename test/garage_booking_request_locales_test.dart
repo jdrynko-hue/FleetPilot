@@ -7,10 +7,18 @@ import 'package:fleetpilot/garage/consumer_booking_screen.dart';
 import 'package:fleetpilot/garage/garage_ui_text.dart';
 import 'garage_booking_screens_test.dart' as fixture;
 
+Future<void> reveal(WidgetTester tester, String key) async {
+  final scrollable = find.byType(Scrollable).first;
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.byKey(Key(key)), 150,
+    scrollable: scrollable);
+  await tester.pumpAndSettle();
+}
+
 Future<void> tap(WidgetTester tester, String key) async {
   final target = find.byKey(Key(key));
-  await tester.ensureVisible(target);
-  await tester.pumpAndSettle();
+  await reveal(tester, key);
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
@@ -18,7 +26,7 @@ Future<void> tap(WidgetTester tester, String key) async {
 Future<void> completeRequest(WidgetTester tester) async {
   for (final entry in {'booking_name':'Private Person','booking_make':'Ford',
       'booking_model':'Focus','booking_concern':'Noisy brakes'}.entries) {
-    await tester.ensureVisible(find.byKey(Key(entry.key)));
+    await reveal(tester, entry.key);
     await tester.enterText(find.byKey(Key(entry.key)), entry.value);
   }
   await tap(tester, 'booking_service');
@@ -55,7 +63,7 @@ void main() {
       expect(zone, isNot(contains('{workshopZone}')));
       await tap(tester, 'booking_send');
       expect(calls, 0);
-      await tester.ensureVisible(find.byKey(const Key('booking_name')));
+      await reveal(tester, 'booking_name');
       await tester.pumpAndSettle();
       expect(find.text(GarageUiText.get('bookingInvalidField')), findsWidgets);
       await completeRequest(tester);
@@ -89,7 +97,7 @@ void main() {
       await tap(tester, 'booking_send');
       expect(tester.widget<Text>(find.byKey(const Key('booking_request_error'))).data,
         GarageUiText.get('bookingRequestUncertain'));
-      await tester.ensureVisible(find.byKey(const Key('booking_send')));
+      await reveal(tester, 'booking_send');
       await tester.pumpAndSettle();
       expect(tester.widget<FilledButton>(find.byKey(const Key('booking_send'))).onPressed, isNull);
       await tester.tap(find.byKey(const Key('booking_send')));
