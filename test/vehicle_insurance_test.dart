@@ -18,7 +18,6 @@ void main() {
   late SupabaseClient client;
   late MockClient transport;
   setUpAll(() async {
-
     transport = MockClient((request) async {
       expect(request.url.path, '/rest/v1/vehicles');
       expect(request.url.queryParameters['company_id'], 'eq.fleet-a');
@@ -31,7 +30,7 @@ void main() {
             'insurance_expiry_date': days == null ? null :
                 DateTime(today.year, today.month, today.day + days).toIso8601String().substring(0, 10),
           },
-      ]), 200, headers: {'content-type': 'application/json'});
+      ]), 200, headers: {'content-type': 'application/json'}, request: request);
     });
     client = SupabaseClient(
       'https://fleet-test.invalid', 'test-anon', httpClient: transport,
