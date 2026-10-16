@@ -37,6 +37,8 @@ Map<String,Object?> snapshot({
   String? orderStatus,
   Object? estimate,
   Object? history,
+  Object? assigned = false,
+  Object? mechanic = null,
 }) => {
   'request_id':requestId,
   'company_id':companyId,
@@ -48,6 +50,8 @@ Map<String,Object?> snapshot({
   'status':status,
   'work_order_id':workOrderId,
   'work_order_status':orderStatus,
+  'mechanic_assigned':workOrderId == null ? null : assigned,
+  'mechanic_user_id':mechanic,
   'quote':estimate,
   'events':history ?? [
     event('request_sent','2026-10-14T09:00:00Z'),
@@ -62,6 +66,8 @@ void main() {
     expect(data.title,'Brake defect');
     expect(data.sharedDescription,isNull);
     expect(data.sharedRegistration,isNull);
+    expect(data.mechanicAssigned,isNull);
+    expect(data.mechanicUserId,isNull);
     expect(data.quote,isNull);
     expect(data.needsFleetApproval,false);
     expect(data.events.single.action,'request_sent');
@@ -129,6 +135,38 @@ void main() {
                               event('request_accepted','2026-10-14T09:01:00Z')]},
     ]){
       expect(()=>GarageRepairBridgeSnapshot.parse(item),throwsA(isA<Exception>()));
+    }
+  });
+
+  test('assignment status does not require revealing staff identity to Fleet',(){
+    final noStaff = GarageRepairBridgeSnapshot.parse(snapshot(
+      status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+      assigned:false,
+    ));
+    expect(noStaff.mechanicAssigned, false);
+    expect(noStaff.mechanicUserId, isNull);
+    final fleet = GarageRepairBridgeSnapshot.parse(snapshot(
+      status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+      assigned:true,
+    ));
+    expect(fleet.mechanicAssigned, true);
+    expect(fleet.mechanicUserId, isNull);
+    final garage = GarageRepairBridgeSnapshot.parse(snapshot(
+      status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+      assigned:true,mechanic:issueId,
+    ));
+    expect(garage.mechanicUserId, issueId);
+    for (final forged in [
+      snapshot(status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+        assigned:false,mechanic:issueId),
+      snapshot(status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+        assigned:'yes'),
+      snapshot(status:'accepted',workOrderId:orderId,orderStatus:'diagnosing',
+        assigned:true,mechanic:'not a uuid'),
+      {...snapshot(), 'mechanic_assigned':true},
+    ]) {
+      expect(() => GarageRepairBridgeSnapshot.parse(forged),
+        throwsFormatException);
     }
   });
 

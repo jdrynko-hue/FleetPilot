@@ -206,4 +206,108 @@ void main() {
     expect(assigned, fixture.issueId);
   });
 
+  testWidgets('Fleet sees mechanic assignment but never workshop identity',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted', workOrderId:fixture.orderId,
+        orderStatus:'diagnosing', assigned:true)),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('repair_assigned_mechanic')), findsOneWidget);
+    expect(find.text('Mechanic assigned'), findsOneWidget);
+    expect(find.textContaining('mechanic@example.test'), findsNothing);
+    expect(find.textContaining(fixture.issueId), findsNothing);
+  });
+
+  testWidgets('workshop roster resolves assigned mechanic without exposing ID',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted', workOrderId:fixture.orderId,
+        orderStatus:'diagnosing', assigned:true, mechanic:fixture.issueId)),
+      loadMechanics: () async => const [
+        GarageRosterMechanic(userId:fixture.issueId,
+          email:'mechanic@example.test'),
+      ],
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('mechanic@example.test'), findsOneWidget);
+    expect(find.textContaining(fixture.issueId), findsNothing);
+  });
+
+  testWidgets('slow roster does not block authorized repair actions',
+      (tester) async {
+    final roster = Completer<List<GarageRosterMechanic>>();
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted',workOrderId:fixture.orderId,
+        orderStatus:'awaiting_approval', assigned:true,
+        mechanic:fixture.issueId,
+        estimate:fixture.quote(approved:true))),
+      loadMechanics: () => roster.future,
+      advance: (data, target) async => target,
+    )));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Mechanic assigned'), findsOneWidget);
+    final start = tester.widget<FilledButton>(
+      find.byKey(const Key('repair_advance_in_progress')));
+    expect(start.onPressed, isNotNull);
+    roster.complete(const [GarageRosterMechanic(
+      userId:fixture.issueId, email:'mechanic@example.test')]);
+    await tester.pumpAndSettle();
+    expect(find.text('mechanic@example.test'), findsOneWidget);
+  });
+
+  testWidgets('workshop keeps generic label when roster cannot load',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted', workOrderId:fixture.orderId,
+        orderStatus:'diagnosing', assigned:true, mechanic:fixture.issueId)),
+      loadMechanics: () async => throw StateError('private API message'),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Mechanic assigned'), findsOneWidget);
+    expect(find.textContaining('private API message'), findsNothing);
+  });
+
+  testWidgets('chronological repair timeline shows safe events and revisions',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: GarageRepairRequestDetailScreen(
+      request: row,
+      load: () async => GarageRepairBridgeSnapshot.parse(fixture.snapshot(
+        status:'accepted',workOrderId:fixture.orderId,orderStatus:'ready',
+        estimate:fixture.quote(approved:true),
+        assigned:true,
+        history:[
+          fixture.event('request_sent','2026-10-14T09:00:00Z'),
+          fixture.event('request_accepted','2026-10-14T09:01:00Z'),
+          fixture.event('quote_approved','2026-10-14T09:02:00Z'),
+          fixture.event('progress_updated','2026-10-14T09:03:00Z'),
+        ],
+      )),
+    )));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('repair_event_timeline')));
+    await tester.tap(find.byKey(const Key('repair_event_timeline')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('repair_timeline_event_0')), findsOneWidget);
+    expect(find.text('Request sent'), findsOneWidget);
+    expect(find.text('Workshop accepted'), findsOneWidget);
+    expect(find.text('Estimate approved'), findsOneWidget);
+    expect(find.textContaining('Estimate revision: 1'), findsOneWidget);
+    expect(find.textContaining('In progress → Ready for collection'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
