@@ -46,4 +46,23 @@ void main() {
     expect(find.text('Customer bookings'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('returning from a module releases the navigation guard', (tester) async {
+    var opened = 0;
+    await tester.pumpWidget(MaterialApp(home: EcosystemGate(
+      loadAccess: () async => const EcosystemAccess(hasFleet: false, garages: []),
+      signOut: () async {}, destinationBuilder: (_) {
+        opened++;
+        return Scaffold(appBar: AppBar(title: const Text('Bookings')));
+      })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ecosystem_customer')));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ecosystem_customer')));
+    await tester.pumpAndSettle();
+    expect(opened, 2);
+    expect(find.text('Bookings'), findsOneWidget);
+  });
+
 }

@@ -61,7 +61,10 @@ class _EcosystemGateState extends State<EcosystemGate> {
     _opening = true;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => widget.destinationBuilder(destination),
-    )).then((_) { if (mounted && !_signingOut) _reload(); });
+    )).then((_) {
+      _opening = false;
+      if (mounted && !_signingOut && _current) _reload();
+    });
   }
   void _createWorkshop() {
     if (!mounted || _opening || _signingOut || !_current || widget.createWorkshopBuilder == null) return;
