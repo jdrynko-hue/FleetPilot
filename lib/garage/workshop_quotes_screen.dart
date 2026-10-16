@@ -44,6 +44,18 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   String? _error;
   int _version = 0;
 
+  String _statusLabel(String status) => switch (status) {
+    'received' => GarageUiText.get('received'),
+    'diagnosing' => GarageUiText.get('diagnosing'),
+    'awaiting_approval' => GarageUiText.get('awaitingApproval'),
+    'awaiting_parts' => GarageUiText.get('awaitingParts'),
+    'in_progress' => GarageUiText.get('inProgress'),
+    'ready' => GarageUiText.get('readyCollection'),
+    'collected' => GarageUiText.get('collected'),
+    'cancelled' => GarageUiText.get('cancelled'),
+    _ => status,
+  };
+
   @override
   void initState() { super.initState(); _refresh(); }
   @override
@@ -97,7 +109,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
             key: Key('quote_order_${order.id}'),
             title: Text(order.complaint, maxLines: 3,
               overflow: TextOverflow.ellipsis),
-            subtitle: Text(order.status.replaceAll('_',' ')),
+            subtitle: Text(_statusLabel(order.status)),
             trailing: order.canQuote
               ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
             onTap: order.canQuote ? () => _open(order) : null,
