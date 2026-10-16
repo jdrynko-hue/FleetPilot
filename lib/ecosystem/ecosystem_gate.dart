@@ -42,6 +42,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
   late Future<EcosystemAccess?> _access;
   bool _signingOut = false;
   bool _handledEntry = false;
+  bool _opening = false;
   String? _error;
   @override
   void initState() { super.initState(); _access = _loadAccess(); }
@@ -56,10 +57,24 @@ class _EcosystemGateState extends State<EcosystemGate> {
     setState(() { _error = null; _access = _loadAccess(); });
   }
   void _open(EcosystemDestination destination) {
-    if (_signingOut || !_current) return;
+    if (_opening || _signingOut || !_current) return;
+    _opening = true;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => widget.destinationBuilder(destination),
-    )).then((_) { if (mounted && !_signingOut) _reload(); });
+    )).then((_) {
+      _opening = false;
+      if (mounted && !_signingOut && _current) _reload();
+    });
+  }
+  void _createWorkshop() {
+    if (!mounted || _opening || _signingOut || !_current || widget.createWorkshopBuilder == null) return;
+    _opening = true;
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: widget.createWorkshopBuilder!,
+    )).then((_) {
+      _opening = false;
+      if (mounted && !_signingOut && _current) _reload();
+    });
   }
   Future<void> _logout() async {
     setState(() { _signingOut = true; _error = null; });
@@ -98,6 +113,10 @@ class _EcosystemGateState extends State<EcosystemGate> {
         final access = snapshot.requireData!;
         if (!_handledEntry && _current) {
           _handledEntry = true;
+          if (widget.preferredPortal == PortalEntry.garage &&
+              access.garages.isEmpty && widget.createWorkshopBuilder != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _createWorkshop());
+          }
           EcosystemDestination? destination;
           if (widget.preferredPortal == PortalEntry.fleet) {
             destination = const EcosystemDestination(EcosystemModule.fleet);
@@ -126,13 +145,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
                 leading: const Icon(Icons.add_business_outlined),
                 title: Text(GarageUiText.get('createWorkshop')),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: _signingOut ? null : () {
-                  if (!_current) return;
-                  Navigator.of(context).push<void>(MaterialPageRoute<void>(
-                    builder: widget.createWorkshopBuilder!)).then((_) {
-                      if (mounted && !_signingOut) _reload();
-                    });
-                })),
+                onTap: _signingOut ? null : _createWorkshop)),
             for (final garage in access.garages)
               _tile('ecosystem_${garage.workspaceId}',
                 garage.module == EcosystemModule.mechanic
