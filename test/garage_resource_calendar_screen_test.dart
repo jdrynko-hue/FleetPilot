@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -159,4 +161,147 @@ void main(){
    expect(find.text('confirmed'),findsNothing);
    expect(find.byKey(const Key('garage_notifications_error')),findsOneWidget);
  });
+
+ for (final stage in ['resources', 'requests', 'calendar']) {
+  testWidgets('calendar discards old scope during $stage load', (tester) async {
+   final barrier = Completer<void>();
+   final calls = <String>[];
+   Future<T> old<T>(String name, T value) async {
+    calls.add(name);
+    if (name == stage) await barrier.future;
+    return value;
+   }
+   await tester.pumpWidget(MaterialApp(home: GarageResourceCalendarScreen(
+    loadResources: () => old('resources', resources),
+    loadRequests: () => old('requests', [req()]),
+    loadCalendar: () => old('calendar', [appointment()]),
+    confirmSlot: (booking, resource) async => 'confirmed',
+   )));
+   await tester.pump();
+   expect(calls.last, stage);
+   await tester.pumpWidget(MaterialApp(home: GarageResourceCalendarScreen(
+    loadResources: () async => [], loadRequests: () async => [],
+    loadCalendar: () async => [], confirmSlot: (booking, resource) async => 'confirmed',
+   )));
+   await tester.pumpAndSettle();
+   final oldCalls = calls.length;
+   barrier.complete();
+   await tester.pumpAndSettle();
+   expect(calls.length, oldCalls);
+   expect(find.text('private@example.test'), findsNothing);
+   expect(find.text('Booking Person'), findsNothing);
+   expect(find.text('Bay One'), findsNothing);
+   expect(find.byKey(const Key('garage_calendar_error')), findsNothing);
+   expect(tester.takeException(), isNull);
+  });
+ }
+
+ Future<void> openConfirmation(WidgetTester tester) async {
+  final selector = find.byKey(Key('garage_calendar_select_' + requestId));
+  await tester.ensureVisible(selector);
+  await tester.pumpAndSettle();
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Bay Two').last);
+  await tester.pumpAndSettle();
+  final accept = find.byKey(Key('garage_calendar_accept_' + requestId));
+  await tester.ensureVisible(accept);
+  await tester.pumpAndSettle();
+  await tester.tap(accept);
+  await tester.pumpAndSettle();
+ }
+
+ testWidgets('calendar dialog cannot confirm under replacement scope', (tester) async {
+  var oldCalls = 0;
+  var newCalls = 0;
+  await mount(tester, GarageResourceCalendarScreen(
+   loadResources: () async => resources, loadRequests: () async => [req()],
+   loadCalendar: () async => [],
+   confirmSlot: (booking, resource) async { oldCalls++; return 'confirmed'; },
+  ));
+  await openConfirmation(tester);
+  await tester.pumpWidget(MaterialApp(home: GarageResourceCalendarScreen(
+   loadResources: () async => resources, loadRequests: () async => [req()],
+   loadCalendar: () async => [],
+   confirmSlot: (booking, resource) async { newCalls++; return 'confirmed'; },
+  )));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('calendar_confirm_action')));
+  await tester.pumpAndSettle();
+  expect(oldCalls, 0);
+  expect(newCalls, 0);
+  expect(tester.widget<FilledButton>(find.byKey(
+    Key('garage_calendar_accept_' + requestId))).onPressed, isNull);
+  expect(tester.takeException(), isNull);
+ });
+
+ for (final fails in [false, true]) {
+  testWidgets('old calendar mutation cannot refresh new scope (error=$fails)', (tester) async {
+   final pending = Completer<String>();
+   var newLoads = 0;
+   await mount(tester, GarageResourceCalendarScreen(
+    loadResources: () async => resources, loadRequests: () async => [req()],
+    loadCalendar: () async => [], confirmSlot: (booking, resource) => pending.future,
+   ));
+   await openConfirmation(tester);
+   await tester.tap(find.byKey(const Key('calendar_confirm_action')));
+   await tester.pump();
+   await tester.pumpWidget(MaterialApp(home: GarageResourceCalendarScreen(
+    loadResources: () async => [], loadRequests: () async => [],
+    loadCalendar: () async { newLoads++; return []; },
+    confirmSlot: (booking, resource) async => 'confirmed',
+   )));
+   await tester.pumpAndSettle();
+   expect(newLoads, 1);
+   if (fails) { pending.completeError(StateError('old private failure')); }
+   else { pending.complete('confirmed'); }
+   await tester.pumpAndSettle();
+   expect(newLoads, 1);
+   expect(find.byKey(const Key('garage_calendar_error')), findsNothing);
+   expect(find.text('Booking Person'), findsNothing);
+   expect(tester.takeException(), isNull);
+  });
+ }
+
+ testWidgets('notifications discard an old account load', (tester) async {
+  final pending = Completer<List<GarageBookingNotice>>();
+  await tester.pumpWidget(MaterialApp(home: GarageBookingNotificationsScreen(
+   load: () => pending.future, acknowledge: (id) async => true,
+  )));
+  await tester.pump();
+  await tester.pumpWidget(MaterialApp(home: GarageBookingNotificationsScreen(
+   load: () async => [], acknowledge: (id) async => true,
+  )));
+  await tester.pumpAndSettle();
+  pending.complete([notification()]);
+  await tester.pumpAndSettle();
+  expect(find.byKey(Key('garage_notification_' + noticeId)), findsNothing);
+  expect(find.byKey(const Key('garage_notifications_empty')), findsOneWidget);
+  expect(tester.takeException(), isNull);
+ });
+
+ for (final fails in [false, true]) {
+  testWidgets('old read acknowledgement cannot refresh new account (error=$fails)', (tester) async {
+   final pending = Completer<bool>();
+   var newLoads = 0;
+   await mount(tester, GarageBookingNotificationsScreen(
+    load: () async => [notification()], acknowledge: (id) => pending.future,
+   ));
+   await tester.tap(find.byKey(Key('garage_notification_mark_' + noticeId)));
+   await tester.pump();
+   await tester.pumpWidget(MaterialApp(home: GarageBookingNotificationsScreen(
+    load: () async { newLoads++; return []; }, acknowledge: (id) async => true,
+   )));
+   await tester.pumpAndSettle();
+   expect(newLoads, 1);
+   if (fails) { pending.completeError(StateError('old private failure')); }
+   else { pending.complete(true); }
+   await tester.pumpAndSettle();
+   expect(newLoads, 1);
+   expect(find.byKey(const Key('garage_notifications_error')), findsNothing);
+   expect(find.byKey(Key('garage_notification_' + noticeId)), findsNothing);
+   expect(tester.takeException(), isNull);
+  });
+ }
+
 }

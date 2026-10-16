@@ -48,6 +48,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
   bool _busy = true;
   String? _error;
   int _sequence = 0;
+  int _scope = 0;
 
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl, String en) => _pl ? pl : en;
@@ -56,11 +57,27 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
   void initState() { super.initState(); _refresh(); }
 
   @override
-  void dispose() { _sequence++; super.dispose(); }
+  void didUpdateWidget(covariant GarageResourceCalendarScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadResources != widget.loadResources ||
+        oldWidget.loadRequests != widget.loadRequests ||
+        oldWidget.loadCalendar != widget.loadCalendar ||
+        oldWidget.confirmSlot != widget.confirmSlot) {
+      _scope++;
+      _refresh();
+    }
+  }
+
+  @override
+  void dispose() { _scope++; _sequence++; super.dispose(); }
 
   Future<void> _refresh() async {
     if (!mounted) return;
     final sequence = ++_sequence;
+    final loadResources = widget.loadResources;
+    final loadRequests = widget.loadRequests;
+    final loadCalendar = widget.loadCalendar;
+    bool current() => mounted && sequence == _sequence;
     setState(() {
       _busy = true;
       _resources = const [];
@@ -70,10 +87,12 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
       _error = null;
     });
     try {
-      final resources = await widget.loadResources();
-      final requests = await widget.loadRequests();
-      final appointments = await widget.loadCalendar();
-      if (!mounted || sequence != _sequence) return;
+      final resources = await loadResources();
+      if (!current()) return;
+      final requests = await loadRequests();
+      if (!current()) return;
+      final appointments = await loadCalendar();
+      if (!current()) return;
       setState(() {
         _resources = List.unmodifiable(resources);
         _requests = List.unmodifiable(requests);
@@ -94,6 +113,9 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
   }
 
   Future<void> _accept(GarageBookingInboxItem request) async {
+    final scope = _scope;
+    final sequence = _sequence;
+    final confirmSlot = widget.confirmSlot;
     final resourceId = _selection[request.id];
     if (_busy || resourceId == null ||
         !_resources.any((resource) => resource.id == resourceId &&
@@ -118,7 +140,8 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
         ],
       ),
     );
-    if (!mounted || confirmed != true || _busy) return;
+    if (!mounted || scope != _scope || sequence != _sequence ||
+        confirmed != true || _busy) return;
     setState(() {
       _busy = true;
       _requests = const []; // Sensitive details never remain after a failed RPC.
@@ -129,16 +152,18 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
     });
     var failed = false;
     try {
-      final response = await widget.confirmSlot(request.id,resourceId);
+      final response = await confirmSlot(request.id,resourceId);
       if (response != 'confirmed') {
         throw const FormatException('Workshop booking was not confirmed');
       }
     } catch (_) {
       failed = true;
     } finally {
-      if (mounted) {
-        await _refresh();
-        if (mounted && failed) {
+      if (mounted && scope == _scope) {
+        final refresh = _refresh();
+        final refreshSequence = _sequence;
+        await refresh;
+        if (mounted && scope == _scope && refreshSequence == _sequence && failed) {
           setState(() => _error = tr(
             'Potwierdzenie nie powiodło się. Sprawdź dostępność lub grafik.',
             'Confirmation failed. Check availability or workshop hours.'));
@@ -269,21 +294,33 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
   bool _busy = true;
   String? _error;
   int _version = 0;
+  int _scope = 0;
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl, String en) => _pl ? pl : en;
 
   @override
   void initState() { super.initState(); _refresh(); }
   @override
-  void dispose() { _version++; super.dispose(); }
+  void didUpdateWidget(covariant GarageBookingNotificationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.load != widget.load ||
+        oldWidget.acknowledge != widget.acknowledge) {
+      _scope++;
+      _refresh();
+    }
+  }
+  @override
+  void dispose() { _scope++; _version++; super.dispose(); }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
+    final load = widget.load;
     final version = ++_version;
     setState(() {
       _busy = true; _notices = const []; _error = null;
     });
     try {
-      final notices = await widget.load();
+      final notices = await load();
       if (mounted && version == _version) {
         setState(() => _notices = List.unmodifiable(notices));
       }
@@ -299,16 +336,20 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
 
   Future<void> _read(GarageBookingNotice notice) async {
     if (_busy || !notice.unread) return;
+    final scope = _scope;
+    final acknowledge = widget.acknowledge;
     setState(() { _busy = true; _notices = const []; });
     var failed = false;
     try {
-      if (!await widget.acknowledge(notice.id)) {
+      if (!await acknowledge(notice.id)) {
         throw const FormatException('Read not acknowledged');
       }
     } catch (_) { failed = true; }
-    if (mounted) {
-      await _refresh();
-      if (mounted && failed) setState(() =>
+    if (mounted && scope == _scope) {
+      final refresh = _refresh();
+      final version = _version;
+      await refresh;
+      if (mounted && scope == _scope && version == _version && failed) setState(() =>
         _error = tr('Nie potwierdzono odczytu.', 'Read not confirmed.'));
     }
   }
