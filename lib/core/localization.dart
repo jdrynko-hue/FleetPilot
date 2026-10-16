@@ -36,6 +36,12 @@ const languageLabels = <String, String>{
 
 final Map<String, Map<String, String>> _translations = {
   "pl": <String, String>{
+    "insurance_date_missing": "Nie ustawiono daty",
+    "insurance_days_remaining": "Pozostało dni: {days}",
+    "insurance_due_filter": "Ubezpieczenie: do 30 dni / po terminie",
+    "insurance_no_matches": "Brak pasujących pojazdów",
+    "insurance_change_filters": "Zmień filtry lub wyszukiwaną frazę.",
+    "insurance_reminder_hint": "Data będzie widoczna w Vehicles i przypomnieniach na pulpicie w ostatnich 30 dniach przed końcem ubezpieczenia.",
     "business_profile_title": "Dane firmy i weryfikacja",
     "business_profile_subtitle":
         "Uzupełnij dane działalności. Weryfikacja jest wymagana przed prawdziwą płatnością.",
@@ -392,6 +398,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma została dodana.",
   },
   "en": <String, String>{
+    "insurance_date_missing": "Date not set",
+    "insurance_days_remaining": "{days} days left",
+    "insurance_due_filter": "Insurance: within 30 days / overdue",
+    "insurance_no_matches": "No matching vehicles",
+    "insurance_change_filters": "Change the filters or search term.",
+    "insurance_reminder_hint": "The date appears in Vehicles and dashboard reminders during the last 30 days before insurance expiry.",
     "business_profile_title": "Business details and verification",
     "business_profile_subtitle":
         "Provide your business details. Verification is required before live payments.",
@@ -749,6 +761,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Company added successfully.",
   },
   "de": <String, String>{
+    "insurance_date_missing": "Datum nicht festgelegt",
+    "insurance_days_remaining": "Verbleibende Tage: {days}",
+    "insurance_due_filter": "Versicherung: bis 30 Tage / überfällig",
+    "insurance_no_matches": "Keine passenden Fahrzeuge",
+    "insurance_change_filters": "Filter oder Suchbegriff ändern.",
+    "insurance_reminder_hint": "Das Datum erscheint unter Fahrzeuge und in den Dashboard-Erinnerungen in den letzten 30 Tagen vor Versicherungsablauf.",
     "business_profile_title": "Firmendaten und Prüfung",
     "business_profile_subtitle":
         "Geben Sie Ihre Firmendaten ein. Vor Live-Zahlungen ist eine Prüfung erforderlich.",
@@ -1103,6 +1121,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Unternehmen erfolgreich hinzugefügt.",
   },
   "sk": <String, String>{
+    "insurance_date_missing": "Dátum nie je nastavený",
+    "insurance_days_remaining": "Zostávajúce dni: {days}",
+    "insurance_due_filter": "Poistenie: do 30 dní / po termíne",
+    "insurance_no_matches": "Žiadne zodpovedajúce vozidlá",
+    "insurance_change_filters": "Zmeňte filtre alebo hľadaný výraz.",
+    "insurance_reminder_hint": "Dátum sa zobrazuje pri vozidlách a v pripomienkach na paneli počas posledných 30 dní pred koncom poistenia.",
     "business_profile_title": "Údaje o firme a overenie",
     "business_profile_subtitle":
         "Vyplňte údaje o firme. Pred ostrou platbou sa vyžaduje overenie.",
@@ -1369,7 +1393,7 @@ final Map<String, Map<String, String>> _translations = {
     "inspection_due": "Inspection due",
     "service_due_date": "Service due date",
     "service_due_mileage": "Service due mileage",
-    "insurance_expiry": "Insurance expiry",
+    "insurance_expiry": "Koniec poistenia",
     "notes": "Poznámky",
     "saving": "Ukladanie…",
     "save_vehicle": "Uložiť vozidlo",
@@ -1453,6 +1477,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma bola úspešne pridaná.",
   },
   "cs": <String, String>{
+    "insurance_date_missing": "Datum není nastaveno",
+    "insurance_days_remaining": "Zbývající dny: {days}",
+    "insurance_due_filter": "Pojištění: do 30 dnů / po termínu",
+    "insurance_no_matches": "Žádná odpovídající vozidla",
+    "insurance_change_filters": "Změňte filtry nebo hledaný výraz.",
+    "insurance_reminder_hint": "Datum se zobrazuje u vozidel a v připomínkách na panelu během posledních 30 dnů před koncem pojištění.",
     "business_profile_title": "Údaje o firmě a ověření",
     "business_profile_subtitle":
         "Vyplňte údaje o firmě. Před ostrou platbou je nutné ověření.",
@@ -1718,7 +1748,7 @@ final Map<String, Map<String, String>> _translations = {
     "inspection_due": "Inspection due",
     "service_due_date": "Service due date",
     "service_due_mileage": "Service due mileage",
-    "insurance_expiry": "Insurance expiry",
+    "insurance_expiry": "Konec pojištění",
     "notes": "Poznámky",
     "saving": "Ukládání…",
     "save_vehicle": "Uložit vozidlo",
@@ -1802,6 +1832,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Firma byla úspěšně přidána.",
   },
   "hu": <String, String>{
+    "insurance_date_missing": "Nincs megadva dátum",
+    "insurance_days_remaining": "Hátralévő napok: {days}",
+    "insurance_due_filter": "Biztosítás: 30 napon belül / lejárt",
+    "insurance_no_matches": "Nincs megfelelő jármű",
+    "insurance_change_filters": "Módosítsd a szűrőket vagy a keresést.",
+    "insurance_reminder_hint": "A dátum megjelenik a járműveknél és az irányítópult emlékeztetőiben a biztosítás lejárta előtti 30 napban.",
     "business_profile_title": "Cégadatok és ellenőrzés",
     "business_profile_subtitle":
         "Adja meg cége adatait. Éles fizetés előtt ellenőrzés szükséges.",
@@ -2071,7 +2107,7 @@ final Map<String, Map<String, String>> _translations = {
     "inspection_due": "Inspection due",
     "service_due_date": "Service due date",
     "service_due_mileage": "Service due mileage",
-    "insurance_expiry": "Insurance expiry",
+    "insurance_expiry": "Biztosítás lejárata",
     "notes": "Megjegyzések",
     "saving": "Mentés…",
     "save_vehicle": "Jármű mentése",
@@ -2155,6 +2191,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "A cég sikeresen hozzáadva.",
   },
   "ro": <String, String>{
+    "insurance_date_missing": "Data nu este setată",
+    "insurance_days_remaining": "Zile rămase: {days}",
+    "insurance_due_filter": "Asigurare: în 30 de zile / expirată",
+    "insurance_no_matches": "Niciun vehicul corespunzător",
+    "insurance_change_filters": "Schimbă filtrele sau termenul de căutare.",
+    "insurance_reminder_hint": "Data apare la vehicule și în mementourile din panou în ultimele 30 de zile înainte de expirarea asigurării.",
     "business_profile_title": "Datele firmei și verificare",
     "business_profile_subtitle":
         "Completați datele firmei. Verificarea este necesară înaintea plăților reale.",
@@ -2423,7 +2465,7 @@ final Map<String, Map<String, String>> _translations = {
     "inspection_due": "Inspection due",
     "service_due_date": "Service due date",
     "service_due_mileage": "Service due mileage",
-    "insurance_expiry": "Insurance expiry",
+    "insurance_expiry": "Expirarea asigurării",
     "notes": "Notițe",
     "saving": "Se salvează…",
     "save_vehicle": "Salvează vehicul",
@@ -2507,6 +2549,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Compania a fost adăugată cu succes.",
   },
   "es": <String, String>{
+    "insurance_date_missing": "Fecha sin establecer",
+    "insurance_days_remaining": "Días restantes: {days}",
+    "insurance_due_filter": "Seguro: en 30 días / vencido",
+    "insurance_no_matches": "No hay vehículos coincidentes",
+    "insurance_change_filters": "Cambia los filtros o el término de búsqueda.",
+    "insurance_reminder_hint": "La fecha aparece en Vehículos y en los recordatorios del panel durante los últimos 30 días antes del vencimiento del seguro.",
     "business_profile_title": "Datos de empresa y verificación",
     "business_profile_subtitle":
         "Complete los datos de su empresa. Debe verificarse antes de pagar en producción.",
@@ -2857,6 +2905,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Empresa añadida correctamente.",
   },
   "fr": <String, String>{
+    "insurance_date_missing": "Date non renseignée",
+    "insurance_days_remaining": "Jours restants : {days}",
+    "insurance_due_filter": "Assurance : sous 30 jours / expirée",
+    "insurance_no_matches": "Aucun véhicule correspondant",
+    "insurance_change_filters": "Modifiez les filtres ou la recherche.",
+    "insurance_reminder_hint": "La date apparaît dans Véhicules et dans les rappels du tableau de bord pendant les 30 derniers jours avant expiration de l’assurance.",
     "business_profile_title": "Informations d’entreprise et vérification",
     "business_profile_subtitle":
         "Renseignez les informations de votre entreprise. Vérification requise avant tout paiement réel.",
@@ -3210,6 +3264,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Entreprise ajoutée avec succès.",
   },
   "it": <String, String>{
+    "insurance_date_missing": "Data non impostata",
+    "insurance_days_remaining": "Giorni rimanenti: {days}",
+    "insurance_due_filter": "Assicurazione: entro 30 giorni / scaduta",
+    "insurance_no_matches": "Nessun veicolo corrispondente",
+    "insurance_change_filters": "Modifica i filtri o il termine di ricerca.",
+    "insurance_reminder_hint": "La data appare in Veicoli e nei promemoria della dashboard negli ultimi 30 giorni prima della scadenza dell’assicurazione.",
     "business_profile_title": "Dati aziendali e verifica",
     "business_profile_subtitle":
         "Inserisci i dati aziendali. La verifica è necessaria prima dei pagamenti reali.",
@@ -3559,6 +3619,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Azienda aggiunta con successo.",
   },
   "uk": <String, String>{
+    "insurance_date_missing": "Дату не встановлено",
+    "insurance_days_remaining": "Залишилося днів: {days}",
+    "insurance_due_filter": "Страхування: до 30 днів / прострочено",
+    "insurance_no_matches": "Відповідних автомобілів немає",
+    "insurance_change_filters": "Змініть фільтри або пошуковий запит.",
+    "insurance_reminder_hint": "Дата відображається в автомобілях і нагадуваннях на панелі протягом останніх 30 днів до закінчення страхування.",
     "business_profile_title": "Дані компанії та перевірка",
     "business_profile_subtitle":
         "Укажіть дані компанії. Перед реальними платежами потрібна перевірка.",
@@ -3825,7 +3891,7 @@ final Map<String, Map<String, String>> _translations = {
     "inspection_due": "Inspection due",
     "service_due_date": "Service due date",
     "service_due_mileage": "Service due mileage",
-    "insurance_expiry": "Insurance expiry",
+    "insurance_expiry": "Закінчення страхування",
     "notes": "Нотатки",
     "saving": "Збереження…",
     "save_vehicle": "Зберегти автомобіль",
@@ -3909,6 +3975,12 @@ final Map<String, Map<String, String>> _translations = {
     "company_added": "Компанію успішно додано.",
   },
   "pt": <String, String>{
+    "insurance_date_missing": "Data não definida",
+    "insurance_days_remaining": "Dias restantes: {days}",
+    "insurance_due_filter": "Seguro: em 30 dias / vencido",
+    "insurance_no_matches": "Nenhum veículo correspondente",
+    "insurance_change_filters": "Altere os filtros ou o termo de pesquisa.",
+    "insurance_reminder_hint": "A data aparece em Veículos e nos lembretes do painel nos últimos 30 dias antes do fim do seguro.",
     "business_profile_title": "Dados da empresa e verificação",
     "business_profile_subtitle":
         "Indique os dados da empresa. A verificação é necessária antes dos pagamentos reais.",

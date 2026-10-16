@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 
 import '../core/constants.dart';
-import '../core/formatters.dart';
 import '../core/widgets.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import 'vehicle_detail_screen.dart';
 import 'vehicle_form_screen.dart';
+import '../notifications/notifications_screen.dart';
+import 'insurance_expiry.dart';
+import 'vehicle_list_tile.dart';
 
 class VehiclesScreen extends StatefulWidget {
   const VehiclesScreen({
@@ -16,6 +18,7 @@ class VehiclesScreen extends StatefulWidget {
     required this.canManage,
     required this.refreshToken,
     required this.onDataChanged,
+    this.repository,
     super.key,
   });
 
@@ -23,16 +26,18 @@ class VehiclesScreen extends StatefulWidget {
   final bool canManage;
   final int refreshToken;
   final VoidCallback onDataChanged;
+  final FleetRepository? repository;
 
   @override
   State<VehiclesScreen> createState() => _VehiclesScreenState();
 }
 
 class _VehiclesScreenState extends State<VehiclesScreen> {
-  final _repository = FleetRepository();
+  late final _repository = widget.repository ?? FleetRepository();
   final _search = TextEditingController();
   late Future<List<Vehicle>> _future;
   String? _statusFilter;
+  bool _insuranceOnly = false;
 
   @override
   void initState() {
@@ -106,6 +111,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
         final query = _search.text.trim().toLowerCase();
         final all = snapshot.data ?? [];
+        final today = DateTime.now();
+        final insuranceAttention = all.where(
+          (v) => insuranceNeedsAttention(v.insuranceExpiryDate, today),
+        ).length;
         final vehicles = all.where((v) {
           final matchesSearch =
               query.isEmpty ||
@@ -115,7 +124,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               (v.currentDriverName ?? '').toLowerCase().contains(query);
           final matchesStatus =
               _statusFilter == null || v.status == _statusFilter;
-          return matchesSearch && matchesStatus;
+          return matchesSearch &&
+              matchesStatus &&
+              (!_insuranceOnly ||
+                  insuranceNeedsAttention(v.insuranceExpiryDate, today));
         }).toList();
 
         return Scaffold(
@@ -142,8 +154,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    SizedBox(
-                      width: 360,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
                       child: TextField(
                         controller: _search,
                         decoration: InputDecoration(
@@ -155,6 +167,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     SizedBox(
                       width: 220,
                       child: DropdownButtonFormField<String?>(
+                        isExpanded: true,
                         initialValue: _statusFilter,
                         decoration: InputDecoration(labelText: tr('status')),
                         items: [
@@ -176,13 +189,40 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   ],
                 ),
                 SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text('${tr('insurance_due_filter')} ($insuranceAttention)'),
+                        value: _insuranceOnly,
+                        onChanged: (value) => setState(() => _insuranceOnly = value ?? false),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => NotificationsScreen(company: widget.company),
+                        ),
+                      ),
+                      icon: const Icon(Icons.notifications_outlined),
+                      label: Text(tr('notification_preferences')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 if (vehicles.isEmpty)
                   SizedBox(
                     height: 360,
                     child: EmptyState(
                       icon: Icons.local_shipping_outlined,
-                      title: tr('no_vehicles_yet'),
-                      message: tr('no_vehicles_message'),
+                      title: tr(all.isEmpty ? 'no_vehicles_yet' : 'insurance_no_matches'),
+                      message: tr(all.isEmpty ? 'no_vehicles_message' : 'insurance_change_filters'),
                     ),
                   )
                 else
@@ -190,38 +230,12 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     child: Column(
                       children: [
                         for (var i = 0; i < vehicles.length; i++) ...[
-                          ListTile(
-                            onTap: () => _openDetail(vehicles[i]),
-                            leading: const CircleAvatar(
-                              child: Icon(Icons.local_shipping_outlined),
-                            ),
-                            title: Text(vehicles[i].registration),
-                            subtitle: Text(
-                              [
-                                '${vehicles[i].make ?? ''} ${vehicles[i].model ?? ''}'
-                                    .trim(),
-                                if (vehicles[i].currentDriverName != null)
-                                  vehicles[i].currentDriverName!,
-                                '${formatMileage(vehicles[i].mileage)} mi',
-                              ].where((e) => e.isNotEmpty).join(' • '),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                StatusPill(
-                                  label: prettifyEnum(vehicles[i].status),
-                                ),
-                                if (widget.canManage) ...[
-                                  SizedBox(width: 4),
-                                  IconButton(
-                                    tooltip: tr('edit'),
-                                    onPressed: () =>
-                                        _openForm(vehicle: vehicles[i]),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                ],
-                              ],
-                            ),
+                          VehicleListTile(
+                            vehicle: vehicles[i],
+                            onOpen: () => _openDetail(vehicles[i]),
+                            onEdit: widget.canManage
+                                ? () => _openForm(vehicle: vehicles[i])
+                                : null,
                           ),
                           if (i != vehicles.length - 1)
                             const Divider(height: 1),
