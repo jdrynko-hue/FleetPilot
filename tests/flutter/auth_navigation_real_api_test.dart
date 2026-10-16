@@ -101,7 +101,9 @@ void main() {
     Future<void> see(Finder finder, String context) => until(() => finder.evaluate().isNotEmpty, context);
     Future<void> tap(Finder finder) async {
       await see(finder, 'navigation tap');
-      await tester.ensureVisible(finder); await tester.tap(finder);
+      await tester.ensureVisible(finder);
+      await until(() => finder.hitTestable().evaluate().isNotEmpty, 'tap target accepts input');
+      await tester.tap(finder);
       await tester.pump(const Duration(milliseconds: 300));
     }
     Future<void> login(SupabaseClient actor) async {
