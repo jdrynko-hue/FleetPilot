@@ -14,6 +14,12 @@ int calendarDaysUntil(DateTime date, DateTime today) => DateTime.utc(
 bool insuranceNeedsAttention(DateTime? expiry, DateTime today) =>
     expiry != null && calendarDaysUntil(expiry, today) <= 30;
 
+/// Calendar-day thresholds for a future server-side reminder dispatcher.
+/// An overdue policy stays visible in the app but must not trigger an
+/// unbounded daily email sequence.
+bool insuranceReminderDue(DateTime? expiry, DateTime today) =>
+    expiry != null && const {30, 14, 7, 1, 0}.contains(calendarDaysUntil(expiry, today));
+
 class InsuranceExpiry extends StatelessWidget {
   const InsuranceExpiry({required this.date, this.today, super.key});
 
