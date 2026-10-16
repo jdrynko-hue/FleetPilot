@@ -341,4 +341,116 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('workshop switch hides old customer email and late inbox',
+      (tester) async {
+    final pending = Completer<List<GarageBookingInboxItem>>();
+    final oldLoad = () => pending.future;
+    final newLoad = () async => <GarageBookingInboxItem>[];
+    final respond = (String id, bool accept) async =>
+        GarageBookingStatus.confirmed;
+    final cancel = (String id) async {};
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: oldLoad, respond: respond, confirmCancellation: cancel,
+    )));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: newLoad, respond: respond, confirmCancellation: cancel,
+    )));
+    await tester.pumpAndSettle();
+    pending.complete([workshopRequest()]);
+    await tester.pumpAndSettle();
+    expect(find.text('private@example.test'), findsNothing);
+    expect(find.text('Private Person'), findsNothing);
+    expect(find.byKey(const Key('workshop_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('private booking scope discards late old customer history',
+      (tester) async {
+    final pending = Completer<List<GarageBookingSummary>>();
+    final oldLoad = () => pending.future;
+    final newLoad = () async => <GarageBookingSummary>[];
+    final cancel = (String id) async => GarageBookingStatus.withdrawn;
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: oldLoad, cancel: cancel,
+    )));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: newLoad, cancel: cancel,
+    )));
+    await tester.pumpAndSettle();
+    pending.complete([myRequest()]);
+    await tester.pumpAndSettle();
+    expect(find.text(shop.name), findsNothing);
+    expect(find.byKey(const Key('customer_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('switching workshop while confirmation open blocks old action',
+      (tester) async {
+    var oldCalls = 0;
+    var newCalls = 0;
+    final oldLoad = () async => [workshopRequest()];
+    final newLoad = () async => <GarageBookingInboxItem>[];
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: oldLoad,
+      respond: (id, accept) async {
+        oldCalls++;
+        return GarageBookingStatus.confirmed;
+      },
+      confirmCancellation: (id) async {},
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('workshop_booking_accept_' + bookingId)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: GarageBookingWorkshopScreen(
+      loadInbox: newLoad,
+      respond: (id, accept) async {
+        newCalls++;
+        return GarageBookingStatus.confirmed;
+      },
+      confirmCancellation: (id) async {},
+    )));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('workshop_booking_confirm')));
+    await tester.pumpAndSettle();
+    expect(oldCalls, 0);
+    expect(newCalls, 0);
+    expect(find.byKey(const Key('workshop_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('switching customer during cancellation dialog blocks old RPC',
+      (tester) async {
+    var oldCalls = 0;
+    var newCalls = 0;
+    final oldLoad = () async => [myRequest()];
+    final newLoad = () async => <GarageBookingSummary>[];
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: oldLoad,
+      cancel: (id) async {
+        oldCalls++;
+        return GarageBookingStatus.withdrawn;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('customer_booking_cancel_' + bookingId)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: GarageMyBookingsScreen(
+      loadBookings: newLoad,
+      cancel: (id) async {
+        newCalls++;
+        return GarageBookingStatus.withdrawn;
+      },
+    )));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('customer_booking_confirm_cancel')));
+    await tester.pumpAndSettle();
+    expect(oldCalls, 0);
+    expect(newCalls, 0);
+    expect(find.byKey(const Key('customer_booking_empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
