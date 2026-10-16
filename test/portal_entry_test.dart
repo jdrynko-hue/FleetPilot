@@ -74,7 +74,9 @@ void main() {
       beforeRequest: () async { loginRequired = true; return false; })));
     await tester.tap(find.byKey(const Key('booking_search_submit')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(OutlinedButton).last);
+    final request = find.byKey(const Key('booking_open_00000000-0000-4000-8000-000000000101'));
+    await tester.ensureVisible(request);
+    await tester.tap(request);
     await tester.pumpAndSettle();
     expect(loginRequired, isTrue);
     expect(submitted, isFalse);
