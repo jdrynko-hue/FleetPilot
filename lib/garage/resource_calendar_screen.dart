@@ -4,6 +4,8 @@ import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'resource_calendar_repository.dart';
 import 'booking_time_text.dart';
+import 'booking_status_text.dart';
+import 'garage_ui_text.dart';
 
 /// Staging-only Garage scheduler: explicit bay selection and private calendar.
 /// Kept outside production Fleet navigation until the ecosystem release.
@@ -295,8 +297,6 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
   String? _error;
   int _version = 0;
   int _scope = 0;
-  bool get _pl => AppLocale.language.value == 'pl';
-  String tr(String pl, String en) => _pl ? pl : en;
 
   @override
   void initState() { super.initState(); _refresh(); }
@@ -326,8 +326,7 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
       }
     } catch (_) {
       if (mounted && version == _version) {
-        setState(() => _error = tr('Nie można pobrać powiadomień.',
-          'Could not load notifications. Verify access.'));
+        setState(() => _error = 'noticeLoadFailed');
       }
     } finally {
       if (mounted && version == _version) setState(() => _busy = false);
@@ -350,36 +349,42 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
       final version = _version;
       await refresh;
       if (mounted && scope == _scope && version == _version && failed) setState(() =>
-        _error = tr('Nie potwierdzono odczytu.', 'Read not confirmed.'));
+        _error = 'noticeReadUnconfirmed');
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('Powiadomienia', 'Notifications')),
+    appBar: AppBar(title: Text(GarageUiText.get('notifications')),
       actions: [IconButton(key: const Key('garage_notifications_refresh'),
+        tooltip: GarageUiText.get('refresh'),
         onPressed: _busy ? null : _refresh,
         icon: const Icon(Icons.refresh))]),
     body: SafeArea(child: _busy
       ? const Center(child: CircularProgressIndicator())
       : ListView(padding: const EdgeInsets.all(16), children: [
-        Text(tr('Powiadomienia wewnątrz aplikacji, bez SMS.',
-          'In-app booking updates. No SMS or external messages.')),
-        if (_error != null) Text(_error!,
+        Text(GarageUiText.get('noticeDisclaimer')),
+        if (_error != null) Text(GarageUiText.get(_error!),
           key: const Key('garage_notifications_error')),
-        if (_notices.isEmpty) Text(tr('Brak powiadomień.', 'No notifications.'),
+        if (_notices.isEmpty && _error == null) Text(GarageUiText.get('noticeEmpty'),
           key: const Key('garage_notifications_empty')),
-        for (final notice in _notices) ListTile(
+        for (final notice in _notices) Card(
           key: Key('garage_notification_' + notice.id),
-          leading: Icon(notice.unread ? Icons.notifications_active_outlined
-            : Icons.notifications_none_outlined),
-          title: Text(notice.event),
-          subtitle: Text(notice.occurredAt.toLocal().toString().substring(0,16)),
-          trailing: notice.unread ? TextButton(
-            key: Key('garage_notification_mark_' + notice.id),
-            onPressed: () => _read(notice),
-            child: Text(tr('Przeczytane', 'Mark read'))) : null,
-        ),
+          child: Padding(padding: const EdgeInsets.all(12), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(notice.unread ? Icons.notifications_active_outlined
+                  : Icons.notifications_none_outlined),
+                const SizedBox(width: 8),
+                Expanded(child: Text(bookingNoticeLabel(notice.event))),
+              ]),
+              Text(bookingLocalTimeLabel(notice.occurredAt)),
+              if (notice.unread) Align(alignment: AlignmentDirectional.centerEnd,
+                child: TextButton(
+                  key: Key('garage_notification_mark_' + notice.id),
+                  onPressed: () => _read(notice),
+                  child: Text(GarageUiText.get('noticeMarkRead')))),
+            ]))),
       ])),
   );
 }

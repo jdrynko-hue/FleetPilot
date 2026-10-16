@@ -172,7 +172,7 @@ void main(){
      },
      acknowledge:(id) async => true,
    ));
-   expect(find.text('confirmed'),findsOneWidget);
+   expect(find.byKey(Key('garage_notification_' + noticeId)),findsOneWidget);
    fail=true;
    await tester.tap(find.byKey(const Key('garage_notifications_refresh')));
    await tester.pumpAndSettle();

@@ -29,3 +29,17 @@ String bookingServiceLabel(String service, {String? language}) {
   };
   return GarageUiText.get(key, language: language);
 }
+
+/// Unknown event identifiers are never echoed into private notification UI.
+String bookingNoticeLabel(String event, {String? language}) {
+  final key = switch (event) {
+    'requested' => 'bookingRequested',
+    'confirmed' => 'bookingConfirmed',
+    'declined' => 'bookingDeclined',
+    'withdrawn' => 'bookingWithdrawn',
+    'cancellation_requested' => 'bookingCancellationPending',
+    'cancelled' => 'bookingCancelled',
+    _ => 'noticeEventUnknown',
+  };
+  return GarageUiText.get(key, language: language);
+}
