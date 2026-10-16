@@ -1,0 +1,91 @@
+name: Fleet + Garage private Storage coexistence E2E
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-combined-storage.yml'
+      - 'tests/qa_combined_storage_e2e.mjs'
+      - 'supabase/qa_hardening/**'
+      - 'supabase/garage_staging/00*_*.sql'
+      - 'tests/qa_fleet_storage_local_tables.sql'
+      - 'tests/qa_fleet_storage_local_e2e.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combined-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LOCAL_QA_DIR: /tmp/flotaryx-combined-storage-e2e
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check local API test before Docker startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/qa_combined_storage_e2e.mjs
+          node --check tests/qa_fleet_storage_local_e2e.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Prepare disposable combined Fleet and Garage Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$LOCAL_QA_DIR"
+          cd "$LOCAL_QA_DIR"
+          supabase init --yes
+          mkdir -p supabase/migrations
+          # Dependency order matters. Fleet private bucket is installed before
+          # Garage Storage, whose policies are explicitly bucket-scoped.
+          cp "$GITHUB_WORKSPACE/supabase/migrations/001_fleetpilot.sql" supabase/migrations/20261014000100_fleet.sql
+          cp "$GITHUB_WORKSPACE/supabase/migrations/002_saas_foundation.sql" supabase/migrations/20261014000200_saas.sql
+          cp "$GITHUB_WORKSPACE/tests/qa_fleet_storage_local_tables.sql" supabase/migrations/20261014000300_synthetic_qa_tables.sql
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql" supabase/migrations/20261014000400_fleet_rls.sql
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/002_private_fleet_storage.sql" supabase/migrations/20261014000500_fleet_storage.sql
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/003_driver_membership_least_privilege.sql" supabase/migrations/20261014000600_driver_firewall.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/001_workshop_foundation.sql" supabase/migrations/20261014000700_garage_core.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/002_staff_invites_and_diagnosis.sql" supabase/migrations/20261014000800_garage_staff.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" supabase/migrations/20261014000900_garage_mechanics.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/004_quote_revisions_and_approval.sql" supabase/migrations/20261014001000_garage_quotes.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/005_private_media_storage.sql" supabase/migrations/20261014001100_garage_storage.sql
+          sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
+          grep -q '^enable_confirmations = false$' supabase/config.toml
+      - name: Launch real local Supabase Auth, REST, Storage and Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$LOCAL_QA_DIR"
+          supabase start -x studio,analytics,imgproxy
+      - name: Exercise two products and independent tenant memberships
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$LOCAL_QA_DIR"
+          supabase status -o env > "$RUNNER_TEMP/combined_supabase_env"
+          get_setting() {
+            sed -n "s/^$1=//p" "$RUNNER_TEMP/combined_supabase_env" | head -1 | tr -d '"'
+          }
+          export COMBINED_LOCAL_URL="$(get_setting API_URL)"
+          export COMBINED_LOCAL_KEY="$(get_setting ANON_KEY)"
+          export FLEET_STORAGE_TEST_API_URL="$COMBINED_LOCAL_URL"
+          export FLEET_STORAGE_TEST_ANON_KEY="$COMBINED_LOCAL_KEY"
+          if [[ -z "$COMBINED_LOCAL_KEY" ]] || \
+             [[ ! "$COMBINED_LOCAL_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]; then
+            echo 'Test destination must be a local disposable Supabase instance' >&2
+            exit 1
+          fi
+          echo "::add-mask::$COMBINED_LOCAL_KEY"
+          node "$GITHUB_WORKSPACE/tests/qa_fleet_storage_local_e2e.mjs"
+          node "$GITHUB_WORKSPACE/tests/qa_combined_storage_e2e.mjs"
+      - name: Destroy disposable Supabase stack
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$LOCAL_QA_DIR/supabase" ]]; then
+            cd "$LOCAL_QA_DIR"
+            supabase stop --no-backup || true
+          fi

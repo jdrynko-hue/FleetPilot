@@ -1,0 +1,84 @@
+name: QA driver membership - disposable tenant RLS
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-driver-membership.yml'
+      - 'supabase/qa_hardening/**'
+      - 'tests/qa_driver_membership_isolation.sql'
+      - 'tests/qa_fleet_auth_bootstrap.sql'
+      - 'tests/qa_fleet_rls_fixture.sql'
+      - 'tests/qa_fleet_rls_isolation.sql'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  driver-rls-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: synthetic-only-driver-rls
+          POSTGRES_DB: fleet_driver_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fleet_driver_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: fleet_driver_disposable
+      PGUSER: postgres
+      PGPASSWORD: synthetic-only-driver-rls
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure PostgreSQL client available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+      - name: Build local Fleet foundations and stage driver firewall
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fresh synthetic Postgres. No hosted QA/prod credentials, project
+          # ref or production data is used anywhere in this job.
+          psql -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
+            -f supabase/qa_hardening/003_driver_membership_least_privilege.sql
+      - name: Verify driver denied, staff allowed and tenant separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 \
+            -f tests/qa_driver_membership_isolation.sql \
+            -f tests/qa_fleet_rls_isolation.sql
+      - name: Reject accidentally repeated driver role migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -v ON_ERROR_STOP=1 \
+            -f supabase/qa_hardening/003_driver_membership_least_privilege.sql \
+            > "$RUNNER_TEMP/driver-repeat.log" 2>&1; then
+            echo 'Unsafe repeated driver role policy change' >&2
+            exit 1
+          fi
+          grep -q 'QA role constraint has drifted' "$RUNNER_TEMP/driver-repeat.log"
+          echo 'PASS: schema drift guard prevents unsafe reinstallation'
