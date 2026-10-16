@@ -38,7 +38,7 @@ void main() {
         loadAccess: () async => const EcosystemAccess(hasFleet: false, garages: []),
         signOut: () async {}, destinationBuilder: (d) {
           opened = d;
-          return const Scaffold(body: Text('Destination'));
+          return Scaffold(appBar: AppBar(title: const Text('Destination')));
         })));
       await tester.pumpAndSettle();
       if (entry == PortalEntry.customer) {
