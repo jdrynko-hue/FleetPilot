@@ -211,7 +211,9 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
     try {
       final data = await _loadScoped();
       if (mounted && generation == _generation) {
-        setState(() => _snapshot = data);
+        // The server-authorized repair snapshot is ready to act on now.
+        // Optional roster enrichment must never keep status actions disabled.
+        setState(() { _snapshot = data; _busy = false; });
       }
       // Staff contact is resolved only against the authorized workshop roster.
       // Failed roster lookups never expose the ID or block the repair itself.
