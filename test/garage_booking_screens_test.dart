@@ -97,7 +97,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Brakes').last);
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('booking_open_' + shop.workspaceId)), findsOneWidget);
+    expect(find.byKey(Key('booking_open_${shop.workspaceId}')), findsOneWidget);
     expect(find.byKey(const Key('booking_search_count')), findsOneWidget);
     expect(find.byKey(const Key('booking_not_guaranteed')), findsOneWidget);
     expect(tester.takeException(), isNull);
