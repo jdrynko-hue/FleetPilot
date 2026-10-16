@@ -167,6 +167,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     SizedBox(
                       width: 220,
                       child: DropdownButtonFormField<String?>(
+                        isExpanded: true,
                         initialValue: _statusFilter,
                         decoration: InputDecoration(labelText: tr('status')),
                         items: [

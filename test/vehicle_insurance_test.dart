@@ -139,10 +139,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(VehicleListTile), findsNWidgets(5),
       reason: tester.widgetList<Text>(find.byType(Text)).map((text) => text.data).join(' | '));
+    final layoutErrors = <FlutterErrorDetails>[];
+    final originalErrorHandler = FlutterError.onError!;
+    FlutterError.onError = (details) {
+      layoutErrors.add(details);
+      originalErrorHandler(details);
+    };
+    addTearDown(() => FlutterError.onError = originalErrorHandler);
     for (final width in [320.0, 390.0, 412.0]) {
       tester.view.physicalSize = Size(width, 2200);
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'Vehicles width $width');
+      expect(tester.takeException(), isNull, reason: 'Vehicles width $width: ${layoutErrors.map((error) => error.toString()).join(' | ')}');
     }
     tester.view.physicalSize = const Size(1200, 2200);
     await tester.pumpAndSettle();
