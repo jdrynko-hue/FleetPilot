@@ -9,7 +9,7 @@ import 'repair_bridge_repository.dart';
 /// QA consent management. Discovery includes only opted-in public profiles.
 class GarageBridgeConnectionsScreen extends StatefulWidget {
   const GarageBridgeConnectionsScreen({required this.fleet, required this.load,
-    required this.connect, this.search, this.loadIssues, this.send, super.key});
+    required this.connect, this.search, this.loadIssues, this.send, this.revoke, super.key});
   factory GarageBridgeConnectionsScreen.forClient({required SupabaseClient client,
     required String scopeId, required bool fleet}) {
     final repo = GarageRepairBridgeRepository(client);
@@ -29,6 +29,12 @@ class GarageBridgeConnectionsScreen extends StatefulWidget {
           : await repo.acceptConnection(company, scopeId);
         check(); return id;
       },
+      revoke: (row) async {
+        check();
+        final ok = await repo.revokeConnection(row.companyId, row.workspaceId);
+        check();
+        return ok;
+      },
       loadIssues: !fleet ? null : () async {
         check(); final rows = await FleetRepository(client).fetchIssues(scopeId); check();
         return rows.where((r) => r.companyId == scopeId && !const {'closed', 'resolved'}.contains(r.status)).toList();
@@ -45,6 +51,7 @@ class GarageBridgeConnectionsScreen extends StatefulWidget {
   final Future<List<GarageBookingWorkshop>> Function(String)? search;
   final Future<String> Function(String shop, String company) connect;
   final Future<List<FleetIssue>> Function()? loadIssues;
+  final Future<bool> Function(GarageFleetConnection)? revoke;
   final Future<String> Function(String shop, FleetIssue issue, bool description, bool registration)? send;
   @override
   State<GarageBridgeConnectionsScreen> createState() => _ConnectionsState();
@@ -125,6 +132,77 @@ class _ConnectionsState extends State<GarageBridgeConnectionsScreen> {
       });
     }
   }
+  /// Revocation cuts off future shared reads/writes on the server. A prior
+  /// request may be in flight, so the UI always re-reads authoritative scope.
+  Future<void> _revoke(GarageFleetConnection connection) async {
+    if (_busy || widget.revoke == null ||
+        !const {'pending', 'active'}.contains(connection.status)) return;
+    setState(() => _busy = true);
+    final generation = _generation;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(_tr('Wycofać zgodę na połączenie?',
+            'Revoke workshop connection?')),
+        content: Text(_tr(
+          'Flota i warsztat stracą możliwość dalszej wymiany zgłoszeń. '
+          'Połączenia nie można przywrócić z panelu: powrót wymaga osobnego procesu zgody. '
+          'Wcześniejsza historia pozostanie w audycie. '
+          'Jeśli operacja się nie potwierdzi, sprawdź status przed kolejną próbą.',
+          'The fleet and workshop will lose access to shared repair requests. '
+          'This connection cannot be restored from the app; reconnecting requires '
+          'a separate consent process. Past actions remain in the audit log. '
+          'If the outcome is uncertain, check the connection before retrying.',
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: Text(_tr('Anuluj', 'Cancel'))),
+          FilledButton(
+            key: const Key('bridge_revoke_confirm'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(_tr('Wycofaj zgodę', 'Revoke access')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || generation != _generation) return;
+    if (confirmed != true) {
+      setState(() => _busy = false);
+      return;
+    }
+    try {
+      // forClient checks the current account; the RPC independently restricts
+      // revocation to an authenticated fleet manager or Garage owner.
+      final latest = await widget.load();
+      if (!mounted || generation != _generation) return;
+      if (!latest.any((r) =>
+          r.companyId == connection.companyId &&
+          r.workspaceId == connection.workspaceId &&
+          r.status == connection.status)) {
+        await _reload();
+        return;
+      }
+      final revoked = await widget.revoke!(connection);
+      if (!revoked) throw const FormatException('Revocation not confirmed');
+      if (!mounted || generation != _generation) return;
+      await _reload();
+      if (mounted) setState(() => _notice = _tr(
+        'Zgoda wycofana. Połączenie zostało odświeżone.',
+        'Connection revoked. The list has been refreshed.'));
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() {
+          _rows = const [];
+          _shops = const [];
+          _busy = false;
+          _notice = _tr(
+            'Wynik wycofania zgody jest niepewny. Odśwież listę przed kolejną próbą.',
+            'Revocation outcome is uncertain. Refresh before attempting again.');
+        });
+      }
+    }
+  }
+
   Future<void> _send(GarageFleetConnection connection) async {
     if (_busy || widget.loadIssues == null || widget.send == null) return;
     setState(() => _busy = true);
@@ -202,8 +280,20 @@ class _ConnectionsState extends State<GarageBridgeConnectionsScreen> {
         onTap: _busy ? null : !widget.fleet && row.status == 'pending'
           ? () => _connect(row.workspaceId, row.companyId, row.companyName)
           : widget.fleet && row.status == 'active' ? () => _send(row) : null,
-        trailing: !widget.fleet && row.status == 'pending' ? const Icon(Icons.how_to_reg)
-          : widget.fleet && row.status == 'active' ? const Icon(Icons.send) : null,
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (!_busy && widget.revoke != null &&
+              const {'pending', 'active'}.contains(row.status))
+            IconButton(
+              key: Key('bridge_revoke_${row.companyId}_${row.workspaceId}'),
+              tooltip: _tr('Wycofaj zgodę', 'Revoke access'),
+              onPressed: () => _revoke(row),
+              icon: const Icon(Icons.link_off_outlined),
+            ),
+          if (!widget.fleet && row.status == 'pending')
+            const Icon(Icons.how_to_reg)
+          else if (widget.fleet && row.status == 'active')
+            const Icon(Icons.send),
+        ]),
       )),
       if (!_busy && _rows.isEmpty) Text(_tr('Brak połączeń.', 'No connections.')),
     ])),

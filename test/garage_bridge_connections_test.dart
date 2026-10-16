@@ -55,6 +55,116 @@ void main() {
     await tester.pumpAndSettle();
     expect(flags,(false,false));
   });
+  testWidgets('fleet manager can revoke active connection only after confirmation',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var revokes = 0;
+    var revoked = false;
+    await tester.pumpWidget(MaterialApp(home: GarageBridgeConnectionsScreen(
+      fleet: true,
+      load: () async => [
+        GarageFleetConnection(company, shop, revoked ? 'revoked' : 'active',
+          'Fleet A', 'Garage A'),
+      ],
+      connect: (_, __) async => shop,
+      revoke: (row) async {
+        expect(row.companyId, company);
+        expect(row.workspaceId, shop);
+        expect(row.status, 'active');
+        revokes++;
+        revoked = true;
+        return true;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_${company}_${shop}')));
+    await tester.pumpAndSettle();
+    expect(revokes, 0);
+    expect(find.textContaining('Past actions remain'), findsOneWidget);
+    expect(find.textContaining('cannot be restored from the app'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('bridge_revoke_confirm')));
+    await tester.pumpAndSettle();
+    expect(revokes, 1);
+    expect(find.text('Connection revoked. The list has been refreshed.'),
+      findsOneWidget);
+    expect(find.text('Revoke access'), findsNothing);
+    expect(find.byKey(const Key('bridge_revoke_${company}_${shop}')),
+      findsNothing);
+  });
+
+  testWidgets('workshop owner can cancel revocation without writing',
+      (tester) async {
+    var revokes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBridgeConnectionsScreen(
+      fleet: false,
+      load: () async => [active],
+      connect: (_, __) async => shop,
+      revoke: (_) async { revokes++; return true; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_${company}_${shop}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(revokes, 0);
+    expect(find.byKey(const Key('bridge_revoke_${company}_${shop}')),
+      findsOneWidget);
+  });
+
+  testWidgets('revocation re-reads server status before mutation',
+      (tester) async {
+    var loads = 0;
+    var revokes = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBridgeConnectionsScreen(
+      fleet: true,
+      load: () async => ++loads == 1 ? [active] : [],
+      connect: (_, __) async => shop,
+      revoke: (_) async { revokes++; return true; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_${company}_${shop}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_confirm')));
+    await tester.pumpAndSettle();
+    expect(revokes, 0);
+    expect(loads, 3);
+    expect(find.byKey(const Key('bridge_revoke_${company}_${shop}')),
+      findsNothing);
+  });
+
+  testWidgets('uncertain revocation hides stale access and never retries',
+      (tester) async {
+    var revokes = 0;
+    var loads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBridgeConnectionsScreen(
+      fleet: true,
+      load: () async {
+        loads++;
+        return [active];
+      },
+      connect: (_, __) async => shop,
+      revoke: (_) async {
+        revokes++;
+        throw StateError('network timeout after server commit');
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_${company}_${shop}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bridge_revoke_confirm')));
+    await tester.pumpAndSettle();
+    expect(revokes, 1);
+    expect(loads, 2);
+    expect(find.textContaining('Revocation outcome is uncertain'),
+      findsOneWidget);
+    expect(find.byKey(const Key('bridge_revoke_${company}_${shop}')),
+      findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('revoked connection cannot send defects', (tester) async {
     var loads=0; var writes=0;
     final issue=FleetIssue(id:issueId,companyId:company,vehicleId:shop,title:'Brakes',
