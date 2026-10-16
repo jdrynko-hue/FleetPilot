@@ -28,6 +28,7 @@ class GarageBookingWorkshopScreen extends StatefulWidget {
 
 class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   bool busy = true;
+  bool confirming = false;
   List<GarageBookingInboxItem> items = const [];
   String? error;
   int version = 0;
@@ -71,11 +72,16 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   }
 
   Future<void> action(GarageBookingInboxItem entry, String type) async {
-    if (busy) return;
+    if (busy || confirming) return;
     final scope = scopeVersion;
+    final listingVersion = version;
     final respond = widget.respond;
     final confirmCancellation = widget.confirmCancellation;
-    final accepted = await showDialog<bool>(context: context,
+    // Lock before the dialog's first frame, not only once a write starts.
+    confirming = true;
+    bool? accepted;
+    try {
+    accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
         title: Text(GarageUiText.get('inboxConfirmTitle')),
         content: Text(type == 'accept'
@@ -91,7 +97,11 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
             child: Text(GarageUiText.get('inboxConfirm'))),
         ],
       ));
-    if (!mounted || scope != scopeVersion || accepted != true || busy) return;
+    } finally {
+      confirming = false;
+    }
+    if (!mounted || scope != scopeVersion || listingVersion != version ||
+        accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
     var failed = false;
     try {
@@ -185,6 +195,7 @@ class GarageMyBookingsScreen extends StatefulWidget {
 class _MyBookingsState extends State<GarageMyBookingsScreen> {
   List<GarageBookingSummary> items = const [];
   bool busy = true;
+  bool confirming = false;
   String? error;
   int version = 0;
   int scopeVersion = 0;
@@ -226,10 +237,14 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
   }
 
   Future<void> withdraw(GarageBookingSummary entry) async {
-    if (busy) return;
+    if (busy || confirming) return;
     final scope = scopeVersion;
+    final listingVersion = version;
     final cancel = widget.cancel;
-    final accepted = await showDialog<bool>(context: context,
+    confirming = true;
+    bool? accepted;
+    try {
+    accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
         title: Text(GarageUiText.get('customerCancelQuestion')),
         content: Text(entry.isOnlyRequested
@@ -242,7 +257,11 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
             onPressed: () => Navigator.pop(c,true),
             child: Text(GarageUiText.get('customerCancelYes'))),
         ]));
-    if (!mounted || scope != scopeVersion || accepted != true || busy) return;
+    } finally {
+      confirming = false;
+    }
+    if (!mounted || scope != scopeVersion || listingVersion != version ||
+        accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
     var failed = false;
     try {

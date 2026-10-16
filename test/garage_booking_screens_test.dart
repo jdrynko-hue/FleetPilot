@@ -49,6 +49,68 @@ void main() {
   setUp(() => AppLocale.language.value='en');
   tearDown(() => AppLocale.language.value='en');
 
+  for (final operation in ['accept', 'decline', 'cancel', 'customer']) {
+    for (final refreshDuringDialog in [false, true]) {
+      testWidgets('single $operation confirmation rejects stale list=$refreshDuringDialog',
+          (tester) async {
+        var writes = 0;
+        final writtenIds = <String>[];
+        var loads = 0;
+        final customer = operation == 'customer';
+        final actionKey = customer
+            ? 'customer_booking_cancel_$bookingId'
+            : 'workshop_booking_${operation}_$bookingId';
+        final confirmKey = customer
+            ? 'customer_booking_confirm_cancel' : 'workshop_booking_confirm';
+        final refreshKey = customer
+            ? 'customer_booking_refresh' : 'workshop_booking_refresh';
+        await render(tester, customer
+          ? GarageMyBookingsScreen(
+              loadBookings: () async { loads++; return [myRequest()]; },
+              cancel: (id) async {
+                writtenIds.add(id); writes++;
+                return GarageBookingStatus.withdrawn;
+              })
+          : GarageBookingWorkshopScreen(
+              loadInbox: () async {
+                loads++;
+                return [workshopRequest(status: operation == 'cancel'
+                    ? GarageBookingStatus.cancellationRequested
+                    : GarageBookingStatus.requested)];
+              },
+              respond: (id, accept) async {
+                writtenIds.add(id); writes++;
+                return accept ? GarageBookingStatus.confirmed : GarageBookingStatus.declined;
+              },
+              confirmCancellation: (id) async { writtenIds.add(id); writes++; }));
+        // Invoke saved callbacks before the dialog's first rendered frame.
+        final action = tester.widget<ButtonStyleButton>(find.byKey(Key(actionKey))).onPressed!;
+        final refresh = tester.widget<IconButton>(find.byKey(Key(refreshKey))).onPressed!;
+        action(); action();
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(writes, 0);
+        if (refreshDuringDialog) {
+          refresh(); await tester.pumpAndSettle();
+          expect(loads, 2);
+        }
+        await tester.tap(find.byKey(Key(confirmKey)));
+        await tester.pumpAndSettle();
+        expect(writes, refreshDuringDialog ? 0 : 1);
+        expect(writtenIds, refreshDuringDialog ? isEmpty : [bookingId]);
+        expect(find.byType(AlertDialog), findsNothing);
+        // Dismissal/completion releases the lock for a fresh explicit intent.
+        final next = tester.widget<ButtonStyleButton>(find.byKey(Key(actionKey))).onPressed!;
+        next(); await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        tester.state<NavigatorState>(find.byType(Navigator).first).pop(false);
+        await tester.pumpAndSettle();
+        expect(writes, refreshDuringDialog ? 0 : 1);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   for (final width in [320.0,375.0,390.0,900.0]) {
     testWidgets('mobile/desktop directory never promises availability at $width',
       (tester) async {
