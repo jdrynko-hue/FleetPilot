@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import unittest
 
-PAGE = Path(__file__).resolve().parents[1] / "web/garage-pricing-preview/index.html"
+PAGE = Path(__file__).resolve().parents[1] / "design/garage-pricing-preview/index.html"
 TEXT = PAGE.read_text(encoding="utf-8")
 
 
