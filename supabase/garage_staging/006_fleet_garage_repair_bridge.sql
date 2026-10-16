@@ -34,6 +34,7 @@ CREATE TABLE public.garage_fleet_requests (
  accepted_at timestamptz,
  expected_completion_at timestamptz,
  UNIQUE(id,company_id,workspace_id),
+ UNIQUE(company_id,workspace_id,issue_id),
  UNIQUE(workspace_id,garage_order_id),
  FOREIGN KEY(company_id,workspace_id) REFERENCES public.garage_fleet_connections(company_id,workspace_id),
  FOREIGN KEY(company_id,issue_id) REFERENCES public.issues(company_id,id),
@@ -368,6 +369,21 @@ AS $$
  );
 $$;
 
+-- Names only for existing consent pairs: no global fleet directory or contacts.
+CREATE FUNCTION public.garage_fleet_connection_labels_for_me()
+RETURNS TABLE(company_id uuid,workspace_id uuid,status text,company_name text,workspace_name text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $$
+ SELECT c.company_id,c.workspace_id,c.status,f.name,w.name
+ FROM public.garage_fleet_connections c
+ JOIN public.companies f ON f.id=c.company_id
+ JOIN public.garage_workspaces w ON w.id=c.workspace_id
+ WHERE (SELECT auth.uid()) IS NOT NULL AND (
+  garage_private.is_fleet_manager(c.company_id)
+  OR garage_private.has_role(c.workspace_id,ARRAY['owner'])
+ );
+$$;
+
 CREATE FUNCTION public.garage_fleet_requests_for_me()
 RETURNS TABLE(request_id uuid,company_id uuid,workspace_id uuid,
  issue_title text,request_status text)
@@ -396,6 +412,7 @@ BEGIN
   'garage_fleet_snapshot(uuid)',
   'garage_fleet_revoke_connection(uuid,uuid)',
   'garage_fleet_connections_for_me()',
+  'garage_fleet_connection_labels_for_me()',
   'garage_fleet_requests_for_me()'
  ] LOOP
   EXECUTE 'REVOKE ALL ON FUNCTION public.'||fn||' FROM PUBLIC,anon,authenticated';

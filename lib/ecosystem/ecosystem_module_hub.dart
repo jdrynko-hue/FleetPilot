@@ -12,6 +12,8 @@ import '../garage/media_repository.dart';
 import '../garage/resource_calendar_repository.dart';
 import '../garage/resource_calendar_screen.dart';
 import '../garage/workshop_quotes_screen.dart';
+import '../garage/repair_requests_screen.dart';
+import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
 
 /// Connects the existing repository-backed screens; no fixture IDs or mock data.
@@ -43,12 +45,19 @@ class EcosystemModuleHub extends StatelessWidget {
         pl ? 'Powiadomienia' : 'Notifications': () =>
           GarageBookingNotificationsScreen.forRepository(calendar),
       } else ...{
+        if (destination.canConfigure)
+          pl ? 'Połączenia z flotami' : 'Fleet connections': () =>
+            GarageBridgeConnectionsScreen.forClient(client: client,
+              scopeId: destination.workspaceId!, fleet: false),
         pl ? 'Kalendarz i stanowiska' : 'Calendar and bays': () =>
           GarageResourceCalendarScreen.forRepositories(calendar: calendar,
             bookings: bookings, workspaceId: destination.workspaceId!),
         pl ? 'Zlecenia i kosztorysy' : 'Work orders and estimates': () =>
           GarageWorkshopQuotesScreen.forClient(client: client,
             workspaceId: destination.workspaceId!),
+        pl ? 'Zgłoszenia flot' : 'Fleet repair requests': () =>
+          GarageRepairRequestsScreen.forClient(client: client,
+            workspaceId: destination.workspaceId!, canAssign: destination.canConfigure),
         pl ? 'Zgłoszenia klientów' : 'Customer requests': () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,
             workspaceId: destination.workspaceId!),

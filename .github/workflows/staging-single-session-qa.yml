@@ -4,6 +4,8 @@ name: Unified hardened Fleet Garage - Android and iPhone
 on:
   pull_request:
     paths:
+      - 'tests/flutter/**'
+      - 'lib/garage/**'
       - '.github/workflows/staging-single-session-qa.yml'
       - 'web/demo/session/**'
       - 'tools/export_private_qa.py'
@@ -111,6 +113,10 @@ jobs:
         run: |
           cd "$GARAGE_QA_DIR"
           supabase start -x studio,analytics,imgproxy
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
       - name: Run connected browser acceptance with disposable staff identities
         shell: bash
         run: |
@@ -139,6 +145,11 @@ jobs:
           node .qa-security-source/tests/qa_company_invite_local_e2e.mjs
           node tests/single_session_browser_e2e.mjs
           node tests/single_session_connected_browser_e2e.mjs
+          flutter pub get
+          flutter test tests/flutter/repairbridge_real_api_test.dart tests/flutter/auth_navigation_real_api_test.dart --reporter expanded \
+            --dart-define=FLOTARYX_ECOSYSTEM_QA=true \
+            --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
       - name: Verify both Android and iPhone real connected screenshots
         shell: bash
         run: |

@@ -3,12 +3,9 @@ import 'package:flutter/material.dart';
 import '../core/localization.dart';
 import 'customer_quote_repository.dart';
 
-/// Private-individual customer's Garage quote screen.
-///
-/// The caller supplies an authenticated GarageCustomerQuoteRepository.load
-/// and .approve binding. This screen is NOT available in the public Fleet UI
-/// until Garage is safely deployed. Corporate/fleet authorization has a
-/// different, not-yet-built consent flow.
+/// Revision-aware estimate review shared by QA private-customer and Fleet flows.
+/// The caller binds the appropriate independently authorized repository/RPC.
+/// Fleet approval never uses the private-customer email authorization endpoint.
 class GarageCustomerQuoteScreen extends StatefulWidget {
   const GarageCustomerQuoteScreen({
     required this.loadQuote,
