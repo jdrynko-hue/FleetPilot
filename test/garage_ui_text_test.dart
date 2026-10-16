@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_module_hub.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
 import 'package:fleetpilot/garage/garage_ui_text.dart';
 import 'package:fleetpilot/garage/repair_requests_screen.dart';
 import 'package:fleetpilot/garage/repair_bridge_repository.dart';
@@ -54,6 +55,29 @@ void main() {
       expect(find.text(GarageUiText.get('fleetRequests')), findsOneWidget);
       expect(find.text(GarageUiText.get('calendarBays')), findsOneWidget);
     }
+  });
+
+  testWidgets('Ukrainian mobile module picker translates account and role entry',
+      (tester) async {
+    AppLocale.language.value = 'uk';
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: EcosystemGate(
+      loadAccess: () async => const EcosystemAccess(hasFleet:false,garages:[]),
+      signOut: () async => throw StateError('PRIVATE AUTH ERROR'),
+      destinationBuilder: (_) => const Scaffold(body:Text('QA destination')),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Виберіть модуль'), findsOneWidget);
+    expect(find.text('Створити автопарк'), findsOneWidget);
+    expect(find.text('Записи до СТО'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('ecosystem_logout')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('PRIVATE AUTH ERROR'), findsNothing);
+    expect(find.text('Не вдалося вийти. Спробуйте ще раз.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('German repair detail renders assigned mechanic and event labels',
