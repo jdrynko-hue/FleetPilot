@@ -19,19 +19,23 @@ typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
 class GarageBookingSearchScreen extends StatefulWidget {
   const GarageBookingSearchScreen({
     required this.search, required this.submit,
-    this.pickTime = pickBookingTime, this.beforeRequest, super.key,
+    this.pickTime = pickBookingTime, this.beforeRequest, this.onWorkshopSelected,
+    this.initialCity, this.initialWorkshopId, super.key,
   });
 
   factory GarageBookingSearchScreen.forRepository(
-    GarageBookingRepository repository, {Key? key}) =>
+    GarageBookingRepository repository, {Key? key, String? initialCity, String? initialWorkshopId}) =>
       GarageBookingSearchScreen(
-        key: key, search: repository.findWorkshops,
+        key: key, initialCity: initialCity, initialWorkshopId: initialWorkshopId, search: repository.findWorkshops,
         submit: repository.request);
 
   final BookingSearch search;
   final BookingSubmit submit;
   final BookingTimePicker pickTime;
   final Future<bool> Function()? beforeRequest;
+  final void Function(String workspaceId, String city)? onWorkshopSelected;
+  final String? initialCity;
+  final String? initialWorkshopId;
 
   @override
   State<GarageBookingSearchScreen> createState() => _GarageBookingSearchState();
@@ -52,12 +56,27 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       ? _shops : _shops.where((shop) => shop.services.contains(_serviceFilter)).toList();
 
   @override
+  void initState() {
+    super.initState();
+    final city = widget.initialCity?.trim();
+    if (city != null && city.length <= 80) _city.text = city;
+    if (widget.initialWorkshopId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _search();
+      });
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant GarageBookingSearchScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.search != widget.search ||
         oldWidget.submit != widget.submit ||
         oldWidget.pickTime != widget.pickTime ||
-        oldWidget.beforeRequest != widget.beforeRequest) {
+        oldWidget.beforeRequest != widget.beforeRequest ||
+        oldWidget.onWorkshopSelected != widget.onWorkshopSelected ||
+        oldWidget.initialCity != widget.initialCity ||
+        oldWidget.initialWorkshopId != widget.initialWorkshopId) {
       // Repository callbacks define the authenticated directory scope.
       // Invalidate old in-flight results and never show another scope's shops.
       _generation++;
@@ -97,7 +116,12 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       final result = await search(city: city.isEmpty ? null : city);
       if (!mounted || gen != _generation) return;
       setState(() {
-        _shops = List.unmodifiable(result);
+        // The guest selection is navigation intent only. Re-query public
+        // listings after login; never reuse a stale workshop/profile object.
+        final ordered = [...result];
+        final selected = ordered.indexWhere((shop) => shop.workspaceId == widget.initialWorkshopId);
+        if (selected > 0) ordered.insert(0, ordered.removeAt(selected));
+        _shops = List.unmodifiable(ordered);
         _searched = true;
         if (result.isEmpty) {
           _error = 'bookingSearchEmpty';
@@ -121,6 +145,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
     var handedOff = false;
     setState(() => _opening = true);
     try {
+      widget.onWorkshopSelected?.call(shop.workspaceId, _city.text.trim());
       final allowed = widget.beforeRequest == null || await widget.beforeRequest!();
       if (!mounted || generation != _generation) return;
       if (!allowed) {
@@ -193,6 +218,9 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         ],
         for (final shop in _visibleShops) Card(
           key: Key('booking_shop_${shop.workspaceId}'),
+          shape: shop.workspaceId == widget.initialWorkshopId
+            ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)) : null,
           child: Padding(padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [

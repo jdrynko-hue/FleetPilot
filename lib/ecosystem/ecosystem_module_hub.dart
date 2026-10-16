@@ -21,10 +21,12 @@ import 'customer_portal.dart';
 /// Connects the existing repository-backed screens; no fixture IDs or mock data.
 class EcosystemModuleHub extends StatelessWidget {
   const EcosystemModuleHub({required this.client,
-    required this.destination, this.customerSearchFirst = false, super.key});
+    required this.destination, this.customerSearchFirst = false, this.customerCity, this.customerWorkshopId, super.key});
   final SupabaseClient client;
   final EcosystemDestination destination;
   final bool customerSearchFirst;
+  final String? customerCity;
+  final String? customerWorkshopId;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class EcosystemModuleHub extends StatelessWidget {
     final customer = destination.module == EcosystemModule.customer;
     if (customer) {
       return CustomerPortal(searchFirst: customerSearchFirst, pages: [
-        (_) => GarageBookingSearchScreen.forRepository(bookings),
+        (_) => GarageBookingSearchScreen.forRepository(bookings, initialCity: customerCity, initialWorkshopId: customerWorkshopId),
         (_) => GarageMyBookingsScreen.forRepository(bookings),
         (_) => GarageBookingNotificationsScreen.forRepository(calendar),
       ]);
