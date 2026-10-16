@@ -337,10 +337,17 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
           DropdownButtonFormField<String>(
             key: const Key('booking_service'),
             value: _service,
+            isExpanded: true,
+            itemHeight: null,
+            selectedItemBuilder: (context) => widget.shop.services.map((service) =>
+              Align(alignment: AlignmentDirectional.centerStart,
+                child: Text(bookingServiceLabel(service), maxLines: 1,
+                  overflow: TextOverflow.ellipsis))).toList(),
             decoration: InputDecoration(border: const OutlineInputBorder(),
               labelText: tr('Usługa', 'Service')),
             items: widget.shop.services.map((service) =>
-              DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service)))).toList(),
+              DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service),
+                maxLines: 2, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (value) => setState(() => _service = value),
             validator: (value) => value == null
                 ? tr('Wybierz usługę.', 'Choose a service.') : null,
