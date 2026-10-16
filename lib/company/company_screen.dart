@@ -266,7 +266,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
       role: role,
     );
 
-    setState(_reload);
+    await widget.onMembershipChanged();
   }
 
   Future<void> _linkDriverAccount(CompanyMember member) async {
@@ -381,7 +381,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
       userId: member.userId,
     );
 
-    setState(_reload);
+    await widget.onMembershipChanged();
   }
 
   Future<void> _revokeInvite(CompanyInvite invite) async {

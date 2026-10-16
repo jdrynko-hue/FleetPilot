@@ -5,6 +5,7 @@ import '../company/manager_control_panel.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import 'fleet_app_bar.dart';
+import 'fleet_membership_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -29,8 +30,9 @@ class FleetShell extends StatefulWidget {
 class _FleetShellState extends State<FleetShell> {
   final _repository = FleetRepository();
 
-  late List<CompanyMembership> _memberships;
-  late CompanyMembership _membership;
+  late final FleetMembershipController _access;
+  List<CompanyMembership> get _memberships => _access.memberships;
+  CompanyMembership get _membership => _access.selected!;
 
   int _index = 0;
   int _refreshToken = 0;
@@ -39,18 +41,25 @@ class _FleetShellState extends State<FleetShell> {
   void initState() {
     super.initState();
 
-    _memberships = List.from(widget.memberships);
+    final memberships = widget.memberships;
 
     // A checkout may return from any fleet, not necessarily the first one.
     // Resolve the URL hint against memberships fetched under this user's RLS.
     final billingReturn = Uri.base.queryParameters['billing'];
     final returnedFleetId = Uri.base.queryParameters['fleet'];
-    _membership = _memberships.firstWhere(
+    final selected = memberships.firstWhere(
       (member) =>
           (billingReturn == 'success' || billingReturn == 'cancel') &&
           member.companyId == returnedFleetId,
-      orElse: () => _memberships.first,
+      orElse: () => memberships.first,
     );
+
+    _access = FleetMembershipController(
+      memberships: memberships,
+      selectedId: selected.companyId,
+      load: _repository.fetchMemberships,
+      currentAccountId: () => _repository.currentUser?.id,
+    )..addListener(_accessChanged);
 
     // Stripe returns to /app/?billing=success or ?billing=cancel.
     // These URL parameters describe the Checkout navigation result,
@@ -78,41 +87,45 @@ class _FleetShellState extends State<FleetShell> {
     setState(() => _refreshToken++);
   }
 
-  Future<void> _reloadMemberships() async {
-    final memberships = await _repository.fetchMemberships();
+  void _accessChanged() {
+    if (mounted) setState(() { _index = 0; _refreshToken++; });
+  }
 
-    if (memberships.isEmpty || !mounted) {
-      return;
-    }
+  Future<void> _reloadMemberships() => _access.refresh();
 
-    setState(() {
-      final currentId = _membership.companyId;
-
-      _memberships = memberships;
-
-      _membership = memberships.firstWhere(
-        (m) => m.companyId == currentId,
-        orElse: () => memberships.first,
-      );
-
-      _refreshToken++;
-    });
+  @override
+  void dispose() {
+    _access.removeListener(_accessChanged);
+    _access.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_access.loading || _access.selected == null) {
+      final polish = AppLocale.language.value == 'pl';
+      return Scaffold(
+        appBar: AppBar(title: const Text('Flotaryx')),
+        body: Center(child: _access.loading
+          ? const CircularProgressIndicator()
+          : Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(_access.failed
+                ? (polish ? 'Nie można sprawdzić dostępu do flot.' : 'Unable to check fleet access.')
+                : (polish ? 'Brak dostępu do flot.' : 'No fleet access.')),
+              FilledButton(onPressed: _reloadMemberships, child: Text(tr('refresh'))),
+              TextButton(onPressed: () => _repository.signOut(), child: Text(tr('sign_out'))),
+            ])),
+      );
+    }
     if (_membership.role == 'driver') {
       return DriverHomeScreen(
-        key: ValueKey(_membership.companyId),
+        key: ValueKey('${_membership.companyId}:${_membership.role}'),
         company: _membership,
         memberships: _memberships,
+        onAccessRefresh: _reloadMemberships,
         onFleetSelected: (id) {
           if (id == _membership.companyId) return;
-          setState(() {
-            _membership = _memberships.firstWhere((m) => m.companyId == id);
-            _index = 0;
-            _refreshToken++;
-          });
+          _access.select(id);
         },
       );
     }
@@ -165,7 +178,7 @@ class _FleetShellState extends State<FleetShell> {
         // Reset screen state when switching fleets. Besides refreshing queries,
         // this prevents cached widgets from briefly showing the previous fleet.
         final body = IndexedStack(
-          key: ValueKey(_membership.companyId),
+          key: ValueKey('${_membership.companyId}:${_membership.role}'),
           index: _index,
           // IndexedStack keeps inactive pages mounted. Only the visible tab
           // participates in route Hero animations (each page has an add FAB).
@@ -183,11 +196,7 @@ class _FleetShellState extends State<FleetShell> {
             compact: !wide,
             onFleetSelected: (id) {
               if (id == _membership.companyId) return;
-              setState(() {
-                _membership = _memberships.firstWhere((m) => m.companyId == id);
-                _index = 0;
-                _refreshToken++;
-              });
+              _access.select(id);
             },
             onManagerPressed: () async {
               await Navigator.of(context).push<void>(
@@ -202,7 +211,7 @@ class _FleetShellState extends State<FleetShell> {
                 builder: (_) => NotificationsScreen(company: _membership),
               ),
             ),
-            onRefreshPressed: _refreshAll,
+            onRefreshPressed: _reloadMemberships,
             onSignOutPressed: () => _repository.signOut(),
           ),
           body: wide

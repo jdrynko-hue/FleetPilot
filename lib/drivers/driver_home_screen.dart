@@ -14,11 +14,13 @@ class DriverHomeScreen extends StatefulWidget {
     required this.company,
     this.memberships = const [],
     this.onFleetSelected,
+    this.onAccessRefresh,
     super.key,
   });
   final CompanyMembership company;
   final List<CompanyMembership> memberships;
   final ValueChanged<String>? onFleetSelected;
+  final Future<void> Function()? onAccessRefresh;
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -426,6 +428,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         final vehicle = data.vehicle;
         return RefreshIndicator(
           onRefresh: () async {
+            if (widget.onAccessRefresh != null) {
+              await widget.onAccessRefresh!();
+              return;
+            }
             setState(_reload);
             await _future;
           },
