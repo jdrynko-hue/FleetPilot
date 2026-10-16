@@ -29,12 +29,14 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   String _country = 'GB';
   bool _busy = false;
   bool _uncertain = false;
+  VoidCallback? _checkMemberships;
   bool _b2bConfirmed = false;
 
   String? get _countryCurrency => currencyForFleetCountry(_country);
 
   bool get _canCreate =>
       !_busy && !_uncertain && _b2bConfirmed && _name.text.trim().isNotEmpty &&
+      _name.text.trim().runes.length <= 160 &&
       _countryCurrency != null;
 
   @override
@@ -68,14 +70,16 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
         );
       }
       if (current()) widget.onCreated();
-    } catch (error) {
+    } catch (_) {
       if (!current()) return;
-      if (widget.allowCancel) {
-        setState(() => _uncertain = true);
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
-      }
+      // The insert may have committed before the response was lost. Both
+      // initial and additional setup must check memberships before retrying.
+      setState(() {
+        _uncertain = true;
+        _checkMemberships = () {
+          if (current()) widget.onCreated();
+        };
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -107,6 +111,8 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                     SizedBox(height: 24),
                     TextField(
                       controller: _name,
+                      enabled: !_busy && !_uncertain,
+                      maxLength: 160,
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: tr('company_name'),
@@ -132,7 +138,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                                 ),
                               ))
                           .toList(),
-                      onChanged: _busy
+                      onChanged: _busy || _uncertain
                           ? null
                           : (value) {
                               if (value != null) {
@@ -164,7 +170,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                       subtitle: Text(tr('b2b_only')),
                       value: _b2bConfirmed,
                       controlAffinity: ListTileControlAffinity.leading,
-                      onChanged: _busy
+                      onChanged: _busy || _uncertain
                           ? null
                           : (value) =>
                                 setState(() => _b2bConfirmed = value ?? false),
@@ -172,7 +178,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                     if (_uncertain) ...[
                       Text(uncertainFleetCreation(), key: const Key('fleet_creation_uncertain')),
                       OutlinedButton(key: const Key('fleet_creation_check_memberships'),
-                        onPressed: _busy ? null : widget.onCreated,
+                        onPressed: _busy ? null : _checkMemberships,
                         child: Text(tr('refresh'))),
                     ],
                     FilledButton(
