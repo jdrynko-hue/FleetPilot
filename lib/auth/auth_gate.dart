@@ -36,6 +36,9 @@ class _AuthGateState extends State<AuthGate> {
   bool _passwordRecovery = false;
   bool _authLinkError = false;
   PortalEntry? _portal;
+  String? _bookingCity;
+  String? _bookingWorkshopId;
+  bool _findingWorkshop = false;
 
   @override
   void initState() {
@@ -58,6 +61,10 @@ class _AuthGateState extends State<AuthGate> {
       if (_user?.id != state.session?.user.id) {
         // Pushed private routes must not survive logout or an account switch.
         Navigator.of(context).popUntil((route) => route.isFirst);
+        if (_user != null) {
+          _bookingCity = null;
+          _bookingWorkshopId = null;
+        }
       }
       setState(() {
         _user = state.session?.user;
@@ -69,16 +76,21 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   void _findWorkshop() {
-    if (!mounted || _user != null || _authLinkError || _passwordRecovery) return;
+    if (!mounted || _findingWorkshop || _user != null || _authLinkError || _passwordRecovery) return;
+    _findingWorkshop = true;
     final repository = GarageBookingRepository(Supabase.instance.client);
     Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) =>
       GarageBookingSearchScreen(search: repository.findWorkshops,
         submit: repository.request,
+        onWorkshopSelected: (workspaceId, city) {
+          _bookingWorkshopId = workspaceId;
+          _bookingCity = city;
+        },
         beforeRequest: () async {
           Navigator.of(context).pop();
           if (mounted) setState(() => _portal = PortalEntry.customer);
           return false;
-        })));
+        }))).whenComplete(() => _findingWorkshop = false);
   }
 
   @override
@@ -119,7 +131,8 @@ class _AuthGateState extends State<AuthGate> {
     if (AppConfig.ecosystemQaEnabled && (invite == null || invite.isEmpty)) {
       return EcosystemGate.forClient(
         Supabase.instance.client, preferredPortal: _portal,
-        customerSearchFirst: Uri.base.queryParameters['portal'] == 'search', key: ValueKey(_user!.id));
+        customerSearchFirst: _bookingWorkshopId != null || Uri.base.queryParameters['portal'] == 'search',
+        customerCity: _bookingCity, customerWorkshopId: _bookingWorkshopId, key: ValueKey(_user!.id));
     }
     return CompanyGate(key: ValueKey(_user!.id));
   }
