@@ -1,0 +1,47 @@
+name: Flotaryx mobile portal entry regression
+
+on:
+  pull_request:
+    paths:
+      - 'web/index.html'
+      - 'web/start/index.html'
+      - 'tests/mobile_login_nav_test.py'
+      - 'tests/mobile_login_nav_browser.mjs'
+      - '.github/workflows/mobile-login-safety.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/index.html'
+      - 'web/start/index.html'
+      - 'tests/mobile_login_nav_test.py'
+      - 'tests/mobile_login_nav_browser.mjs'
+      - '.github/workflows/mobile-login-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  landing-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tests -p mobile_login_nav_test.py -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated pinned browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Verify mobile portal geometry and translated accessible names
+        env:
+          MOBILE_SCREENSHOT_DIR: ${{ runner.temp }}/mobile-portal-screens
+        run: node tests/mobile_login_nav_browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-portal-screens
+          path: ${{ runner.temp }}/mobile-portal-screens
+          if-no-files-found: ignore
