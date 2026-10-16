@@ -166,6 +166,16 @@ void main() {
         tester.widget<OutlinedButton>(find.byKey(const Key('repair_assign'))).onPressed != null,
         'assignment read-back');
 
+      await tester.runAsync(() async {
+        final workshopView = await GarageRepairBridgeRepository(owner).load(requestId);
+        expect(workshopView.mechanicAssigned, isTrue);
+        expect(workshopView.mechanicUserId, mechanicId);
+        final fleetView = await GarageRepairBridgeRepository(fleet).load(requestId);
+        expect(fleetView.mechanicAssigned, isTrue);
+        expect(fleetView.mechanicUserId, isNull);
+      });
+      expect(tester.takeException(), isNull);
+
       await mount(GarageWorkshopQuotesScreen.forClient(client: owner, workspaceId: shop));
       await tap(find.text(title));
       await see(find.byKey(const Key('quote_description_0')), 'quote editor');
