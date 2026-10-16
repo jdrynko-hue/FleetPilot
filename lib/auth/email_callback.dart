@@ -7,7 +7,8 @@ String authEmailCallback({required String backendUrl,
   if (backendUrl == qaBackend) {
     final candidate = Uri.tryParse(configuredQaCallback);
     if (candidate == null || candidate.scheme != 'https' ||
-        candidate.host.isEmpty || candidate.userInfo.isNotEmpty ||
+        candidate.host.isEmpty || candidate.host.endsWith('.') ||
+        candidate.userInfo.isNotEmpty ||
         candidate.port != 443 || candidate.path != '/app/' ||
         candidate.hasQuery || candidate.hasFragment ||
         candidate.host == 'flotaryx.com' || candidate.host == 'www.flotaryx.com') {

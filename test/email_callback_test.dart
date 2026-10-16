@@ -24,7 +24,8 @@ void main() {
     expect(authEmailCallback(backendUrl: qa, configuredQaCallback: preview), preview);
   });
   for (final invalid in ['', 'https://flotaryx.com/app/',
-    'https://www.flotaryx.com/app/', 'http://qa.example/app/',
+    'https://www.flotaryx.com/app/', 'https://flotaryx.com./app/',
+    'http://qa.example/app/',
     'https://user:secret@qa.example/app/', 'https://qa.example:8443/app/',
     'https://qa.example/', 'https://qa.example/app/?redirect=https://evil.example',
     'https://qa.example/app/#access_token=private']) {
