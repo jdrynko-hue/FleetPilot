@@ -4,6 +4,7 @@ import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
 import 'booking_time_text.dart';
+import 'garage_ui_text.dart';
 
 /// Staging-only workshop request inbox. Not linked from production Fleet.
 class GarageBookingWorkshopScreen extends StatefulWidget {
@@ -195,8 +196,6 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
   String? error;
   int version = 0;
   int scopeVersion = 0;
-  bool get pl => AppLocale.language.value == 'pl';
-  String tr(String a,String b) => pl ? a : b;
   @override
   void initState() { super.initState(); refresh(); }
   @override
@@ -227,8 +226,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
       }
     } catch (_) {
       if (mounted && v == version) {
-        setState(() => error = tr('Nie można pobrać rezerwacji.',
-            'Could not load your requests.'));
+        setState(() => error = 'customerBookingsLoadFailed');
       }
     } finally {
       if (mounted && v == version) setState(() => busy = false);
@@ -241,17 +239,16 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     final cancel = widget.cancel;
     final accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
-        title: Text(tr('Anulować termin?', 'Cancel this appointment?')),
+        title: Text(GarageUiText.get('customerCancelQuestion')),
         content: Text(entry.isOnlyRequested
-          ? tr('Wycofać prośbę?', 'Withdraw the request?')
-          : tr('Poprosić warsztat o anulowanie?',
-              'Request cancellation from the workshop?')),
+          ? GarageUiText.get('customerWithdrawQuestion')
+          : GarageUiText.get('customerRequestCancelQuestion')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c,false),
-            child: Text(tr('Nie','No'))),
+            child: Text(GarageUiText.get('customerCancelNo'))),
           FilledButton(key: const Key('customer_booking_confirm_cancel'),
             onPressed: () => Navigator.pop(c,true),
-            child: Text(tr('Tak','Yes'))),
+            child: Text(GarageUiText.get('customerCancelYes'))),
         ]));
     if (!mounted || scope != scopeVersion || accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
@@ -269,9 +266,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
       if (mounted && scope == scopeVersion) {
         await refresh();
         if (mounted && scope == scopeVersion && failed) {
-          setState(() => error = tr(
-            'Nie potwierdzono anulowania. Sprawdź aktualny status.',
-            'Cancellation unconfirmed. Check the current status.'));
+          setState(() => error = 'customerCancelUnconfirmed');
         }
       }
     }
@@ -279,17 +274,17 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('Moje terminy','My appointments')),
+    appBar: AppBar(title: Text(GarageUiText.get('customerBookingsTitle')),
       actions: [IconButton(key: const Key('customer_booking_refresh'),
+        tooltip: GarageUiText.get('refresh'),
         onPressed: busy ? null : refresh, icon: const Icon(Icons.refresh))]),
     body: SafeArea(child: busy
       ? const Center(child: CircularProgressIndicator())
       : ListView(padding: const EdgeInsets.all(16), children: [
-        Text(tr('Termin jest ważny dopiero po potwierdzeniu przez warsztat.',
-                'A slot is valid only after workshop confirmation.')),
-        if (error != null) Text(error!,
+        Text(GarageUiText.get('customerBookingsDisclaimer')),
+        if (error != null) Text(GarageUiText.get(error!),
           key: const Key('customer_booking_error')),
-        if (items.isEmpty) Text(tr('Brak terminów.','No appointments.'),
+        if (items.isEmpty) Text(GarageUiText.get('customerBookingsEmpty'),
           key: const Key('customer_booking_empty')),
         for (final entry in items) Card(
           key: Key('customer_booking_item_' + entry.id),
@@ -306,7 +301,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
                 OutlinedButton(
                   key: Key('customer_booking_cancel_' + entry.id),
                   onPressed: () => withdraw(entry),
-                  child: Text(tr('Anuluj','Cancel'))),
+                  child: Text(GarageUiText.get('customerCancel'))),
             ]))),
       ])),
   );
