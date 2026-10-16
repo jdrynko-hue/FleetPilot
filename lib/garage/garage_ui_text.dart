@@ -161,7 +161,7 @@ class GarageUiText {
     "customerCancelUnconfirmed",
     "customerBookingsDisclaimer",
     "customerBookingsEmpty",
-    "customerCancel",
+    "customerCancelAppointment",
   ];
 
   static const labels = <String, List<String>>{

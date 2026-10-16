@@ -301,7 +301,7 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
                 OutlinedButton(
                   key: Key('customer_booking_cancel_' + entry.id),
                   onPressed: () => withdraw(entry),
-                  child: Text(GarageUiText.get('customerCancel'))),
+                  child: Text(GarageUiText.get('customerCancelAppointment'))),
             ]))),
       ])),
   );
