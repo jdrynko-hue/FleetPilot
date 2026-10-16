@@ -59,6 +59,17 @@ void main() {
     expect(calendarDaysUntil(DateTime(2027, 1, 1), DateTime(2026, 12, 31)), 1);
   });
 
+  test('email reminder dates are bounded and exclude overdue policies', () {
+    final today = DateTime(2026, 10, 16);
+    expect(insuranceReminderDue(null, today), isFalse);
+    for (final days in [-365, -1, 0, 1, 2, 7, 8, 14, 15, 30, 31]) {
+      final expiry = DateTime(2026, 10, 16 + days);
+      expect(insuranceReminderDue(expiry, today),
+          const {0, 1, 7, 14, 30}.contains(days),
+          reason: 'Reminder stage for $days days');
+    }
+  });
+
   testWidgets('expiry text distinguishes missing, upcoming, today and expired', (tester) async {
     final today = DateTime(2026, 10, 16);
     for (final days in <int?>[null, -1, 0, 7, 14, 30, 31]) {
