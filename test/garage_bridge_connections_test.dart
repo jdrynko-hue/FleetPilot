@@ -57,6 +57,10 @@ void main() {
   });
   testWidgets('fleet manager can revoke active connection only after confirmation',
       (tester) async {
+    tester.view.physicalSize = const Size(320, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     var revokes = 0;
     var revoked = false;
     await tester.pumpWidget(MaterialApp(home: GarageBridgeConnectionsScreen(
