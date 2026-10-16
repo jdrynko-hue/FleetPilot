@@ -49,7 +49,7 @@ void main() {
             workspaceId: fixture.workshopId, name: 'Test Garage',
             canConfigure: true)),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(find.text(GarageUiText.get('fleetConnections')), findsOneWidget);
       expect(find.text(GarageUiText.get('ordersEstimates')), findsOneWidget);
       expect(find.text(GarageUiText.get('fleetRequests')), findsOneWidget);
