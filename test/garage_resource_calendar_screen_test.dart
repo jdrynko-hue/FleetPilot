@@ -66,6 +66,24 @@ void main(){
   });
  }
 
+ testWidgets('pending and confirmed calendar entries include appointment zone', (tester) async {
+  await mount(tester, GarageResourceCalendarScreen(
+   loadResources: () async => resources, loadRequests: () async => [req()],
+   loadCalendar: () async => [appointment()],
+   confirmSlot: (booking, resource) async => 'confirmed',
+  ));
+  final local = DateTime.utc(2026, 11, 20, 10).toLocal();
+  final expected = '${local.toString().substring(0, 16)} (${local.timeZoneName})';
+  expect(find.descendant(of: find.byKey(Key('garage_calendar_pending_' + requestId)),
+    matching: find.text(expected)), findsOneWidget);
+  final confirmed = find.byKey(Key('garage_calendar_appointment_' + requestId));
+  await tester.scrollUntilVisible(confirmed, 300);
+  await tester.pumpAndSettle();
+  expect(find.descendant(of: confirmed,
+    matching: find.textContaining(expected)), findsOneWidget);
+  expect(tester.takeException(), isNull);
+ });
+
  testWidgets('selecting Bay Two and confirming calls exact resource RPC once',
    (tester) async {
    var calls=0;
