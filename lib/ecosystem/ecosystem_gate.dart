@@ -91,7 +91,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
         final access = snapshot.requireData!;
         return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(GarageUiText.get('chooseModule')),
+            Text(GarageUiText.get('chooseModule'),
               style: Theme.of(context).textTheme.headlineSmall),
             if (_error != null) Text(_error!),
             _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
