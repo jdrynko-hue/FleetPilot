@@ -488,6 +488,13 @@ void main() {
     expect(find.textContaining('Request outcome is uncertain'), findsOneWidget);
     expect(find.textContaining('private server details'), findsNothing);
     expect(find.byKey(const Key('booking_sent_notice')), findsNothing);
+    // The error makes the long mobile ListView taller. Scroll to the
+    // disabled action before inspecting the lazily built button.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('booking_send')), 160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     final button = tester.widget<FilledButton>(
       find.byKey(const Key('booking_send')),
     );
