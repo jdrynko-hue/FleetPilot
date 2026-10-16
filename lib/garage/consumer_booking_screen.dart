@@ -44,6 +44,21 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   String tr(String pl, String en) => _pl ? pl : en;
 
   @override
+  void didUpdateWidget(covariant GarageBookingSearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.search != widget.search ||
+        oldWidget.submit != widget.submit ||
+        oldWidget.pickTime != widget.pickTime) {
+      // Repository callbacks define the authenticated directory scope.
+      // Invalidate old in-flight results and never show another scope's shops.
+      _generation++;
+      _shops = const [];
+      _error = null;
+      _busy = false;
+    }
+  }
+
+  @override
   void dispose() {
     _generation++;
     _city.dispose();
@@ -59,9 +74,10 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       return;
     }
     final gen = ++_generation;
+    final search = widget.search;
     setState(() { _busy = true; _shops = const []; _error = null; });
     try {
-      final result = await widget.search(city: city.isEmpty ? null : city);
+      final result = await search(city: city.isEmpty ? null : city);
       if (!mounted || gen != _generation) return;
       setState(() {
         _shops = List.unmodifiable(result);
@@ -174,12 +190,35 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _busy = false;
   String? _error;
   bool _sent = false;
+  int _generation = 0;
 
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl, String en) => _pl ? pl : en;
 
   @override
+  void didUpdateWidget(covariant GarageBookingRequestScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.shop.workspaceId != widget.shop.workspaceId ||
+        oldWidget.submit != widget.submit ||
+        oldWidget.pickTime != widget.pickTime) {
+      // Never reuse private customer details, service selection, or
+      // submission outcome for a different workshop/account scope.
+      _generation++;
+      _busy = false;
+      _sent = false;
+      _error = null;
+      _service = null;
+      _when = null;
+      for (final controller in
+          [_name, _make, _model, _registration, _concern]) {
+        controller.clear();
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _generation++;
     for (final c in [_name, _make, _model, _registration, _concern]) {
       c.dispose();
     }
@@ -200,8 +239,12 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
 
   Future<void> _pick() async {
     if (_busy || _sent) return;
-    final when = await widget.pickTime(context);
-    if (when != null && mounted) setState(() { _when = when; _error = null; });
+    final gen = _generation;
+    final pickTime = widget.pickTime;
+    final when = await pickTime(context);
+    if (when != null && mounted && gen == _generation) {
+      setState(() { _when = when; _error = null; });
+    }
   }
 
   Future<void> _send() async {
@@ -214,10 +257,13 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
           'Select a time within 90 days.'));
       return;
     }
+    final gen = ++_generation;
+    final submit = widget.submit;
+    final workspaceId = widget.shop.workspaceId;
     setState(() { _busy = true; _error = null; });
     try {
-      await widget.submit(
-        workspaceId: widget.shop.workspaceId,
+      await submit(
+        workspaceId: workspaceId,
         customerName: _name.text.trim(),
         vehicleMake: _make.text.trim(),
         vehicleModel: _model.text.trim(),
@@ -227,13 +273,13 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
         concern: _concern.text.trim(),
         desiredStart: when,
       );
-      if (mounted) setState(() => _sent = true);
+      if (mounted && gen == _generation) setState(() => _sent = true);
     } catch (_) {
-      if (mounted) setState(() => _error = tr(
+      if (mounted && gen == _generation) setState(() => _error = tr(
         'Nie udało się wysłać prośby. Sprawdź logowanie i spróbuj ponownie.',
         'Could not send request. Check your sign-in and retry.'));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && gen == _generation) setState(() => _busy = false);
     }
   }
 
