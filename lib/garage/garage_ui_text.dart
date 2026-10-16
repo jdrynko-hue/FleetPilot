@@ -109,6 +109,10 @@ class GarageUiText {
     'bookingServiceElectrical',
     'bookingServiceBodywork',
     'bookingServiceOther',
+    "createWorkshop",
+    "workshopName",
+    "workshopSetupIntro",
+    "workshopCreateUncertain",
   ];
 
   static const labels = <String, List<String>>{
@@ -216,6 +220,10 @@ class GarageUiText {
       "Electrical repairs",
       "Bodywork",
       "Other",
+      "Create a workshop",
+      "Workshop name",
+      "Verify your email before creating a workshop. This step does not publish your workshop or activate payments.",
+      "Creation could not be confirmed. Return to the module chooser and refresh before trying again.",
     ],
     'pl': <String>[
       'Znajdź warsztat',
@@ -321,6 +329,10 @@ class GarageUiText {
       "Elektryka",
       "Naprawy blacharskie",
       "Inne",
+      "Utwórz warsztat",
+      "Nazwa warsztatu",
+      "Przed utworzeniem warsztatu potwierdź adres e-mail. Ten krok nie publikuje warsztatu ani nie uruchamia płatności.",
+      "Nie można potwierdzić utworzenia. Wróć do wyboru modułu i odśwież dostęp przed kolejną próbą.",
     ],
     'de': <String>[
       'Werkstatt finden',
@@ -426,6 +438,10 @@ class GarageUiText {
       "Elektrik",
       "Karosseriearbeiten",
       "Sonstiges",
+      "Werkstatt erstellen",
+      "Name der Werkstatt",
+      "Bestätigen Sie zuerst Ihre E-Mail-Adresse. Dieser Schritt veröffentlicht die Werkstatt nicht und aktiviert keine Zahlungen.",
+      "Die Erstellung konnte nicht bestätigt werden. Kehren Sie zur Modulauswahl zurück und aktualisieren Sie den Zugriff vor einem neuen Versuch.",
     ],
     'sk': <String>[
       'Nájsť servis',
@@ -531,6 +547,10 @@ class GarageUiText {
       "Elektroinštalácia",
       "Karosárske práce",
       "Iné",
+      "Vytvoriť autoservis",
+      "Názov autoservisu",
+      "Pred vytvorením autoservisu potvrďte e-mail. Tento krok nezverejní autoservis ani neaktivuje platby.",
+      "Vytvorenie sa nepodarilo potvrdiť. Vráťte sa na výber modulu a pred ďalším pokusom obnovte prístup.",
     ],
     'cs': <String>[
       'Najít servis',
@@ -636,6 +656,10 @@ class GarageUiText {
       "Elektroinstalace",
       "Karosářské práce",
       "Jiné",
+      "Vytvořit autoservis",
+      "Název autoservisu",
+      "Před vytvořením autoservisu potvrďte e-mail. Tento krok nezveřejní autoservis ani neaktivuje platby.",
+      "Vytvoření se nepodařilo potvrdit. Vraťte se k výběru modulu a před dalším pokusem obnovte přístup.",
     ],
     'hu': <String>[
       'Szerviz keresése',
@@ -741,6 +765,10 @@ class GarageUiText {
       "Elektromos javítás",
       "Karosszériajavítás",
       "Egyéb",
+      "Műhely létrehozása",
+      "Műhely neve",
+      "A műhely létrehozása előtt erősítse meg e-mail-címét. Ez a lépés nem teszi nyilvánossá a műhelyt és nem aktivál fizetést.",
+      "A létrehozás nem erősíthető meg. Újabb próbálkozás előtt térjen vissza a modulválasztóhoz és frissítse a hozzáférést.",
     ],
     'ro': <String>[
       'Găsește un service',
@@ -846,6 +874,10 @@ class GarageUiText {
       "Reparații electrice",
       "Tinichigerie",
       "Altele",
+      "Creează un atelier",
+      "Numele atelierului",
+      "Confirmă adresa de e-mail înainte de a crea atelierul. Acest pas nu publică atelierul și nu activează plățile.",
+      "Crearea nu a putut fi confirmată. Revino la alegerea modulului și reîmprospătează accesul înainte de a încerca din nou.",
     ],
     'es': <String>[
       'Buscar taller',
@@ -951,6 +983,10 @@ class GarageUiText {
       "Reparaciones eléctricas",
       "Carrocería",
       "Otros",
+      "Crear un taller",
+      "Nombre del taller",
+      "Verifica tu correo antes de crear el taller. Este paso no publica el taller ni activa pagos.",
+      "No se pudo confirmar la creación. Vuelve a la selección de módulos y actualiza el acceso antes de intentarlo de nuevo.",
     ],
     'fr': <String>[
       'Trouver un garage',
@@ -1056,6 +1092,10 @@ class GarageUiText {
       "Réparations électriques",
       "Carrosserie",
       "Autre",
+      "Créer un atelier",
+      "Nom de l’atelier",
+      "Vérifiez votre adresse e-mail avant de créer un atelier. Cette étape ne publie pas l’atelier et n’active aucun paiement.",
+      "La création n’a pas pu être confirmée. Revenez au choix du module et actualisez les accès avant de réessayer.",
     ],
     'it': <String>[
       'Trova un\'officina',
@@ -1161,6 +1201,10 @@ class GarageUiText {
       "Riparazioni elettriche",
       "Carrozzeria",
       "Altro",
+      "Crea un’officina",
+      "Nome dell’officina",
+      "Verifica la tua email prima di creare un’officina. Questo passaggio non pubblica l’officina e non attiva pagamenti.",
+      "Impossibile confermare la creazione. Torna alla scelta del modulo e aggiorna l’accesso prima di riprovare.",
     ],
     'uk': <String>[
       'Знайти СТО',
@@ -1266,6 +1310,10 @@ class GarageUiText {
       "Ремонт електрики",
       "Кузовні роботи",
       "Інше",
+      "Створити майстерню",
+      "Назва майстерні",
+      "Підтвердьте електронну адресу перед створенням майстерні. Цей крок не публікує майстерню та не активує платежі.",
+      "Не вдалося підтвердити створення. Поверніться до вибору модуля й оновіть доступ перед повторною спробою.",
     ],
     'pt': <String>[
       'Encontrar oficina',
@@ -1371,6 +1419,10 @@ class GarageUiText {
       "Reparações elétricas",
       "Carroçaria",
       "Outros",
+      "Criar uma oficina",
+      "Nome da oficina",
+      "Confirme o seu email antes de criar uma oficina. Este passo não publica a oficina nem ativa pagamentos.",
+      "Não foi possível confirmar a criação. Volte à seleção de módulos e atualize o acesso antes de tentar novamente.",
     ],
   };
 

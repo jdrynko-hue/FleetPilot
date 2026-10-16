@@ -3,17 +3,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/company_gate.dart';
 import '../garage/garage_ui_text.dart';
+import '../garage/create_workspace_screen.dart';
 import 'ecosystem_access.dart';
 import 'ecosystem_module_hub.dart';
 
 /// QA-only entry point. A private customer is never forced to create a fleet.
 class EcosystemGate extends StatefulWidget {
   const EcosystemGate({required this.loadAccess,
-    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, super.key});
+    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, super.key});
 
   factory EcosystemGate.forClient(SupabaseClient client, {Key? key}) {
     final userId = client.auth.currentUser?.id;
     return EcosystemGate(key: key,
+        createWorkshopBuilder: (routeContext) => GarageCreateWorkspaceScreen.forClient(
+          client: client, onCreated: () => Navigator.of(routeContext).pop()),
         isCurrentAccount: () => userId != null && client.auth.currentUser?.id == userId,
         loadAccess: EcosystemAccessRepository.forClient(client).load,
         signOut: () => client.auth.signOut(),
@@ -28,6 +31,7 @@ class EcosystemGate extends StatefulWidget {
   final Widget Function(EcosystemDestination) destinationBuilder;
   final Future<void> Function() signOut;
   final bool Function()? isCurrentAccount;
+  final WidgetBuilder? createWorkshopBuilder;
   @override
   State<EcosystemGate> createState() => _EcosystemGateState();
 }
@@ -97,6 +101,18 @@ class _EcosystemGateState extends State<EcosystemGate> {
             _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
               GarageUiText.get('createFleet'), Icons.local_shipping_outlined,
               const EcosystemDestination(EcosystemModule.fleet)),
+            if (widget.createWorkshopBuilder != null)
+              Card(child: ListTile(key: const Key('ecosystem_create_workshop'),
+                leading: const Icon(Icons.add_business_outlined),
+                title: Text(GarageUiText.get('createWorkshop')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _signingOut ? null : () {
+                  if (!_current) return;
+                  Navigator.of(context).push<void>(MaterialPageRoute<void>(
+                    builder: widget.createWorkshopBuilder!)).then((_) {
+                      if (mounted && !_signingOut) _reload();
+                    });
+                })),
             for (final garage in access.garages)
               _tile('ecosystem_${garage.workspaceId}',
                 garage.module == EcosystemModule.mechanic
