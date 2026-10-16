@@ -146,7 +146,10 @@ jobs:
           node tests/single_session_browser_e2e.mjs
           node tests/single_session_connected_browser_e2e.mjs
           flutter pub get
-          flutter test tests/flutter/repairbridge_real_api_test.dart --reporter expanded
+          flutter test tests/flutter/repairbridge_real_api_test.dart tests/flutter/auth_navigation_real_api_test.dart --reporter expanded \
+            --dart-define=FLOTARYX_ECOSYSTEM_QA=true \
+            --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
       - name: Verify both Android and iPhone real connected screenshots
         shell: bash
         run: |
