@@ -154,10 +154,16 @@ assert.equal(myAlice[0].status,'confirmed');
 assert.match(myAlice[0].work_order_id,/^[0-9a-f-]{36}$/);
 assert.equal(good(await rpc(alice,'garage_booking_cancel',{
  p_booking:a}),'request cancellation'),'cancellation_requested');
-denied(await rpc(alice,'garage_booking_cancel',{
- p_booking:a}),'cannot cancel twice');
+for(const result of await Promise.all(Array.from({length:6},()=>rpc(alice,'garage_booking_cancel',{p_booking:a}))))
+ assert.equal(good(result,'parallel cancellation replay'),'cancellation_requested');
 assert.equal(good(await rpc(ownerA,'garage_booking_confirm_cancellation',{
  p_booking:a}),'confirm cancellation'),'cancelled');
+for(const result of await Promise.all(Array.from({length:6},()=>rpc(ownerA,'garage_booking_confirm_cancellation',{p_booking:a}))))
+ assert.equal(good(result,'parallel staff cancellation replay'),'cancelled');
+assert.equal(good(await rpc(alice,'garage_booking_cancel',{p_booking:a}),'customer terminal cancellation replay'),'cancelled');
+denied(await rpc(bob,'garage_booking_cancel',{p_booking:a}),'other customer terminal replay');
+denied(await rpc(ownerB,'garage_booking_confirm_cancellation',{p_booking:a}),'other workshop terminal replay');
+
 assert.equal(good(await rpc(alice,'garage_booking_my_requests'),
  'customer sees cancellation')[0].status,'cancelled');
 assert.equal(good(await rpc(ownerA,'garage_booking_configure',{
