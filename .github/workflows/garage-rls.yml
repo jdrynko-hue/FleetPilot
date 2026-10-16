@@ -3,6 +3,9 @@ name: Garage isolation and local Supabase E2E
 on:
   pull_request:
     paths:
+      - 'lib/garage/repair_bridge_repository.dart'
+      - 'lib/garage/repair_requests_screen.dart'
+      - 'lib/garage/order_actions_repository.dart'
       - 'supabase/garage_staging/**'
       - 'tests/garage_rls_isolation.sql'
       - 'tests/garage_invites_diagnosis.sql'
