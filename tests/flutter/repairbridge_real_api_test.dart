@@ -32,9 +32,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final clients = <SupabaseClient>[];
+      addTearDown(() async { for (final client in clients) { await client.dispose(); } });
       final suffix = DateTime.now().microsecondsSinceEpoch.toString();
       Future<SupabaseClient> actor(String role) async {
-        final client = SupabaseClient(api, anon);
+        // Disposable password signups do not use browser PKCE redirects/storage.
+        final client = SupabaseClient(api, anon, authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit, autoRefreshToken: false));
         clients.add(client);
         final response = await client.auth.signUp(email: 'flutter-$role-$suffix@example.test',
           password: 'DisposableFlutter-QA-2026!');
@@ -72,7 +75,6 @@ void main() {
         mechanicId = mechanic.auth.currentUser!.id;
       });
       expect(tester.takeException(), isNull);
-      addTearDown(() async { for (final client in clients) { await client.dispose(); } });
 
       Future<void> until(bool Function() ready, String context) async {
         for (var i = 0; i < 300; i++) {
