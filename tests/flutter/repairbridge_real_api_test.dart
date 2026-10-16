@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/data/models.dart';
 import 'package:fleetpilot/garage/bridge_connections_screen.dart';
+import 'package:fleetpilot/garage/consumer_booking_repository.dart';
 import 'package:fleetpilot/garage/repair_requests_screen.dart';
 import 'package:fleetpilot/garage/repair_bridge_repository.dart';
 import 'package:fleetpilot/garage/workshop_quotes_screen.dart';
@@ -79,6 +80,22 @@ void main() {
           'p_workspace': shop, 'p_city': 'FlutterQA$suffix', 'p_time_zone': 'Europe/London',
           'p_services': ['brakes'], 'p_duration': 60, 'p_listed': true,
         });
+        // Exercise the actual Dart repository transport, not only JS RPC calls.
+        final bookings = GarageBookingRepository(outsider);
+        final requestKey = newBookingRequestKey();
+        final preferred = DateTime.now().toUtc().add(const Duration(days: 2));
+        Future<String> sendBooking() => bookings.request(
+          workspaceId: shop, customerName: 'Flutter private customer',
+          vehicleMake: 'Ford', vehicleModel: 'Focus', service: 'brakes',
+          concern: 'Flutter durable request', desiredStart: preferred,
+          requestKey: requestKey,
+        );
+        final bookingId = await sendBooking();
+        expect(await bookings.cancel(bookingId), GarageBookingStatus.withdrawn);
+        expect(await sendBooking(), bookingId);
+        final history = await bookings.myRequests();
+        expect(history, hasLength(1));
+        expect(history.single.status, GarageBookingStatus.withdrawn);
         final token = await owner.rpc('garage_issue_staff_invite', params: {
           'p_workspace_id': shop, 'p_email': mechanic.auth.currentUser!.email, 'p_role': 'mechanic',
         });
