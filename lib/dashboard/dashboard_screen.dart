@@ -7,6 +7,7 @@ import '../core/formatters.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import '../vehicles/vehicle_detail_screen.dart';
+import '../vehicles/insurance_expiry.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -146,13 +147,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final attention = <_AttentionItem>[];
 
-        final today = DateTime(now.year, now.month, now.day);
-
-        int daysUntil(DateTime date) {
-          final target = DateTime(date.year, date.month, date.day);
-          return target.difference(today).inDays;
-        }
-
         String reminderBand(int days) {
           if (days < 0) return '!';
           if (days <= 7) return '≤7d';
@@ -168,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }) {
           if (date == null) return;
 
-          final days = daysUntil(date);
+          final days = calendarDaysUntil(date, now);
 
           if (days <= 30) {
             attention.add(
