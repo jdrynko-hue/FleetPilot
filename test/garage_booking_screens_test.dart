@@ -91,7 +91,9 @@ void main() {
     final local = when.toLocal();
     expect(find.descendant(of: picker, matching: find.text(
       '${local.toString().substring(0, 16)} (${local.timeZoneName})')), findsOneWidget);
-    await tester.scrollUntilVisible(find.byKey(const Key('booking_time_zone_hint')), -300);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('booking_time_zone_hint')), -300,
+      scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.byKey(const Key('booking_time_zone_hint'))).data,
       contains('(${local.timeZoneName}); workshop: Europe/London'));
