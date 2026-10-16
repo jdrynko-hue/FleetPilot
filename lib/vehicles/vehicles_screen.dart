@@ -154,8 +154,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    SizedBox(
-                      width: 360,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
                       child: TextField(
                         controller: _search,
                         decoration: InputDecoration(
@@ -194,8 +194,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    SizedBox(
-                      width: 360,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
                       child: CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
