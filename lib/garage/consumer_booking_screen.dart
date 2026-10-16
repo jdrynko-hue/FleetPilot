@@ -245,8 +245,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.shop.workspaceId != widget.shop.workspaceId ||
         oldWidget.submit != widget.submit ||
-        oldWidget.pickTime != widget.pickTime ||
-        oldWidget.beforeRequest != widget.beforeRequest) {
+        oldWidget.pickTime != widget.pickTime) {
       // Never reuse private customer details, service selection, or
       // submission outcome for a different workshop/account scope.
       _generation++;
