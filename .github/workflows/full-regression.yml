@@ -53,11 +53,11 @@ jobs:
       - run: flutter pub get
       - name: Analyze full source tree
         run: flutter analyze --no-fatal-infos
-      - name: Verify vehicle insurance with UK daylight-saving dates
+      - name: Verify insurance and booking labels with UK daylight-saving dates
         timeout-minutes: 2
         env:
           TZ: Europe/London
-        run: flutter test test/vehicle_insurance_test.dart --reporter expanded
+        run: flutter test test/vehicle_insurance_test.dart test/garage_booking_time_text_test.dart --reporter expanded
       - name: Run all Flutter tests
         run: flutter test --reporter expanded
       - name: Verify QA-only ecosystem entry and private route cleanup
