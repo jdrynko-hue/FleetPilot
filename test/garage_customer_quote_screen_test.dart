@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/garage/customer_quote_repository.dart';
 import 'package:fleetpilot/garage/customer_quote_screen.dart';
+import 'package:fleetpilot/garage/garage_ui_text.dart';
 
 GarageCustomerQuote quote({int revision = 1, bool approved = false}) =>
     GarageCustomerQuoteRepository.parse({
@@ -225,4 +226,74 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  test('quote-approval labels and revision/amount placeholders exist in 12 languages', () {
+    for (final language in supportedLanguages) {
+      for (final key in [
+        'customerEstimateTitle', 'customerApprove', 'customerConfirm',
+        'customerCancel', 'customerLoadFailed', 'customerChanged',
+        'customerRecorded', 'customerApprovedMessage',
+        'customerApprovalUncertain', 'customerEmpty', 'customerRetry',
+        'customerApproved', 'customerPending', 'customerTax',
+        'customerSubtotal', 'customerTotalTax', 'customerTotal',
+        'customerApproving', 'customerScopeWarning',
+      ]) {
+        final label = GarageUiText.get(key, language: language);
+        expect(label.trim(), isNotEmpty, reason: '$language $key');
+        expect(label, isNot(key), reason: '$language $key');
+      }
+      final confirm = GarageUiText.format('customerConfirmBody',
+        {'revision': 7, 'total': 'GBP 72.00'}, language: language);
+      expect(confirm, contains('7'), reason: language);
+      expect(confirm, contains('GBP 72.00'), reason: language);
+      expect(confirm, isNot(contains('{revision}')), reason: language);
+      expect(confirm, isNot(contains('{total}')), reason: language);
+      expect(GarageUiText.format('customerRevision', {'revision': 7},
+        language: language), contains('7'), reason: language);
+    }
+  });
+
+  testWidgets('German mobile approval dialog retains revision and sum',
+      (tester) async {
+    AppLocale.language.value = 'de';
+    var approvals = 0;
+    await display(
+      tester, width: 390,
+      load: () async => quote(),
+      approve: (revision) async { approvals++; return revision; },
+    );
+    expect(find.text('Reparaturkostenvoranschlag'), findsOneWidget);
+    expect(find.text('Version 1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    expect(find.text('Kostenvoranschlag bestätigen'), findsOneWidget);
+    expect(find.textContaining('£72.00'), findsWidgets);
+    expect(approvals, 0);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(approvals, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Spanish mobile quote retains fail-closed stale revision check',
+      (tester) async {
+    AppLocale.language.value = 'es';
+    var loads = 0;
+    var approvals = 0;
+    await display(
+      tester, width: 375,
+      load: () async => quote(revision: ++loads == 1 ? 1 : 2),
+      approve: (revision) async { approvals++; return revision; },
+    );
+    expect(find.text('Presupuesto de reparación'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pumpAndSettle();
+    expect(approvals, 0);
+    expect(find.text('Versión 2'), findsOneWidget);
+    expect(find.textContaining('El presupuesto ha cambiado'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
