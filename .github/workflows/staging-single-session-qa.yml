@@ -14,6 +14,9 @@ on:
       - 'tests/single_session_connected_browser_e2e.mjs'
       - 'tests/disposable_connected_fixture.mjs'
       - 'supabase/garage_staging/**'
+      - 'supabase/qa_hardening/**'
+      - 'tests/qa_*'
+      - 'tests/security_stack_source_test.py'
       - 'supabase/migrations/001_fleetpilot.sql'
       - 'supabase/migrations/002_saas_foundation.sql'
   workflow_dispatch:
@@ -31,21 +34,16 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: '0'
     steps:
       - uses: actions/checkout@v4
-      - name: Read pinned green security stack from PR 61 (no merge or deployment)
-        uses: actions/checkout@v4
-        with:
-          repository: jdrynko-hue/FleetPilot
-          ref: ee36ffbfaf14c2636e069174ac34523204058619
-          path: .qa-security-source
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
-      - name: Verify owner-private HTTPS export configuration
-        run: python3 tests/private_qa_export_test.py
+      - name: Verify owner-private export and same-checkout security source
+        run: |
+          python3 tests/private_qa_export_test.py
+          python3 tests/security_stack_source_test.py
       - name: Install pinned disposable browser dependencies
         shell: bash
         run: |
@@ -85,17 +83,17 @@ jobs:
           mkdir -p supabase/migrations
           # Fleet foundation resets are confined to this fresh local stack.
           # No RepairBridge replacement Fleet tables or provisioning RPC.
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/migrations/001_fleetpilot.sql" "supabase/migrations/20261015000001_001_fleetpilot.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/migrations/002_saas_foundation.sql" "supabase/migrations/20261015000002_002_saas_foundation.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/tests/qa_fleet_storage_local_tables.sql" "supabase/migrations/20261015000003_qa_fleet_storage_local_tables.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql" "supabase/migrations/20261015000004_001_restrict_fleet_documents_checks_change_requests.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/002_private_fleet_storage.sql" "supabase/migrations/20261015000005_002_private_fleet_storage.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/003_driver_membership_least_privilege.sql" "supabase/migrations/20261015000006_003_driver_membership_least_privilege.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/tests/qa_driver_rpc_local_schema.sql" "supabase/migrations/20261015000007_qa_driver_rpc_local_schema.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/004_driver_read_rpcs.sql" "supabase/migrations/20261015000008_004_driver_read_rpcs.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/005_driver_write_rpcs.sql" "supabase/migrations/20261015000009_005_driver_write_rpcs.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/006_company_invites_membership_rpc.sql" "supabase/migrations/20261015000010_006_company_invites_membership_rpc.sql"
-          cp "$GITHUB_WORKSPACE/.qa-security-source/supabase/qa_hardening/007_public_definer_acl_parity.sql" "supabase/migrations/20261015000011_007_public_definer_acl_parity.sql"
+          cp "$GITHUB_WORKSPACE/supabase/migrations/001_fleetpilot.sql" "supabase/migrations/20261015000001_001_fleetpilot.sql"
+          cp "$GITHUB_WORKSPACE/supabase/migrations/002_saas_foundation.sql" "supabase/migrations/20261015000002_002_saas_foundation.sql"
+          cp "$GITHUB_WORKSPACE/tests/qa_fleet_storage_local_tables.sql" "supabase/migrations/20261015000003_qa_fleet_storage_local_tables.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql" "supabase/migrations/20261015000004_001_restrict_fleet_documents_checks_change_requests.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/002_private_fleet_storage.sql" "supabase/migrations/20261015000005_002_private_fleet_storage.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/003_driver_membership_least_privilege.sql" "supabase/migrations/20261015000006_003_driver_membership_least_privilege.sql"
+          cp "$GITHUB_WORKSPACE/tests/qa_driver_rpc_local_schema.sql" "supabase/migrations/20261015000007_qa_driver_rpc_local_schema.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/004_driver_read_rpcs.sql" "supabase/migrations/20261015000008_004_driver_read_rpcs.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/005_driver_write_rpcs.sql" "supabase/migrations/20261015000009_005_driver_write_rpcs.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/006_company_invites_membership_rpc.sql" "supabase/migrations/20261015000010_006_company_invites_membership_rpc.sql"
+          cp "$GITHUB_WORKSPACE/supabase/qa_hardening/007_public_definer_acl_parity.sql" "supabase/migrations/20261015000011_007_public_definer_acl_parity.sql"
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/001_workshop_foundation.sql" "supabase/migrations/20261015000012_001_workshop_foundation.sql"
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/002_staff_invites_and_diagnosis.sql" "supabase/migrations/20261015000013_002_staff_invites_and_diagnosis.sql"
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/003_mechanic_assignment.sql" "supabase/migrations/20261015000014_003_mechanic_assignment.sql"
@@ -145,8 +143,8 @@ jobs:
           export LOCAL_ACL_ANON_KEY="$GARAGE_TEST_ANON_KEY"
           export LOCAL_INVITE_API_URL="$GARAGE_TEST_API_URL"
           export LOCAL_INVITE_ANON_KEY="$GARAGE_TEST_ANON_KEY"
-          node .qa-security-source/tests/qa_definer_acl_local_e2e.mjs
-          node .qa-security-source/tests/qa_company_invite_local_e2e.mjs
+          node tests/qa_definer_acl_local_e2e.mjs
+          node tests/qa_company_invite_local_e2e.mjs
           node tests/single_session_browser_e2e.mjs
           node tests/single_session_connected_browser_e2e.mjs
           flutter pub get
