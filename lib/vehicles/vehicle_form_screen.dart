@@ -304,6 +304,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
             SizedBox(height: 12),
             _DateField(
               label: tr('insurance_expiry'),
+              helperText: tr('insurance_reminder_hint'),
               value: _insuranceDue,
               onTap: () async {
                 final value = await _pickDate(_insuranceDue);
@@ -335,7 +336,9 @@ class _DateField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.helperText,
   });
+  final String? helperText;
   final String label;
   final DateTime? value;
   final VoidCallback onTap;
@@ -347,6 +350,8 @@ class _DateField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
+          helperText: helperText,
+          helperMaxLines: 4,
           suffixIcon: const Icon(Icons.calendar_today_outlined),
         ),
         child: Text(formatDate(value)),

@@ -167,7 +167,12 @@ class _FleetShellState extends State<FleetShell> {
         final body = IndexedStack(
           key: ValueKey(_membership.companyId),
           index: _index,
-          children: pages,
+          // Inactive tabs stay mounted but must not share FAB Hero tags in
+          // route transitions (for example, opening notification settings).
+          children: [
+            for (var i = 0; i < pages.length; i++)
+              HeroMode(enabled: i == _index, child: pages[i]),
+          ],
         );
 
         return Scaffold(
