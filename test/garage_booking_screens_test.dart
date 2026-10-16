@@ -453,4 +453,46 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('uncertain booking submit prevents a duplicate request',
+      (tester) async {
+    var submissions = 0;
+    await render(tester, GarageBookingRequestScreen(
+      shop: shop,
+      pickTime: (_) async => DateTime.now().add(const Duration(days: 2)),
+      submit: ({
+        required workspaceId, required customerName,
+        required vehicleMake, required vehicleModel,
+        required service, required concern, required desiredStart,
+        registration,
+      }) async {
+        submissions++;
+        throw StateError('private server details');
+      },
+    ));
+    await tester.enterText(find.byKey(const Key('booking_name')), 'Private Person');
+    await tester.enterText(find.byKey(const Key('booking_make')), 'Ford');
+    await tester.enterText(find.byKey(const Key('booking_model')), 'Focus');
+    await tester.tap(find.byKey(const Key('booking_service')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('brakes').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_concern')), 'Noisy brakes');
+    await tester.ensureVisible(find.byKey(const Key('booking_pick_time')));
+    await tester.tap(find.byKey(const Key('booking_pick_time')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.tap(find.byKey(const Key('booking_send')));
+    await tester.pumpAndSettle();
+    expect(submissions, 1);
+    expect(find.textContaining('Request outcome is uncertain'), findsOneWidget);
+    expect(find.textContaining('private server details'), findsNothing);
+    expect(find.byKey(const Key('booking_sent_notice')), findsNothing);
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('booking_send')),
+    );
+    expect(button.onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
 }
