@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'billing_markets.dart';
+import 'fleet_creation_notice.dart';
 
 import '../data/fleet_repository.dart';
 
@@ -27,12 +28,13 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   final _name = TextEditingController();
   String _country = 'GB';
   bool _busy = false;
+  bool _uncertain = false;
   bool _b2bConfirmed = false;
 
   String? get _countryCurrency => currencyForFleetCountry(_country);
 
   bool get _canCreate =>
-      !_busy && _b2bConfirmed && _name.text.trim().isNotEmpty &&
+      !_busy && !_uncertain && _b2bConfirmed && _name.text.trim().isNotEmpty &&
       _countryCurrency != null;
 
   @override
@@ -68,8 +70,12 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
       if (current()) widget.onCreated();
     } catch (error) {
       if (!current()) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      if (widget.allowCancel) {
+        setState(() => _uncertain = true);
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -163,6 +169,12 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
                           : (value) =>
                                 setState(() => _b2bConfirmed = value ?? false),
                     ),
+                    if (_uncertain) ...[
+                      Text(uncertainFleetCreation(), key: const Key('fleet_creation_uncertain')),
+                      OutlinedButton(key: const Key('fleet_creation_check_memberships'),
+                        onPressed: _busy ? null : widget.onCreated,
+                        child: Text(tr('refresh'))),
+                    ],
                     FilledButton(
                       onPressed: _canCreate ? _create : null,
                       child: Text(_busy ? tr('creating') : tr('create_fleet')),

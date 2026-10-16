@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/create_company_screen.dart';
 
 import '../company/company_screen.dart';
 import '../company/manager_control_panel.dart';
@@ -36,6 +37,7 @@ class _FleetShellState extends State<FleetShell> {
 
   int _index = 0;
   int _refreshToken = 0;
+  bool _creatingFleet = false;
 
   @override
   void initState() {
@@ -92,6 +94,32 @@ class _FleetShellState extends State<FleetShell> {
   }
 
   Future<void> _reloadMemberships() => _access.refresh();
+
+  Future<void> _openAdditionalFleet() async {
+    if (_creatingFleet || _access.loading ||
+        !{'owner', 'admin'}.contains(_membership.role)) return;
+    final account = _repository.currentUser?.id;
+    if (account == null) return;
+    final previousIds = _memberships.map((member) => member.companyId).toSet();
+    var refresh = false;
+    _creatingFleet = true;
+    try {
+      await Navigator.of(context).push<void>(MaterialPageRoute<void>(
+        builder: (routeContext) => CreateCompanyScreen(allowCancel: true,
+          onCreated: () {
+            refresh = true;
+            Navigator.of(routeContext).pop();
+          }),
+      ));
+      if (!mounted || _repository.currentUser?.id != account || !refresh) return;
+      await _reloadMemberships();
+      if (!mounted || _repository.currentUser?.id != account || _access.failed) return;
+      final added = _memberships.where((member) => !previousIds.contains(member.companyId)).toList();
+      if (added.length == 1) _access.select(added.single.companyId);
+    } finally {
+      _creatingFleet = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -211,6 +239,8 @@ class _FleetShellState extends State<FleetShell> {
                 builder: (_) => NotificationsScreen(company: _membership),
               ),
             ),
+            onCreateFleetPressed: {'owner', 'admin'}.contains(_membership.role)
+                ? _openAdditionalFleet : null,
             onRefreshPressed: _reloadMemberships,
             onSignOutPressed: () => _repository.signOut(),
           ),
