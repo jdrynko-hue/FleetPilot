@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fleetpilot/data/fleet_repository.dart';
+import 'package:fleetpilot/core/app_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fleetpilot/auth/email_callback.dart';
 
@@ -27,4 +33,26 @@ void main() {
         throwsStateError);
     });
   }
+  test('signup and recovery pass the environment callback to Auth transport', () async {
+    final requests = <http.Request>[];
+    final transport = MockClient((request) async {
+      requests.add(request);
+      return http.Response(request.url.path.endsWith('/signup') ? jsonEncode({
+        'id': '00000000-0000-4000-8000-000000000001', 'aud': 'authenticated',
+        'email': 'callback@example.test', 'created_at': '2026-10-16T00:00:00Z',
+        'app_metadata': <String, Object>{}, 'user_metadata': <String, Object>{},
+      }) : '{}', 200, headers: {'content-type': 'application/json'});
+    });
+    final client = SupabaseClient('https://callback-test.invalid', 'test-anon',
+      httpClient: transport, authOptions: const AuthClientOptions(autoRefreshToken: false));
+    addTearDown(() async { await client.dispose(); transport.close(); });
+    final repository = FleetRepository(client);
+    await repository.signUp(email: 'callback@example.test', password: 'fixture-only-password', portal: 'garage');
+    await repository.sendPasswordReset('callback@example.test');
+    expect(requests.length, 2);
+    final qaBuild = AppConfig.isEcosystemQaBackend(AppConfig.supabaseUrl);
+    expect(requests[0].url.queryParameters['redirect_to'], qaBuild ? '$preview?portal=garage' : 'https://flotaryx.com/app/');
+    expect(requests[1].url.queryParameters['redirect_to'], qaBuild ? preview : 'https://flotaryx.com/app/');
+  });
+
 }
