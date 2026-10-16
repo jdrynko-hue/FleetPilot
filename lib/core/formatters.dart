@@ -1,3 +1,5 @@
+export 'money_input.dart' show parseMoneyInput, validateMoneyInput;
+
 String formatDate(DateTime? value) {
   if (value == null) return '—';
   final d = value.toLocal();
@@ -41,9 +43,4 @@ int? parseInt(String value) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) return null;
   return int.tryParse(trimmed.replaceAll(',', ''));
-}
-
-double parseMoneyInput(String value) {
-  final normalized = value.trim().replaceAll(',', '.');
-  return double.tryParse(normalized) ?? 0;
 }
