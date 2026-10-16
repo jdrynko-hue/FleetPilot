@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
+import 'booking_status_text.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -135,7 +136,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
               children: [
                 Text(shop.name, style: Theme.of(context).textTheme.titleMedium),
                 Text('${shop.city}, ${shop.country}'),
-                Text(shop.services.join(', ')),
+                Text(shop.services.map((service) => bookingServiceLabel(service)).join(', ')),
                 Text(tr('Strefa czasowa: ${shop.timeZone}',
                     'Workshop time zone: ${shop.timeZone}')),
                 OutlinedButton(key: Key('booking_open_${shop.workspaceId}'),
@@ -339,7 +340,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             decoration: InputDecoration(border: const OutlineInputBorder(),
               labelText: tr('Usługa', 'Service')),
             items: widget.shop.services.map((service) =>
-              DropdownMenuItem(value: service, child: Text(service))).toList(),
+              DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service)))).toList(),
             onChanged: (value) => setState(() => _service = value),
             validator: (value) => value == null
                 ? tr('Wybierz usługę.', 'Choose a service.') : null,
