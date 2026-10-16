@@ -6,6 +6,7 @@ import 'repair_bridge_repository.dart';
 import 'customer_quote_screen.dart';
 import 'order_actions_repository.dart';
 import 'resource_calendar_repository.dart';
+import 'garage_ui_text.dart';
 
 /// QA module only. The RPC checks current membership and active connections.
 class GarageRepairRequestsScreen extends StatefulWidget {
@@ -123,7 +124,7 @@ class _RepairRequestsState extends State<GarageRepairRequestsScreen> {
     appBar: AppBar(
       title: Text(_tr('Naprawy Fleet ↔ Garage', 'Fleet ↔ Garage repairs')),
       actions: [IconButton(
-        tooltip: _tr('Odśwież', 'Refresh'),
+        tooltip: GarageUiText.get('refresh'),
         onPressed: _loading ? null : _refresh,
         icon: const Icon(Icons.refresh),
       )],
@@ -283,14 +284,14 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
   };
 
   String _status(String status) => switch (status) {
-    'received' => _tr('Przyjęto', 'Received'),
-    'diagnosing' => _tr('Diagnostyka', 'Diagnosing'),
-    'awaiting_approval' => _tr('Oczekuje na zgodę', 'Awaiting approval'),
-    'awaiting_parts' => _tr('Oczekuje na części', 'Awaiting parts'),
-    'in_progress' => _tr('W naprawie', 'In progress'),
-    'ready' => _tr('Gotowy do odbioru', 'Ready for collection'),
-    'collected' => _tr('Odebrano', 'Collected'),
-    'cancelled' => _tr('Anulowano', 'Cancelled'),
+    'received' => GarageUiText.get('received'),
+    'diagnosing' => GarageUiText.get('diagnosing'),
+    'awaiting_approval' => GarageUiText.get('awaitingApproval'),
+    'awaiting_parts' => GarageUiText.get('awaitingParts'),
+    'in_progress' => GarageUiText.get('inProgress'),
+    'ready' => GarageUiText.get('readyCollection'),
+    'collected' => GarageUiText.get('collected'),
+    'cancelled' => GarageUiText.get('cancelled'),
     _ => status,
   };
 
@@ -427,17 +428,17 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
   }
 
   String _eventLabel(GarageRepairBridgeEvent event) => switch (event.action) {
-    'request_sent' => _tr('Wysłano zgłoszenie', 'Request sent'),
-    'request_accepted' => _tr('Warsztat przyjął zgłoszenie', 'Workshop accepted'),
-    'quote_approved' => _tr('Zatwierdzono kosztorys', 'Estimate approved'),
-    'progress_updated' => _tr('Zmieniono etap naprawy', 'Repair status changed'),
-    'connection_revoked' => _tr('Wycofano połączenie', 'Connection revoked'),
-    _ => _tr('Zdarzenie', 'Event'),
+    'request_sent' => GarageUiText.get('requestSent'),
+    'request_accepted' => GarageUiText.get('workshopAccepted'),
+    'quote_approved' => GarageUiText.get('estimateApproved'),
+    'progress_updated' => GarageUiText.get('repairStatusChanged'),
+    'connection_revoked' => GarageUiText.get('connectionRevoked'),
+    _ => GarageUiText.get('event'),
   };
 
   String? _eventDescription(GarageRepairBridgeEvent event) {
     if (event.action == 'quote_approved') {
-      return '${_tr('Wersja kosztorysu', 'Estimate revision')}: '
+      return '${GarageUiText.get('estimateRevision')}: '
           '${event.details['revision']}';
     }
     if (event.action == 'progress_updated') {
@@ -451,15 +452,15 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
   Widget build(BuildContext context) {
     final data = _snapshot;
     return Scaffold(
-      appBar: AppBar(title: Text(_tr('Zgłoszenie floty', 'Fleet repair request')),
-        actions: [IconButton(tooltip: _tr('Odśwież', 'Refresh'),
+      appBar: AppBar(title: Text(GarageUiText.get('repairRequest')),
+        actions: [IconButton(tooltip: GarageUiText.get('refresh'),
           onPressed: _busy ? null : _refresh, icon: const Icon(Icons.refresh))]),
       body: SafeArea(child: ListView(padding: const EdgeInsets.all(16), children: [
         if (_busy && data == null) const Center(child: CircularProgressIndicator()),
         if (_error != null) ...[
           Text(_error!),
           TextButton(onPressed: _busy ? null : _refresh,
-            child: Text(_tr('Odśwież', 'Refresh'))),
+            child: Text(GarageUiText.get('refresh'))),
         ],
         if (data != null) ...[
           Text(data.title, style: Theme.of(context).textTheme.titleLarge),
@@ -477,11 +478,10 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
               contentPadding: EdgeInsets.zero,
               key: const Key('repair_assigned_mechanic'),
               leading: const Icon(Icons.engineering_outlined),
-              title: Text(_tr('Przypisany mechanik', 'Assigned mechanic')),
+              title: Text(GarageUiText.get('assignedMechanic')),
               subtitle: Text(data.mechanicAssigned!
-                ? (_assignedEmail ?? _tr('Mechanik przypisany',
-                    'Mechanic assigned'))
-                : _tr('Jeszcze nie przypisano', 'Not assigned yet')),
+                ? (_assignedEmail ?? GarageUiText.get('mechanicAssigned'))
+                : GarageUiText.get('notAssigned')),
             ),
           if (widget.approve != null && data.needsFleetApproval)
             FilledButton(key: const Key('repair_review_quote'), onPressed: _busy ? null : _openQuote,
@@ -507,10 +507,8 @@ class _RepairDetailState extends State<GarageRepairRequestDetailScreen> {
           const SizedBox(height: 12),
           ExpansionTile(
             key: const Key('repair_event_timeline'),
-            title: Text(_tr('Historia naprawy', 'Repair timeline')),
-            subtitle: Text(_tr(
-              'Zdarzenia: ${data.events.length}',
-              'Events: ${data.events.length}')),
+            title: Text(GarageUiText.get('repairTimeline')),
+            subtitle: Text('${GarageUiText.get('events')}: ${data.events.length}'),
             children: [
               for (var i = 0; i < data.events.length; i++)
                 Builder(builder: (context) {
