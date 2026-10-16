@@ -20,6 +20,22 @@ bool insuranceNeedsAttention(DateTime? expiry, DateTime today) =>
 bool insuranceReminderDue(DateTime? expiry, DateTime today) =>
     expiry != null && const {30, 14, 7, 1, 0}.contains(calendarDaysUntil(expiry, today));
 
+/// Stable per-vehicle, per-policy reminder identity for idempotent delivery.
+/// A renewed policy receives a different key even if its vehicle ID is unchanged.
+String insuranceReminderKey({
+  required String vehicleId,
+  required DateTime expiry,
+  required int daysBefore,
+}) {
+  if (!const {30, 14, 7, 1, 0}.contains(daysBefore)) {
+    throw ArgumentError.value(daysBefore, 'daysBefore', 'Unsupported reminder stage');
+  }
+  final date = '${expiry.year.toString().padLeft(4, '0')}-'
+      '${expiry.month.toString().padLeft(2, '0')}-'
+      '${expiry.day.toString().padLeft(2, '0')}';
+  return 'insurance:${Uri.encodeComponent(vehicleId)}:$date:$daysBefore';
+}
+
 class InsuranceExpiry extends StatelessWidget {
   const InsuranceExpiry({required this.date, this.today, super.key});
 
