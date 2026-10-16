@@ -214,6 +214,31 @@ void main() {
     expect(tester.takeException(),isNull);
   });
 
+  testWidgets('customer cancellation accepts an already cancelled server result',
+      (tester) async {
+    var loads = 0;
+    var cancellations = 0;
+    await render(tester, GarageMyBookingsScreen(
+      loadBookings: () async => [myRequest(status: loads++ == 0
+        ? GarageBookingStatus.confirmed : GarageBookingStatus.cancelled)],
+      cancel: (id) async {
+        expect(id, bookingId);
+        cancellations++;
+        return GarageBookingStatus.cancelled;
+      },
+    ));
+    await tester.tap(find.byKey(Key('customer_booking_cancel_' + bookingId)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('customer_booking_confirm_cancel')));
+    await tester.pumpAndSettle();
+    expect(cancellations, 1);
+    expect(loads, 2);
+    expect(find.text('Cancelled'), findsOneWidget);
+    expect(find.byKey(const Key('customer_booking_error')), findsNothing);
+    expect(find.byKey(Key('customer_booking_cancel_' + bookingId)), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('search ignores stale results after changing directory scope',
       (tester) async {
     final pending = Completer<List<GarageBookingWorkshop>>();

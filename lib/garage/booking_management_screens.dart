@@ -259,7 +259,8 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     try {
       final result = await cancel(entry.id);
       if (result != GarageBookingStatus.withdrawn &&
-          result != GarageBookingStatus.cancellationRequested) {
+          result != GarageBookingStatus.cancellationRequested &&
+          result != GarageBookingStatus.cancelled) {
         throw const FormatException('Unexpected cancellation state');
       }
     } catch (_) {

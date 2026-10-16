@@ -357,7 +357,8 @@ class GarageBookingRepository {
       params: {'p_booking': _id(bookingId)});
     final parsed = _status(raw);
     if (!const {GarageBookingStatus.withdrawn,
-                 GarageBookingStatus.cancellationRequested}.contains(parsed)) {
+                 GarageBookingStatus.cancellationRequested,
+                 GarageBookingStatus.cancelled}.contains(parsed)) {
       throw const FormatException('Unexpected cancellation result');
     }
     return parsed;
