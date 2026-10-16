@@ -1,6 +1,7 @@
 // Explicit opt-in integration suite: real Flutter widgets + loopback Supabase.
 // Outside test/ so normal offline regression never attempts network access.
 import 'dart:io';
+import 'package:http/io_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -32,11 +33,21 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final clients = <SupabaseClient>[];
-      addTearDown(() async { for (final client in clients) { await client.dispose(); } });
+      final transports = <HttpClient>[];
+      Future<void> closeClients() async {
+        for (final client in clients) { await client.dispose(); }
+        clients.clear();
+        for (final transport in transports) { transport.close(force: true); }
+        transports.clear();
+      }
+      addTearDown(closeClients);
       final suffix = DateTime.now().microsecondsSinceEpoch.toString();
       Future<SupabaseClient> actor(String role) async {
         // Disposable password signups do not use browser PKCE redirects/storage.
-        final client = SupabaseClient(api, anon, authOptions: const AuthClientOptions(
+        final transport = HttpClient()..idleTimeout = Duration.zero;
+        transports.add(transport);
+        final client = SupabaseClient(api, anon, httpClient: IOClient(transport),
+          authOptions: const AuthClientOptions(
           authFlowType: AuthFlowType.implicit, autoRefreshToken: false));
         clients.add(client);
         final response = await client.auth.signUp(email: 'flutter-$role-$suffix@example.test',
@@ -195,6 +206,8 @@ void main() {
       });
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
+      // Close sockets before Flutter verifies that no fake-clock timers remain.
+      await tester.runAsync(closeClients);
       await tester.pump();
     }, timeout: const Timeout(Duration(minutes: 5)));
   }
