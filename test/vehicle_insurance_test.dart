@@ -94,6 +94,9 @@ void main() {
     expect(() => insuranceReminderKey(
       vehicleId: 'car', expiry: DateTime(2026, 11, 15), daysBefore: -1,
     ), throwsArgumentError);
+    expect(() => insuranceReminderKey(
+      vehicleId: '  ', expiry: DateTime(2026, 11, 15), daysBefore: 7,
+    ), throwsArgumentError);
   });
 
   testWidgets('expiry text distinguishes missing, upcoming, today and expired', (tester) async {
