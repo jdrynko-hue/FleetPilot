@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../garage/booking_management_screens.dart';
+import '../garage/booking_profile_screen.dart';
 import '../garage/calendar_settings_screen.dart';
 import '../garage/consumer_booking_repository.dart';
 import '../garage/consumer_booking_screen.dart';
@@ -60,6 +61,10 @@ class EcosystemModuleHub extends StatelessWidget {
         GarageUiText.get('customerRequests'): () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,
             workspaceId: destination.workspaceId!),
+        if (destination.canConfigure)
+          GarageUiText.get('bookingProfile'): () =>
+            GarageBookingProfileScreen.forRepository(repository: bookings,
+              workspaceId: destination.workspaceId!),
         if (destination.canConfigure)
           GarageUiText.get('calendarSettings'): () =>
             GarageCalendarSettingsScreen.forRepository(repository: calendar,

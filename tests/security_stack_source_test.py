@@ -29,7 +29,7 @@ class UnifiedSecuritySourceTest(unittest.TestCase):
                          ['001', '002', '003', '004', '005', '006', '007'])
         garage = [p for p in paths if p.startswith('supabase/garage_staging/')]
         self.assertEqual([Path(p).name[:3] for p in garage],
-                         [f'{i:03}' for i in range(1, 15)])
+                         [f'{i:03}' for i in range(1, 16)])
 
     def test_role_regressions_execute_from_current_tree(self):
         workflow = WORKFLOW.read_text()

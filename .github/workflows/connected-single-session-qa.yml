@@ -91,6 +91,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/012_booking_cancellation_replay.sql" supabase/migrations/20261016000012_booking_cancellation_replay.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/013_booking_durable_request_keys.sql" supabase/migrations/20261016000013_booking_durable_request_keys.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/014_booking_confirmation_replay.sql" supabase/migrations/20261016000014_booking_confirmation_replay.sql
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/015_booking_profile_owner_read.sql" supabase/migrations/20261016000015_booking_profile_owner_read.sql
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
           grep -q '^enable_confirmations = false$' supabase/config.toml
       - name: Start local Supabase Auth and Data API

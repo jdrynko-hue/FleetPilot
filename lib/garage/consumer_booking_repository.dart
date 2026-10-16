@@ -25,6 +25,18 @@ enum GarageBookingStatus {
   cancelled,
 }
 
+class GarageBookingProfile {
+  const GarageBookingProfile({required this.workspaceId, required this.city,
+    required this.timeZone, required this.services, required this.durationMinutes,
+    required this.listed});
+  final String workspaceId;
+  final String city;
+  final String timeZone;
+  final List<String> services;
+  final int durationMinutes;
+  final bool listed;
+}
+
 class GarageBookingService {
   static const values = {
     'diagnostics',
@@ -257,6 +269,39 @@ class GarageBookingRepository {
       params: {'p_city': city?.trim()},
     );
     return parseWorkshops(raw);
+  }
+
+  static GarageBookingProfile? parseProfile(Object? raw, String workspaceId) {
+    _id(workspaceId);
+    if (raw is! List || raw.length > 1) throw const FormatException('Invalid profile rows');
+    if (raw.isEmpty) return null;
+    final row = raw.single;
+    if (row is! Map) throw const FormatException('Invalid profile');
+    final services = row['services'];
+    final duration = row['duration_minutes'];
+    if (_uid(row, 'workspace_id') != workspaceId ||
+        services is! List || services.isEmpty || services.length > 8 ||
+        services.toSet().length != services.length ||
+        services.any((value) => value is! String || !GarageBookingService.values.contains(value)) ||
+        duration is! int || !const {30, 60, 90, 120}.contains(duration) ||
+        row['listed'] is! bool) throw const FormatException('Invalid profile fields');
+    final city = _text(row, 'city');
+    final zone = _text(row, 'time_zone');
+    if (city.length < 2 || city.length > 80 || zone.length > 100) {
+      throw const FormatException('Invalid profile location');
+    }
+    return GarageBookingProfile(workspaceId: workspaceId, city: city,
+      timeZone: zone, services: List.unmodifiable(services.cast<String>()),
+      durationMinutes: duration, listed: row['listed'] as bool);
+  }
+
+  Future<GarageBookingProfile?> profile(String workspaceId) async {
+    _requireSignIn();
+    final userId = client.auth.currentUser!.id;
+    final raw = await client.rpc('garage_booking_profile',
+      params: {'p_workspace': _id(workspaceId)});
+    if (client.auth.currentUser?.id != userId) throw StateError('Account changed');
+    return parseProfile(raw, workspaceId);
   }
 
   Future<bool> configure({

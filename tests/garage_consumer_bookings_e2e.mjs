@@ -49,6 +49,11 @@ const shopB=await createGarage(ownerB,'Flotaryx Booking Workshop B');
 const tomorrow=new Date(Date.now()+48*60*60*1000).toISOString();
 const slot2=new Date(Date.now()+72*60*60*1000).toISOString();
 
+assert.deepEqual(good(await rpc(ownerA,'garage_booking_profile',{p_workspace:shopA}),
+ 'new owner profile is unset'),[]);
+for (const user of [null,ownerB,alice]) {
+ denied(await rpc(user,'garage_booking_profile',{p_workspace:shopA}), 'non-owner profile read');
+}
 assert.deepEqual(good(await rpc(null,'garage_booking_discover',{p_city:'Dunstable'}),
  'no listed garages'),[]);
 denied(await rpc(ownerB,'garage_booking_configure',{
@@ -217,4 +222,9 @@ assert.equal(good(await book(bob,'Bob Example',slot2),'existing confirmed replay
 assert.equal(good(await rpc(alice,'garage_booking_request_once',aliceArgs),'cancelled durable replay after unlist'),a);
 assert.equal(good(await rpc(durable,'garage_booking_request_once',durableArgs),'withdrawn durable replay after unlist'),durableId);
 denied(await book(alice,'Alice Example'),'unlisted garage refuses requests');
+const privateProfile=good(await rpc(ownerA,'garage_booking_profile',{p_workspace:shopA}), 'unlisted owner profile');
+assert.equal(privateProfile.length,1);
+assert.equal(privateProfile[0].workspace_id,shopA);
+assert.equal(privateProfile[0].listed,false);
+assert.equal(privateProfile[0].time_zone,'Europe/London');
 console.log('PASS local Supabase Garage consumer bookings: listing consent, tenant isolation, verified sessions, collision, cancellation, unlisting');

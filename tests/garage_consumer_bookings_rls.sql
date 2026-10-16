@@ -5,6 +5,7 @@
 \ir ../supabase/garage_staging/011_booking_request_replay.sql
 \ir ../supabase/garage_staging/012_booking_cancellation_replay.sql
 \ir ../supabase/garage_staging/013_booking_durable_request_keys.sql
+\ir ../supabase/garage_staging/015_booking_profile_owner_read.sql
 
 INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('00000000-0000-4000-8000-000000000031','customer-a@example.test',now()),
@@ -312,3 +313,36 @@ BEGIN
  WHERE request_key=current_setting('booking.qa.key')::uuid)<>1 THEN
   RAISE EXCEPTION 'Durable ledger not atomic'; END IF;
 END $$;
+
+-- Owner reads include unlisted profiles, without broad table grants.
+DO $$ BEGIN
+ IF has_table_privilege('authenticated','public.garage_booking_profiles','SELECT')
+ OR has_function_privilege('anon','public.garage_booking_profile(uuid)','EXECUTE')
+ OR NOT has_function_privilege('authenticated','public.garage_booking_profile(uuid)','EXECUTE')
+ THEN RAISE EXCEPTION 'Unexpected owner profile ACL'; END IF;
+END $$;
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+DO $$ BEGIN
+ IF (SELECT count(*) FROM public.garage_booking_profile(
+  '00000000-0000-4000-8000-000000000101'))<>1 THEN
+  RAISE EXCEPTION 'Owner profile missing'; END IF;
+END $$;
+COMMIT;
+BEGIN;
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE u text; denied boolean;
+BEGIN
+ FOREACH u IN ARRAY ARRAY[
+  '00000000-0000-4000-8000-000000000002',
+  '00000000-0000-4000-8000-000000000003',
+  '00000000-0000-4000-8000-000000000031',''] LOOP
+  PERFORM set_config('request.jwt.claim.sub',u,true); denied:=false;
+  BEGIN PERFORM public.garage_booking_profile('00000000-0000-4000-8000-000000000101');
+  EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+  IF NOT denied THEN RAISE EXCEPTION 'Non-owner read private profile'; END IF;
+ END LOOP;
+END $$;
+COMMIT;
