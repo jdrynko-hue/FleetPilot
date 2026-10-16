@@ -190,6 +190,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _busy = false;
   String? _error;
   bool _sent = false;
+  bool _uncertain = false;
   int _generation = 0;
 
   bool get _pl => AppLocale.language.value == 'pl';
@@ -206,6 +207,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       _generation++;
       _busy = false;
       _sent = false;
+      _uncertain = false;
       _error = null;
       _service = null;
       _when = null;
@@ -248,7 +250,8 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   }
 
   Future<void> _send() async {
-    if (_busy || _sent || !(_form.currentState?.validate() ?? false)) return;
+    if (_busy || _sent || _uncertain ||
+        !(_form.currentState?.validate() ?? false)) return;
     final when = _when;
     if (when == null ||
         when.isBefore(DateTime.now().add(const Duration(hours: 1))) ||
@@ -275,9 +278,21 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       );
       if (mounted && gen == _generation) setState(() => _sent = true);
     } catch (_) {
-      if (mounted && gen == _generation) setState(() => _error = tr(
-        'Nie udało się wysłać prośby. Sprawdź logowanie i spróbuj ponownie.',
-        'Could not send request. Check your sign-in and retry.'));
+      // A timeout can happen after the server accepted a request.
+      // Without an idempotency key, retrying could create a duplicate.
+      if (mounted && gen == _generation) {
+        setState(() {
+          _uncertain = true;
+          _error = tr(
+            'Nie można potwierdzić wysłania. Sprawdź „Moje terminy” '
+            'przed ponownym wysłaniem zgłoszenia. '
+            'Wróć do listy warsztatów.',
+            'Request outcome is uncertain. Check My appointments '
+            'before submitting another request. '
+            'Return to the workshop list.',
+          );
+        });
+      }
     } finally {
       if (mounted && gen == _generation) setState(() => _busy = false);
     }
@@ -336,7 +351,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             : _when!.toLocal().toString().substring(0, 16))),
         if (_error != null) Text(_error!, key: const Key('booking_request_error')),
         FilledButton(key: const Key('booking_send'),
-          onPressed: _busy ? null : _send,
+          onPressed: _busy || _uncertain ? null : _send,
           child: Text(_busy ? tr('Wysyłanie…', 'Sending…') :
             tr('Wyślij prośbę (bez rezerwacji)', 'Send request (not booked)'))),
       ],
