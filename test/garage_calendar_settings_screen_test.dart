@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -152,4 +154,107 @@ void main(){
     expect(find.text('Existing Bay'),findsNothing);
     expect(find.byKey(const Key('garage_settings_notice')),findsOneWidget);
   });
+
+  GarageCalendarSettingsScreen settings({
+    Future<bool> Function()? write,
+    Future<List<GarageOpeningHours>> Function()? hours,
+    Future<List<GarageCalendarResource>> Function()? bays,
+    Future<List<GarageRosterMechanic>> Function()? mechanics,
+  }) => GarageCalendarSettingsScreen(
+    loadHours: hours ?? () async => [monday],
+    loadResources: bays ?? () async => [bay],
+    loadMechanics: mechanics ?? () async => [const GarageRosterMechanic(
+      userId: '00000000-0000-4000-8000-000000000301', email: 'private-staff@example.test')],
+    setHours: (day, opens, closes, enabled) async => await write?.call() ?? true,
+    addResource: (name) async { await write?.call(); return resourceId; },
+    setResourceActive: (id, active) async => await write?.call() ?? true,
+    assignMechanic: (id, mechanic) async => await write?.call() ?? true,
+  );
+
+  for (final stage in ['hours', 'bays', 'mechanics']) {
+    testWidgets('settings scope replacement stops old $stage load', (tester) async {
+      final pending = Completer<void>();
+      final calls = <String>[];
+      Future<T> old<T>(String name, T result) async {
+        calls.add(name);
+        if (name == stage) await pending.future;
+        return result;
+      }
+      await tester.pumpWidget(MaterialApp(home: settings(
+        hours: () => old('hours', [monday]), bays: () => old('bays', [bay]),
+        mechanics: () => old('mechanics', [const GarageRosterMechanic(
+          userId: '00000000-0000-4000-8000-000000000301', email: 'private-staff@example.test')]),
+      )));
+      await tester.pump();
+      expect(calls.last, stage);
+      await tester.pumpWidget(MaterialApp(home: settings(
+        hours: () async => [], bays: () async => [], mechanics: () async => [])));
+      await tester.pumpAndSettle();
+      final count = calls.length;
+      pending.complete();
+      await tester.pumpAndSettle();
+      expect(calls.length, count);
+      expect(find.text('Existing Bay'), findsNothing);
+      expect(find.text('private-staff@example.test'), findsNothing);
+      expect(find.byKey(const Key('garage_settings_notice')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final action in ['hours', 'add', 'toggle', 'mechanic']) {
+    testWidgets('scope change dismisses old $action dialog without writing', (tester) async {
+      var oldWrites = 0;
+      var newWrites = 0;
+      await render(tester, settings(write: () async { oldWrites++; return true; }));
+      final key = switch (action) {
+        'hours' => 'garage_settings_weekday_1',
+        'add' => 'garage_settings_add_bay',
+        'toggle' => 'garage_settings_toggle_' + resourceId,
+        _ => 'garage_settings_assign_' + resourceId,
+      };
+      await tester.scrollUntilVisible(find.byKey(Key(key)), 250,
+        scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      if (action == 'mechanic') expect(find.text('private-staff@example.test'), findsOneWidget);
+      await tester.pumpWidget(MaterialApp(home: settings(
+        write: () async { newWrites++; return true; },
+        bays: () async => [], mechanics: () async => [])));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('private-staff@example.test'), findsNothing);
+      expect(oldWrites, 0);
+      expect(newWrites, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final fails in [false, true]) {
+    testWidgets('old settings write cannot refresh new scope (error=$fails)', (tester) async {
+      final pending = Completer<bool>();
+      var newLoads = 0;
+      await render(tester, settings(write: () => pending.future));
+      final toggle = find.byKey(Key('garage_settings_toggle_' + resourceId));
+      await tester.scrollUntilVisible(toggle, 250, scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('garage_resource_confirm_toggle')));
+      await tester.pump();
+      await tester.pumpWidget(MaterialApp(home: settings(
+        hours: () async { newLoads++; return []; },
+        bays: () async => [], mechanics: () async => [])));
+      await tester.pumpAndSettle();
+      expect(newLoads, 1);
+      if (fails) { pending.completeError(StateError('old private failure')); }
+      else { pending.complete(true); }
+      await tester.pumpAndSettle();
+      expect(newLoads, 1);
+      expect(find.byKey(const Key('garage_settings_notice')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
 }
