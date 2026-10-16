@@ -36,12 +36,30 @@ class GarageBookingSearchScreen extends StatefulWidget {
 class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   final _city = TextEditingController();
   List<GarageBookingWorkshop> _shops = const [];
+  String? _serviceFilter;
+  bool _searched = false;
   bool _busy = false;
   String? _error;
   int _generation = 0;
 
   bool get _pl => AppLocale.language.value == 'pl';
   String tr(String pl, String en) => _pl ? pl : en;
+
+  String _serviceLabel(String code) => switch (code) {
+    'diagnostics' => tr('Diagnostyka', 'Diagnostics'),
+    'maintenance' => tr('Serwis i konserwacja', 'Maintenance'),
+    'brakes' => tr('Hamulce', 'Brakes'),
+    'tyres' => tr('Opony', 'Tyres'),
+    'inspection' => tr('Przeglądy', 'Inspections'),
+    'electrical' => tr('Elektryka', 'Electrical'),
+    'bodywork' => tr('Blacharstwo', 'Bodywork'),
+    'other' => tr('Inne', 'Other'),
+    _ => code,
+  };
+
+  List<GarageBookingWorkshop> get _visibleShops =>
+    List.unmodifiable(_serviceFilter == null ? _shops
+      : _shops.where((shop) => shop.services.contains(_serviceFilter)));
 
   @override
   void dispose() {
@@ -59,12 +77,13 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       return;
     }
     final gen = ++_generation;
-    setState(() { _busy = true; _shops = const []; _error = null; });
+    setState(() { _busy = true; _shops = const []; _searched = false; _error = null; });
     try {
       final result = await widget.search(city: city.isEmpty ? null : city);
       if (!mounted || gen != _generation) return;
       setState(() {
         _shops = List.unmodifiable(result);
+        _searched = true;
         if (result.isEmpty) {
           _error = tr('Brak zgłoszonych warsztatów.',
               'No workshops accepting requests found.');
@@ -74,6 +93,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       if (!mounted || gen != _generation) return;
       setState(() {
         _shops = const [];
+        _searched = false;
         _error = tr('Nie można pobrać katalogu. Spróbuj ponownie.',
             'Could not load workshops. Retry.');
       });
@@ -106,22 +126,51 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
             labelText: tr('Miasto (opcjonalnie)', 'City (optional)'))),
+        DropdownButtonFormField<String>(
+          key: const Key('booking_search_service'),
+          initialValue: _serviceFilter,
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            labelText: tr('Rodzaj usługi', 'Service category')),
+          items: [
+            DropdownMenuItem<String>(value: null,
+              child: Text(tr('Wszystkie usługi', 'All services'))),
+            for (final code in GarageBookingService.values)
+              DropdownMenuItem<String>(value: code, child: Text(_serviceLabel(code))),
+          ],
+          onChanged: _busy ? null : (value) =>
+            setState(() => _serviceFilter = value),
+        ),
+        const SizedBox(height: 12),
         FilledButton(key: const Key('booking_search_submit'),
           onPressed: _busy ? null : _search,
           child: Text(tr('Szukaj warsztatów', 'Search workshops'))),
         if (_busy) const Center(child: CircularProgressIndicator()),
         if (_error != null) Text(_error!,
           key: const Key('booking_search_error')),
-        for (final shop in _shops) Card(
+        if (_searched && _shops.isNotEmpty && _visibleShops.isEmpty)
+          Text(tr('Żaden z widocznych warsztatów nie oferuje tej usługi. '
+              'Wybierz inną kategorię lub miasto.',
+              'None of these workshops list this service. '
+              'Try another category or city.'),
+            key: const Key('booking_search_no_service')),
+        if (_searched && _visibleShops.isNotEmpty)
+          Text(tr('Znalezione warsztaty: ${_visibleShops.length}. '
+              'Wybrany termin jest tylko propozycją.',
+              'Workshops found: ${_visibleShops.length}. '
+              'Your preferred time is a request, not a booking.'),
+            key: const Key('booking_search_count')),
+        for (final shop in _visibleShops) Card(
           key: Key('booking_shop_${shop.workspaceId}'),
           child: Padding(padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(shop.name, style: Theme.of(context).textTheme.titleMedium),
                 Text('${shop.city}, ${shop.country}'),
-                Text(shop.services.join(', ')),
-                Text(tr('Strefa czasowa: ${shop.timeZone}',
-                    'Workshop time zone: ${shop.timeZone}')),
+                Text(shop.services.map(_serviceLabel).join(' · ')),
+                Text(tr('Termin potwierdza warsztat.',
+                    'The workshop confirms your appointment.')),
                 OutlinedButton(key: Key('booking_open_${shop.workspaceId}'),
                   onPressed: _busy ? null : () => _open(shop),
                   child: Text(tr('Poproś o termin', 'Request a time'))),
