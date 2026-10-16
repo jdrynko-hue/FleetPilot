@@ -28,7 +28,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
   bool _approvalSucceeded = false;
   int? _approvedRevision;
   String? _notice;
-
+  int _generation = 0;
 
   @override
   void initState() {
@@ -36,32 +36,57 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
     _refresh();
   }
 
+  @override
+  void didUpdateWidget(covariant GarageCustomerQuoteScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.loadQuote != oldWidget.loadQuote ||
+        widget.approveRevision != oldWidget.approveRevision) {
+      // The callbacks define the authenticated order/scope. Never carry a
+      // confirmed revision or in-flight response into a different scope.
+      _generation++;
+      _approvalSucceeded = false;
+      _approvedRevision = null;
+      _approving = false;
+      _quote = null;
+      _refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
   Future<void> _refresh() async {
     if (_approving) return;
+    final generation = ++_generation;
+    final load = widget.loadQuote;
     setState(() {
       _loading = true;
       _quote = null;
       _notice = null;
     });
     try {
-      final quote = await widget.loadQuote();
-      if (!mounted) return;
+      final quote = await load();
+      if (!mounted || generation != _generation) return;
       setState(() {
         _quote = quote;
-        // If the approval RPC already succeeded, do not allow an immediate
-        // duplicate submission just because a later read is temporarily
-        // stale. A *new* quote revision is independently approvable.
+        // Do not replay an already accepted revision after a stale read.
+        // This marker is reset on account/order scope changes.
         if (quote?.approved == true) _approvedRevision = quote!.revision;
         _approvalSucceeded = quote != null &&
             (quote.approved || quote.revision == _approvedRevision);
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _notice = GarageUiText.get('customerLoadFailed');
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && generation == _generation) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -95,6 +120,9 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         selected == null || selected.approved) {
       return;
     }
+    final generation = _generation;
+    final load = widget.loadQuote;
+    final approve = widget.approveRevision;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -118,7 +146,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         ],
       ),
     );
-    if (!mounted || accepted != true || _approving) return;
+    if (!mounted || generation != _generation || accepted != true || _approving) return;
     setState(() {
       _approving = true;
       _notice = null;
@@ -126,8 +154,8 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
     try {
       // TOCTOU guard: refresh before approval. Server independently locks the
       // order and refuses stale revisions or unauthorized callers.
-      final latest = await widget.loadQuote();
-      if (!mounted) return;
+      final latest = await load();
+      if (!mounted || generation != _generation) return;
       if (latest == null || !_sameQuote(selected, latest)) {
         setState(() {
           _quote = latest;
@@ -135,8 +163,8 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         });
         return;
       }
-      final acceptedRevision = await widget.approveRevision(selected.revision);
-      if (!mounted) return;
+      final acceptedRevision = await approve(selected.revision);
+      if (!mounted || generation != _generation) return;
       if (acceptedRevision != selected.revision) {
         throw const FormatException('Unexpected approved revision');
       }
@@ -146,8 +174,8 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         _notice = GarageUiText.get('customerRecorded');
       });
       try {
-        final confirmed = await widget.loadQuote();
-        if (!mounted) return;
+        final confirmed = await load();
+        if (!mounted || generation != _generation) return;
         setState(() {
           _quote = confirmed;
           if (confirmed?.approved == true) {
@@ -158,13 +186,15 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         // Successful server RPC is not replayed just because re-fetch failed.
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _quote = null; // Never show stale approval state as actionable.
         _notice = GarageUiText.get('customerApprovalUncertain');
       });
     } finally {
-      if (mounted) setState(() => _approving = false);
+      if (mounted && generation == _generation) {
+        setState(() => _approving = false);
+      }
     }
   }
 
