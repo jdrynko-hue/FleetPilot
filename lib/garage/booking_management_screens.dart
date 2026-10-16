@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
 import 'booking_time_text.dart';
@@ -33,8 +32,6 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   String? error;
   int version = 0;
   int scopeVersion = 0;
-  bool get pl => AppLocale.language.value == 'pl';
-  String tr(String a, String b) => pl ? a : b;
   @override
   void initState() { super.initState(); refresh(); }
   @override
@@ -66,8 +63,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
       }
     } catch (_) {
       if (mounted && version == current) {
-        setState(() => error = tr('Nie można pobrać zgłoszeń.',
-            'Could not load requests. Verify access and retry.'));
+        setState(() => error = 'inboxLoadFailed');
       }
     } finally {
       if (mounted && version == current) setState(() => busy = false);
@@ -81,19 +77,18 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
     final confirmCancellation = widget.confirmCancellation;
     final accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
-        title: Text(tr('Potwierdź zmianę', 'Confirm action')),
+        title: Text(GarageUiText.get('inboxConfirmTitle')),
         content: Text(type == 'accept'
-          ? tr('Sprawdź grafik przed potwierdzeniem terminu.',
-               'Check your workshop schedule before accepting.')
+          ? GarageUiText.get('inboxAcceptQuestion')
           : type == 'decline'
-            ? tr('Odrzucić zapytanie?', 'Decline this request?')
-            : tr('Anulować i zwolnić termin?', 'Cancel and release this slot?')),
+            ? GarageUiText.get('inboxDeclineQuestion')
+            : GarageUiText.get('inboxCancelQuestion')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c,false),
-            child: Text(tr('Wróć', 'Back'))),
+            child: Text(GarageUiText.get('inboxBack'))),
           FilledButton(key: const Key('workshop_booking_confirm'),
             onPressed: () => Navigator.pop(c,true),
-            child: Text(tr('Potwierdź', 'Confirm'))),
+            child: Text(GarageUiText.get('inboxConfirm'))),
         ],
       ));
     if (!mounted || scope != scopeVersion || accepted != true || busy) return;
@@ -116,9 +111,7 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
       if (mounted && scope == scopeVersion) {
         await refresh();
         if (mounted && scope == scopeVersion && failed) {
-          setState(() => error = tr(
-            'Nie potwierdzono zmiany. Sprawdź aktualny status przed próbą.',
-            'Action unconfirmed. Check the current status before retrying.'));
+          setState(() => error = 'inboxUncertain');
         }
       }
     }
@@ -127,17 +120,17 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(tr('Zgłoszenia terminów', 'Appointment requests')),
+      title: Text(GarageUiText.get('inboxTitle')),
       actions: [IconButton(key: const Key('workshop_booking_refresh'),
+        tooltip: GarageUiText.get('refresh'),
         onPressed: busy ? null : refresh, icon: const Icon(Icons.refresh))]),
     body: SafeArea(child: busy
       ? const Center(child: CircularProgressIndicator())
       : ListView(padding: const EdgeInsets.all(16), children: [
-        Text(tr('To prośby, nie wolne terminy. Sprawdź kalendarz.',
-                'These are requests, not available slots. Check your calendar.')),
-        if (error != null) Text(error!,
+        Text(GarageUiText.get('inboxDisclaimer')),
+        if (error != null) Text(GarageUiText.get(error!),
           key: const Key('workshop_booking_error')),
-        if (items.isEmpty) Text(tr('Brak nowych zgłoszeń.', 'No requests.'),
+        if (items.isEmpty && error == null) Text(GarageUiText.get('inboxEmpty'),
           key: const Key('workshop_booking_empty')),
         for (final entry in items) Card(
           key: Key('workshop_booking_item_' + entry.id),
@@ -158,18 +151,17 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
                   FilledButton(
                     key: Key('workshop_booking_accept_' + entry.id),
                     onPressed: () => action(entry,'accept'),
-                    child: Text(tr('Potwierdź', 'Accept'))),
+                    child: Text(GarageUiText.get('inboxAccept'))),
                   OutlinedButton(
                     key: Key('workshop_booking_decline_' + entry.id),
                     onPressed: () => action(entry,'decline'),
-                    child: Text(tr('Odrzuć', 'Decline'))),
+                    child: Text(GarageUiText.get('inboxDecline'))),
                 ]),
               if (entry.status == GarageBookingStatus.cancellationRequested)
                 OutlinedButton(
                   key: Key('workshop_booking_cancel_' + entry.id),
                   onPressed: () => action(entry,'cancel'),
-                  child: Text(tr('Potwierdź anulowanie',
-                      'Confirm cancellation'))),
+                  child: Text(GarageUiText.get('inboxConfirmCancellation'))),
             ]))),
       ])),
   );
