@@ -93,9 +93,15 @@ class GarageRepairBridgeRepository {
   Future<GarageRepairBridgeSnapshot> load(String requestId) async {
     _signedIn();
     requireId(requestId, 'requestId');
+    final user = client.auth.currentUser!.id;
     final result = await client.rpc('garage_fleet_snapshot',
         params: {'p_request': requestId});
-    return GarageRepairBridgeSnapshot.parse(result);
+    if (client.auth.currentUser?.id != user) throw StateError('Account changed');
+    final snapshot = GarageRepairBridgeSnapshot.parse(result);
+    if (snapshot.requestId != requestId) {
+      throw const FormatException('Unexpected RepairBridge request');
+    }
+    return snapshot;
   }
 
   Future<int> approveQuote(String requestId, int exactRevision) async {
