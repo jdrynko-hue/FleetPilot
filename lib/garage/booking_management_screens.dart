@@ -29,19 +29,35 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   List<GarageBookingInboxItem> items = const [];
   String? error;
   int version = 0;
+  int scopeVersion = 0;
   bool get pl => AppLocale.language.value == 'pl';
   String tr(String a, String b) => pl ? a : b;
   @override
   void initState() { super.initState(); refresh(); }
   @override
-  void dispose() { version++; super.dispose(); }
+  void didUpdateWidget(covariant GarageBookingWorkshopScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadInbox != widget.loadInbox ||
+        oldWidget.respond != widget.respond ||
+        oldWidget.confirmCancellation != widget.confirmCancellation) {
+      // Callback identity defines the workshop/staff authorization scope.
+      scopeVersion++;
+      version++;
+      items = const [];
+      error = null;
+      refresh();
+    }
+  }
+  @override
+  void dispose() { version++; scopeVersion++; super.dispose(); }
 
   Future<void> refresh() async {
     if (!mounted) return;
     final current = ++version;
+    final loadInbox = widget.loadInbox;
     setState(() { busy = true; items = const []; error = null; });
     try {
-      final result = await widget.loadInbox();
+      final result = await loadInbox();
       if (mounted && version == current) {
         setState(() => items = List.unmodifiable(result));
       }
@@ -57,6 +73,9 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
 
   Future<void> action(GarageBookingInboxItem entry, String type) async {
     if (busy) return;
+    final scope = scopeVersion;
+    final respond = widget.respond;
+    final confirmCancellation = widget.confirmCancellation;
     final accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
         title: Text(tr('Potwierdź zmianę', 'Confirm action')),
@@ -74,14 +93,14 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
             child: Text(tr('Potwierdź', 'Confirm'))),
         ],
       ));
-    if (!mounted || accepted != true || busy) return;
+    if (!mounted || scope != scopeVersion || accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
     var failed = false;
     try {
       if (type == 'cancel') {
-        await widget.confirmCancellation(entry.id);
+        await confirmCancellation(entry.id);
       } else {
-        final result = await widget.respond(entry.id,type == 'accept');
+        final result = await respond(entry.id,type == 'accept');
         if (result != (type == 'accept'
               ? GarageBookingStatus.confirmed
               : GarageBookingStatus.declined)) {
@@ -91,9 +110,9 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
     } catch (_) {
       failed = true;
     } finally {
-      if (mounted) {
+      if (mounted && scope == scopeVersion) {
         await refresh();
-        if (mounted && failed) {
+        if (mounted && scope == scopeVersion && failed) {
           setState(() => error = tr(
             'Nie potwierdzono zmiany. Sprawdź aktualny status przed próbą.',
             'Action unconfirmed. Check the current status before retrying.'));
@@ -174,19 +193,34 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
   bool busy = true;
   String? error;
   int version = 0;
+  int scopeVersion = 0;
   bool get pl => AppLocale.language.value == 'pl';
   String tr(String a,String b) => pl ? a : b;
   @override
   void initState() { super.initState(); refresh(); }
   @override
-  void dispose() { version++; super.dispose(); }
+  void didUpdateWidget(covariant GarageMyBookingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadBookings != widget.loadBookings ||
+        oldWidget.cancel != widget.cancel) {
+      // Do not retain private bookings when the signed-in customer changes.
+      scopeVersion++;
+      version++;
+      items = const [];
+      error = null;
+      refresh();
+    }
+  }
+  @override
+  void dispose() { version++; scopeVersion++; super.dispose(); }
 
   Future<void> refresh() async {
     if (!mounted) return;
     final v = ++version;
+    final loadBookings = widget.loadBookings;
     setState(() { busy = true; items = const []; error = null; });
     try {
-      final result = await widget.loadBookings();
+      final result = await loadBookings();
       if (mounted && v == version) {
         setState(() => items = List.unmodifiable(result));
       }
@@ -212,6 +246,8 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
 
   Future<void> withdraw(GarageBookingSummary entry) async {
     if (busy) return;
+    final scope = scopeVersion;
+    final cancel = widget.cancel;
     final accepted = await showDialog<bool>(context: context,
       builder: (c) => AlertDialog(
         title: Text(tr('Anulować termin?', 'Cancel this appointment?')),
@@ -226,11 +262,11 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
             onPressed: () => Navigator.pop(c,true),
             child: Text(tr('Tak','Yes'))),
         ]));
-    if (!mounted || accepted != true || busy) return;
+    if (!mounted || scope != scopeVersion || accepted != true || busy) return;
     setState(() { busy = true; items = const []; error = null; });
     var failed = false;
     try {
-      final result = await widget.cancel(entry.id);
+      final result = await cancel(entry.id);
       if (result != GarageBookingStatus.withdrawn &&
           result != GarageBookingStatus.cancellationRequested) {
         throw const FormatException('Unexpected cancellation state');
@@ -238,9 +274,9 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     } catch (_) {
       failed = true;
     } finally {
-      if (mounted) {
+      if (mounted && scope == scopeVersion) {
         await refresh();
-        if (mounted && failed) {
+        if (mounted && scope == scopeVersion && failed) {
           setState(() => error = tr(
             'Nie potwierdzono anulowania. Sprawdź aktualny status.',
             'Cancellation unconfirmed. Check the current status.'));
