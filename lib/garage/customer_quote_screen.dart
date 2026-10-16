@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
+import 'garage_ui_text.dart';
 import 'customer_quote_repository.dart';
 
 /// Revision-aware estimate review shared by QA private-customer and Fleet flows.
@@ -29,8 +29,6 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
   int? _approvedRevision;
   String? _notice;
 
-  bool get _polish => AppLocale.language.value == 'pl';
-  String _tr(String pl, String en) => _polish ? pl : en;
 
   @override
   void initState() {
@@ -60,10 +58,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _notice = _tr(
-          'Nie udało się bezpiecznie pobrać wyceny. Spróbuj ponownie.',
-          'Could not securely load this estimate. Please retry.',
-        );
+        _notice = GarageUiText.get('customerLoadFailed');
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -103,26 +98,22 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(_tr('Potwierdź wycenę', 'Approve estimate')),
+        title: Text(GarageUiText.get('customerConfirm')),
         content: Text(
-          _tr(
-            'Czy akceptujesz wycenę nr ${selected.revision} na kwotę '
-                '${selected.formatMinor(selected.totalMinor)}? '
-                'To zgoda na wykonanie prac zgodnych z tą wersją.',
-            'Do you approve estimate revision ${selected.revision} '
-                'totalling ${selected.formatMinor(selected.totalMinor)}? '
-                'This authorizes the work described in this revision.',
-          ),
+          GarageUiText.format('customerConfirmBody', {
+            'revision': selected.revision,
+            'total': selected.formatMinor(selected.totalMinor),
+          }),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(_tr('Anuluj', 'Cancel')),
+            child: Text(GarageUiText.get('customerCancel')),
           ),
           FilledButton(
             key: const Key('garage_quote_confirm'),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(_tr('Zatwierdź wycenę', 'Approve estimate')),
+            child: Text(GarageUiText.get('customerApprove')),
           ),
         ],
       ),
@@ -140,10 +131,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
       if (latest == null || !_sameQuote(selected, latest)) {
         setState(() {
           _quote = latest;
-          _notice = _tr(
-            'Wycena została zmieniona. Sprawdź aktualną wersję przed zgodą.',
-            'The estimate changed. Review the latest revision before approval.',
-          );
+          _notice = GarageUiText.get('customerChanged');
         });
         return;
       }
@@ -155,10 +143,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
       setState(() {
         _approvalSucceeded = true;
         _approvedRevision = selected.revision;
-        _notice = _tr(
-          'Zgoda została zapisana. Odśwież, aby potwierdzić status.',
-          'Approval recorded. Refresh to verify the current status.',
-        );
+        _notice = GarageUiText.get('customerRecorded');
       });
       try {
         final confirmed = await widget.loadQuote();
@@ -166,10 +151,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         setState(() {
           _quote = confirmed;
           if (confirmed?.approved == true) {
-            _notice = _tr(
-              'Wycena została zatwierdzona.',
-              'Estimate approved successfully.',
-            );
+            _notice = GarageUiText.get('customerApprovedMessage');
           }
         });
       } catch (_) {
@@ -179,10 +161,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
       if (!mounted) return;
       setState(() {
         _quote = null; // Never show stale approval state as actionable.
-        _notice = _tr(
-          'Nie udało się potwierdzić zgody. Odśwież stan wyceny.',
-          'Could not confirm approval. Refresh the estimate before retrying.',
-        );
+        _notice = GarageUiText.get('customerApprovalUncertain');
       });
     } finally {
       if (mounted) setState(() => _approving = false);
@@ -198,11 +177,11 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tr('Wycena naprawy', 'Repair estimate')),
+        title: Text(GarageUiText.get('customerEstimateTitle')),
         actions: [
           IconButton(
             key: const Key('garage_quote_refresh'),
-            tooltip: _tr('Odśwież', 'Refresh'),
+            tooltip: GarageUiText.get('refresh'),
             onPressed: _loading || _approving ? null : _refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -223,31 +202,25 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
                   ],
                   if (quote == null) ...[
                     Text(
-                      _tr(
-                        'Nie ma aktualnej wyceny do wyświetlenia.',
-                        'No current estimate to display.',
-                      ),
+                      GarageUiText.get('customerEmpty'),
                       key: const Key('garage_quote_empty'),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _refresh,
-                      child: Text(_tr('Spróbuj ponownie', 'Try again')),
+                      child: Text(GarageUiText.get('customerRetry')),
                     ),
                   ] else ...[
                     Text(
-                      _tr(
-                        'Wersja ${quote.revision}',
-                        'Revision ${quote.revision}',
-                      ),
+                      GarageUiText.format('customerRevision', {'revision': quote.revision}),
                       key: const Key('garage_quote_revision'),
                       style: style.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       quote.approved || _approvalSucceeded
-                          ? _tr('Zatwierdzona', 'Approved')
-                          : _tr('Oczekuje na zgodę', 'Awaiting approval'),
+                          ? GarageUiText.get('customerApproved')
+                          : GarageUiText.get('customerPending'),
                       key: const Key('garage_quote_status'),
                     ),
                     const SizedBox(height: 16),
@@ -267,7 +240,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
                                 '${quote.formatMinor(line.unitPriceMinor)}',
                               ),
                               Text(
-                                _tr('Podatek', 'Tax') +
+                                GarageUiText.get('customerTax') +
                                     ': ${quote.formatMinor(line.taxMinor)}',
                               ),
                               Text(
@@ -281,16 +254,16 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
                     }),
                     const SizedBox(height: 12),
                     Text(
-                      _tr('Kwota netto', 'Subtotal') +
+                      GarageUiText.get('customerSubtotal') +
                           ': ${quote.formatMinor(quote.subtotalMinor)}',
                     ),
                     Text(
-                      _tr('Podatek łącznie', 'Total tax') +
+                      GarageUiText.get('customerTotalTax') +
                           ': ${quote.formatMinor(quote.taxMinor)}',
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _tr('Łącznie', 'Total') +
+                      GarageUiText.get('customerTotal') +
                           ': ${quote.formatMinor(quote.totalMinor)}',
                       key: const Key('garage_quote_total'),
                       style: style.titleLarge,
@@ -301,18 +274,13 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
                       onPressed: canApprove ? _requestApproval : null,
                       child: Text(
                         _approving
-                            ? _tr('Zatwierdzanie…', 'Approving…')
-                            : _tr('Zatwierdź wycenę', 'Approve estimate'),
+                            ? GarageUiText.get('customerApproving')
+                            : GarageUiText.get('customerApprove'),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      _tr(
-                        'Zatwierdzenie dotyczy tylko podanej wersji '
-                            'kosztorysu. Zmiana ceny wymaga nowej zgody.',
-                        'Approval applies only to this estimate revision. '
-                            'Any changed quote requires fresh approval.',
-                      ),
+                      GarageUiText.get('customerScopeWarning'),
                       style: style.bodySmall,
                     ),
                   ],
