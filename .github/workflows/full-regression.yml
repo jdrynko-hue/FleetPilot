@@ -7,6 +7,7 @@ on:
       - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
       - '.github/workflows/full-regression.yml'
@@ -17,6 +18,7 @@ on:
       - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
       - '.github/workflows/full-regression.yml'
@@ -65,9 +67,34 @@ jobs:
           flutter test test/ecosystem_auth_routes_test.dart test/ecosystem_access_test.dart
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+      - name: Stage the actual Flutter portal entry
+        run: cp web/app/index.html web/index.html
       - name: Compile connected Flutter web for QA without deployment
         run: >-
-          flutter build web --release
+          flutter build web --release --base-href "/app/"
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
+      - name: Verify the compiled QA portal can bootstrap at its real path
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Entry(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.bases = []
+                  self.scripts = []
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  if tag == 'base': self.bases.append(attrs.get('href'))
+                  if tag == 'script': self.scripts.append(attrs.get('src'))
+          output = Path('build/web')
+          entry = Entry()
+          entry.feed((output / 'index.html').read_text())
+          assert entry.bases == ['/app/'], 'QA portal base path is incorrect'
+          assert 'flutter_bootstrap.js' in entry.scripts, 'Compiled page cannot start Flutter'
+          for name in ['flutter_bootstrap.js', 'main.dart.js']:
+              assert (output / name).is_file() and (output / name).stat().st_size > 0, name
+          print('PASS: QA portal entry, /app/ base and bootstrap assets')
+          PY
