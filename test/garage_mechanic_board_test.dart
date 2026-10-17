@@ -100,7 +100,7 @@ void main() {
     expect(find.text('Moje zlecenia'), findsOneWidget);
     expect(find.text('Tylko zlecenia przydzielone do Twojego konta.'),
         findsOneWidget);
-    expect(find.text('W trakcie'), findsOneWidget);
+    expect(find.text('W naprawie'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

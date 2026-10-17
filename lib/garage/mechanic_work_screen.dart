@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
+import 'garage_ui_text.dart';
 import 'mechanic_board.dart';
 import 'mechanic_jobs_repository.dart';
 import 'media_repository.dart';
@@ -59,8 +59,6 @@ class _GarageMechanicWorkScreenState
   String? _error;
   int _requestVersion = 0;
 
-  bool get _pl => AppLocale.language.value == 'pl';
-
   @override
   void initState() {
     super.initState();
@@ -84,9 +82,7 @@ class _GarageMechanicWorkScreenState
       if (!mounted || request != _requestVersion) return;
       setState(() {
         _assignments = const [];
-        _error = _pl
-            ? 'Nie udało się pobrać zleceń. Sprawdź dostęp i spróbuj ponownie.'
-            : 'Could not load assigned jobs. Check access and retry.';
+        _error = GarageUiText.get('mechanicLoadFailed');
       });
     } finally {
       if (mounted && request == _requestVersion) {
@@ -116,11 +112,11 @@ class _GarageMechanicWorkScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_pl ? 'Flotaryx Garage' : 'Flotaryx Garage'),
+        title: const Text('Flotaryx Garage'),
         actions: [
           IconButton(
             key: const Key('garage_mechanic_work_refresh'),
-            tooltip: _pl ? 'Odśwież' : 'Refresh',
+            tooltip: GarageUiText.get('refresh'),
             onPressed: _busy ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -144,7 +140,7 @@ class _GarageMechanicWorkScreenState
                         OutlinedButton(
                           key: const Key('garage_mechanic_work_retry'),
                           onPressed: _load,
-                          child: Text(_pl ? 'Spróbuj ponownie' : 'Try again'),
+                          child: Text(GarageUiText.get('retry')),
                         ),
                       ],
                     ),

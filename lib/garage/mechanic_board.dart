@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
+import 'garage_ui_text.dart';
 import 'work_order_domain.dart';
 
 /// Sanitised assignment projection supplied by an authorized Garage backend.
@@ -40,30 +40,29 @@ class GarageMechanicBoard extends StatelessWidget {
   final List<GarageMechanicAssignment> assignments;
   final ValueChanged<String> onOpenAssignment;
 
-  String _statusName(GarageOrderStatus status, bool polish) {
+  String _statusName(GarageOrderStatus status) {
     switch (status) {
       case GarageOrderStatus.received:
-        return polish ? 'Przyjęte' : 'Received';
+        return GarageUiText.get('received');
       case GarageOrderStatus.diagnosing:
-        return polish ? 'Diagnoza' : 'Diagnosing';
+        return GarageUiText.get('diagnosing');
       case GarageOrderStatus.awaitingApproval:
-        return polish ? 'Czeka na zgodę' : 'Awaiting approval';
+        return GarageUiText.get('awaitingApproval');
       case GarageOrderStatus.awaitingParts:
-        return polish ? 'Czeka na części' : 'Awaiting parts';
+        return GarageUiText.get('awaitingParts');
       case GarageOrderStatus.inProgress:
-        return polish ? 'W trakcie' : 'In progress';
+        return GarageUiText.get('inProgress');
       case GarageOrderStatus.ready:
-        return polish ? 'Gotowe' : 'Ready';
+        return GarageUiText.get('readyCollection');
       case GarageOrderStatus.collected:
-        return polish ? 'Odebrane' : 'Collected';
+        return GarageUiText.get('collected');
       case GarageOrderStatus.cancelled:
-        return polish ? 'Anulowane' : 'Cancelled';
+        return GarageUiText.get('cancelled');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final polish = AppLocale.language.value == 'pl';
     final inProgress = assignments
         .where((job) => job.status == GarageOrderStatus.inProgress)
         .length;
@@ -79,14 +78,12 @@ class GarageMechanicBoard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              polish ? 'Moje zlecenia' : 'My assigned jobs',
+              GarageUiText.get('myAssignedJobs'),
               style: typography.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              polish
-                  ? 'Tylko zlecenia przydzielone do Twojego konta.'
-                  : 'Work orders assigned to your account only.',
+              GarageUiText.get('mechanicAssignedOnly'),
               style: typography.bodyMedium,
             ),
             const SizedBox(height: 12),
@@ -96,23 +93,20 @@ class GarageMechanicBoard extends StatelessWidget {
               children: [
                 Chip(
                   label: Text(
-                    polish
-                        ? 'Razem: ${assignments.length}'
-                        : 'Total: ${assignments.length}',
+                    GarageUiText.format('mechanicTotal',
+                        {'count': assignments.length}),
                   ),
                 ),
                 Chip(
                   label: Text(
-                    polish
-                        ? 'W trakcie: $inProgress'
-                        : 'In progress: $inProgress',
+                    GarageUiText.format('mechanicInProgress',
+                        {'count': inProgress}),
                   ),
                 ),
                 Chip(
                   label: Text(
-                    polish
-                        ? 'Części: $awaitingParts'
-                        : 'Awaiting parts: $awaitingParts',
+                    GarageUiText.format('mechanicAwaitingParts',
+                        {'count': awaitingParts}),
                   ),
                 ),
               ],
@@ -122,9 +116,7 @@ class GarageMechanicBoard extends StatelessWidget {
               child: assignments.isEmpty
                   ? Center(
                       child: Text(
-                        polish
-                            ? 'Nie masz aktualnie przydzielonych zleceń.'
-                            : 'You have no assigned work orders.',
+                        GarageUiText.get('mechanicNoJobs'),
                         key: const Key('garage_mechanic_empty'),
                         textAlign: TextAlign.center,
                       ),
@@ -168,7 +160,7 @@ class GarageMechanicBoard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _statusName(job.status, polish),
+                                  _statusName(job.status),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color:
