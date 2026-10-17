@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/fleet_repository.dart';
-import '../core/localization.dart';
+import 'auth_ui_text.dart';
 
 typedef PasswordResetRequester = Future<void> Function(String email);
 
@@ -18,7 +18,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _email = TextEditingController();
   bool _busy = false;
   String _loc(String en, String pl) =>
-      AppLocale.language.value == 'pl' ? pl : en;
+      authText(en, pl);
   bool _submitted = false;
   String? _error;
 

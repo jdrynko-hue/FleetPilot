@@ -239,6 +239,13 @@ body{overflow-wrap:anywhere}
     document.querySelectorAll('.step > b').forEach((el,i)=>{el.textContent=stepWords[lang]+' '+String(i+1).padStart(2,'0');});
     groupVehicleHeading(lang);
     selector.value=lang;
+    document.querySelectorAll('a[href]').forEach(link=>{
+      const target=new URL(link.getAttribute('href'),window.location.href);
+      if(target.origin===window.location.origin&&target.pathname==='/app/'){
+        target.searchParams.set('lang',lang);
+        link.setAttribute('href',target.pathname+target.search+target.hash);
+      }
+    });
     document.title=lang==='pl'?'Flotaryx — Fleet i Garage (w przygotowaniu)':'Flotaryx — '+selector.options[selector.selectedIndex].text+' | Fleet & Garage (coming soon)';
     try{window.localStorage.setItem('fleetpilot_site_lang',lang);}catch(error){}
   }
