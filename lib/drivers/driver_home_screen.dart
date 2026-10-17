@@ -14,11 +14,13 @@ class DriverHomeScreen extends StatefulWidget {
     required this.company,
     this.memberships = const [],
     this.onFleetSelected,
+    this.onAccessRefresh,
     super.key,
   });
   final CompanyMembership company;
   final List<CompanyMembership> memberships;
   final ValueChanged<String>? onFleetSelected;
+  final Future<void> Function()? onAccessRefresh;
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -426,6 +428,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         final vehicle = data.vehicle;
         return RefreshIndicator(
           onRefresh: () async {
+            if (widget.onAccessRefresh != null) {
+              await widget.onAccessRefresh!();
+              return;
+            }
             setState(_reload);
             await _future;
           },
@@ -660,19 +666,22 @@ class _DriverWalkaroundState extends State<_DriverWalkaround> {
     }
     setState(() => _busy = true);
     try {
-      await _client.from('driver_vehicle_checks').insert({
-        'company_id': widget.companyId,
-        'vehicle_id': widget.vehicleId,
-        'driver_id': widget.driverId,
-        'created_by': _client.auth.currentUser!.id,
-        'check_type': _type,
-        'result': result,
-        'odometer': mileage,
-        'checks': {
-          for (final answer in _answers.entries) answer.key: answer.value!,
+      // An authenticated driver may never insert into Fleet tables directly.
+      // The RPC resolves the caller's current driver/vehicle server-side and
+      // validates the plan, nine checks, result and notes before writing.
+      await _client.rpc(
+        'fleetpilot_submit_driver_check',
+        params: {
+          '_company_id': widget.companyId,
+          '_check_type': _type,
+          '_result': result,
+          '_odometer': mileage,
+          '_checks': {
+            for (final answer in _answers.entries) answer.key: answer.value!,
+          },
+          '_notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         },
-        'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      });
+      );
       if (mounted) {
         _message(
           result == 'pass'

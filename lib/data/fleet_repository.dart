@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models.dart';
+import '../auth/email_callback.dart';
+import '../core/app_config.dart';
 
 class FleetRepository {
   FleetRepository([SupabaseClient? client])
@@ -20,11 +22,13 @@ class FleetRepository {
     required String email,
     required String password,
     String locale = 'en',
+    String? portal,
   }) async {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
-      emailRedirectTo: 'https://flotaryx.com/app/',
+      emailRedirectTo: authEmailCallback(backendUrl: AppConfig.supabaseUrl,
+        configuredQaCallback: AppConfig.qaAuthCallback, portal: portal),
       data: {'locale': locale},
     );
     return response.session != null;
@@ -34,7 +38,8 @@ class FleetRepository {
   Future<void> sendPasswordReset(String email) async {
     await _client.auth.resetPasswordForEmail(
       email,
-      redirectTo: 'https://flotaryx.com/app/',
+      redirectTo: authEmailCallback(backendUrl: AppConfig.supabaseUrl,
+        configuredQaCallback: AppConfig.qaAuthCallback),
     );
   }
 
@@ -54,6 +59,10 @@ class FleetRepository {
         .select('company_id, role, companies!inner(name, currency)')
         .eq('user_id', user.id)
         .order('created_at');
+
+    // Auth can change while PostgREST is still answering the old request.
+    // Never publish the previous account's fleet list into a new session.
+    if (currentUser?.id != user.id) return [];
 
     return (rows as List)
         .map(

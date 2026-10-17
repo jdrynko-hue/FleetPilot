@@ -1,0 +1,105 @@
+name: QA single-session staging Auth shell - disposable browser
+
+on:
+  pull_request:
+    paths:
+      - 'web/demo/session/**'
+      - 'tests/single_session_browser_e2e.mjs'
+      - '.github/workflows/qa-single-session-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-session-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LOCAL_SINGLE_DIR: /tmp/flotaryx-single-user-auth
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test syntax and ban hardcoded roles or shared user JWTs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/single_session_browser_e2e.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('web/demo/session/index.html').read_text()
+          lower=s.lower()
+          for forbidden in ('qa-config.js','__flotaryx_local_qa__',
+                'cfg.roles', 'localstorage.setitem','sessionstorage.setitem',
+                'service_role','stripe.com','supabase.co','target="_blank"',
+                'window.open(', 'window.location.href='):
+              assert forbidden not in lower,forbidden
+          assert 'session-config.js' in s
+          assert 'loginForm' in s and 'logoutButton' in s
+          assert "allowed(location.hostname)" in s
+          assert "u.protocol==='http:'" in s
+          print('PASS: source has no shared role tokens, storage persistence or remote destinations')
+          PY
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          s=Path('web/demo/session/index.html').read_text()
+          scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,flags=re.DOTALL)
+          scripts=[x for x in scripts if x.strip()]
+          assert len(scripts)==1, f'Expected exactly one inline app script, got {len(scripts)}'
+          Path('/tmp/flotaryx-session-inline.mjs').write_text(scripts[0])
+          PY
+          node --check /tmp/flotaryx-session-inline.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Initialize unlinked disposable local Auth only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$LOCAL_SINGLE_DIR"
+          cd "$LOCAL_SINGLE_DIR"
+          supabase init --yes
+          sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' supabase/config.toml
+          grep -q '^enable_confirmations = false$' supabase/config.toml
+      - name: Install browser engines
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Start disposable Auth, REST and Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$LOCAL_SINGLE_DIR"
+          supabase start -x studio,analytics,imgproxy
+      - name: Exercise four separate local Auth logins
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$LOCAL_SINGLE_DIR"
+          supabase status -o env > "$RUNNER_TEMP/single_session_env"
+          local_setting() {
+            sed -n "s/^$1=//p" "$RUNNER_TEMP/single_session_env" | head -1 | tr -d '"'
+          }
+          export SINGLE_SESSION_API_URL="$(local_setting API_URL)"
+          export SINGLE_SESSION_ANON_KEY="$(local_setting ANON_KEY)"
+          if [[ -z "$SINGLE_SESSION_ANON_KEY" ]] || \
+            [[ ! "$SINGLE_SESSION_API_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+$ ]]; then
+            echo 'Refusing non-loopback API' >&2;exit 1
+          fi
+          echo "::add-mask::$SINGLE_SESSION_ANON_KEY"
+          cd "$GITHUB_WORKSPACE"
+          node tests/single_session_browser_e2e.mjs
+      - name: Destroy ephemeral local environment
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$LOCAL_SINGLE_DIR/supabase" ]]; then
+            cd "$LOCAL_SINGLE_DIR"
+            supabase stop --no-backup || true
+          fi

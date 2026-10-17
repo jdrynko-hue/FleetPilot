@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
+import 'garage_ui_text.dart';
 import 'garage_currencies.dart';
 
 /// Drop-in currency selector for a future workshop quote editor.
@@ -12,25 +12,24 @@ class GarageQuoteCurrencyPicker extends StatelessWidget {
   const GarageQuoteCurrencyPicker({
     required this.currency,
     required this.onChanged,
+    this.enabled = true,
     super.key,
   });
 
   final String currency;
   final ValueChanged<String> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     GarageCurrencies.digits(currency);
-    final polish = AppLocale.language.value == 'pl';
     return DropdownButtonFormField<String>(
       key: const Key('garage_quote_currency'),
       initialValue: currency,
       isExpanded: true,
       decoration: InputDecoration(
-        labelText: polish ? 'Waluta kosztorysu' : 'Estimate currency',
-        helperText: polish
-            ? 'Kwota będzie zapisana w wybranej walucie.'
-            : 'Amounts are recorded in the selected currency.',
+        labelText: GarageUiText.get('estimateCurrency'),
+        helperText: GarageUiText.get('estimateCurrencyHint'),
         border: const OutlineInputBorder(),
       ),
       items: [
@@ -46,8 +45,8 @@ class GarageQuoteCurrencyPicker extends StatelessWidget {
             ),
           ),
       ],
-      onChanged: (value) {
-        if (value != null && value != currency) {
+      onChanged: !enabled ? null : (value) {
+        if (enabled && value != null && value != currency) {
           onChanged(value);
         }
       },

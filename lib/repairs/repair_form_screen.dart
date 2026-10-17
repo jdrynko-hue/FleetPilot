@@ -264,30 +264,33 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _parts,
+                    validator: (value) => validateMoneyInput(value),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: InputDecoration(labelText: tr('parts_cost')),
+                    decoration: InputDecoration(labelText: tr('parts_cost'), errorMaxLines: 4),
                   ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: _labour,
+                    validator: (value) => validateMoneyInput(value),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: InputDecoration(labelText: tr('labour_cost')),
+                    decoration: InputDecoration(labelText: tr('labour_cost'), errorMaxLines: 4),
                   ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: _other,
+                    validator: (value) => validateMoneyInput(value),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: InputDecoration(labelText: tr('other_cost')),
+                    decoration: InputDecoration(labelText: tr('other_cost'), errorMaxLines: 4),
                   ),
                 ),
               ],

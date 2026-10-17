@@ -35,6 +35,9 @@ ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.issues ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.companies,public.company_members,public.vehicles,public.issues
  FROM PUBLIC,anon,authenticated;
+CREATE POLICY repairbridge_test_own_membership ON public.company_members
+ FOR SELECT TO authenticated USING (user_id=(SELECT auth.uid()));
+GRANT SELECT (company_id,user_id,role) ON public.company_members TO authenticated;
 -- Test-only self-provisioning RPC. It never accesses a hosted database or secret.
 CREATE FUNCTION public.repairbridge_test_create_fleet(p_registration text,p_title text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''

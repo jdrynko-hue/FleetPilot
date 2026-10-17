@@ -1,3 +1,5 @@
+import 'auth_ui_text.dart';
+
 /// Client-side password guidance. Supabase Auth settings enforce the actual
 /// minimum and compromised-password policy on the server.
 const int minimumNewPasswordLength = 12;
@@ -16,11 +18,9 @@ String? validateAccountPassword(
       : minimumExistingLoginPasswordLength;
   if (password.length >= minimum) return null;
   if (creatingNewPassword) {
-    return locale == 'pl'
-        ? 'Hasło musi mieć co najmniej 12 znaków.'
-        : 'Use at least 12 characters.';
+    return authText('Use at least 12 characters.',
+      'Hasło musi mieć co najmniej 12 znaków.', language: locale);
   }
-  return locale == 'pl'
-      ? 'Hasło musi mieć co najmniej 8 znaków.'
-      : 'Use at least 8 characters.';
+  return authText('Use at least 8 characters.',
+    'Hasło musi mieć co najmniej 8 znaków.', language: locale);
 }

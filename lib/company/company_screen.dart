@@ -6,6 +6,7 @@ import '../auth/create_company_screen.dart';
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
+import '../core/locale_preferences.dart';
 import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -128,7 +129,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
   Future<void> _changeLanguage(String value) async {
     await _repository.updateUserLocale(value);
-    AppLocale.language.value = value;
+    selectAppLanguage(value);
 
     if (mounted) setState(() {});
   }
@@ -266,14 +267,21 @@ class _CompanyScreenState extends State<CompanyScreen> {
       role: role,
     );
 
-    setState(_reload);
+    await widget.onMembershipChanged();
   }
 
   Future<void> _linkDriverAccount(CompanyMember member) async {
     try {
       final drivers = await _repository.fetchDrivers(widget.company.companyId);
+      // Client-side filtering improves UX only; the RPC independently verifies
+      // that the linked Auth user's verified email matches the driver record.
+      final targetEmail = member.email.trim().toLowerCase();
       final available = drivers
-          .where((d) => d.userId == null || d.userId == member.userId)
+          .where((d) =>
+              d.isActive &&
+              (d.userId == null || d.userId == member.userId) &&
+              targetEmail.isNotEmpty &&
+              d.email?.trim().toLowerCase() == targetEmail)
           .toList();
       if (!mounted) return;
       if (available.isEmpty) {
@@ -281,8 +289,8 @@ class _CompanyScreenState extends State<CompanyScreen> {
           SnackBar(
             content: Text(
               AppLocale.language.value == 'pl'
-                  ? 'Brak wolnych kart kierowców.'
-                  : 'No available driver records.',
+                  ? 'Brak aktywnej, niepowiązanej karty kierowcy z takim samym adresem e-mail.'
+                  : 'No active, unlinked driver record with the same email address.',
             ),
           ),
         );
@@ -374,7 +382,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
       userId: member.userId,
     );
 
-    setState(_reload);
+    await widget.onMembershipChanged();
   }
 
   Future<void> _revokeInvite(CompanyInvite invite) async {
@@ -765,7 +773,10 @@ class _CompanyScreenState extends State<CompanyScreen> {
                       ),
                       trailing: members[i].role == 'owner'
                           ? Text(tr('owner'))
-                          : _canAdmin && members[i].userId != currentUserId
+                          : members[i].userId != currentUserId &&
+                                  (_canAdmin ||
+                                      (widget.company.role == 'manager' &&
+                                          members[i].role == 'driver'))
                           ? PopupMenuButton<String>(
                               onSelected: (value) {
                                 if (value == 'remove') {
@@ -777,22 +788,24 @@ class _CompanyScreenState extends State<CompanyScreen> {
                                 }
                               },
                               itemBuilder: (_) => [
-                                PopupMenuItem(
-                                  value: 'admin',
-                                  child: Text(tr('admin')),
-                                ),
-                                PopupMenuItem(
-                                  value: 'manager',
-                                  child: Text(tr('manager')),
-                                ),
-                                PopupMenuItem(
-                                  value: 'viewer',
-                                  child: Text(tr('viewer')),
-                                ),
-                                PopupMenuItem(
-                                  value: 'driver',
-                                  child: Text(tr('driver')),
-                                ),
+                                if (_canAdmin) ...[
+                                  PopupMenuItem(
+                                    value: 'admin',
+                                    child: Text(tr('admin')),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'manager',
+                                    child: Text(tr('manager')),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'viewer',
+                                    child: Text(tr('viewer')),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'driver',
+                                    child: Text(tr('driver')),
+                                  ),
+                                ],
                                 if (members[i].role == 'driver')
                                   PopupMenuItem(
                                     value: 'link_driver',
@@ -802,11 +815,13 @@ class _CompanyScreenState extends State<CompanyScreen> {
                                           : 'Link driver record',
                                     ),
                                   ),
-                                const PopupMenuDivider(),
-                                PopupMenuItem(
-                                  value: 'remove',
-                                  child: Text(tr('remove')),
-                                ),
+                                if (_canAdmin) ...[
+                                  const PopupMenuDivider(),
+                                  PopupMenuItem(
+                                    value: 'remove',
+                                    child: Text(tr('remove')),
+                                  ),
+                                ],
                               ],
                               child: Text(prettifyEnum(members[i].role)),
                             )

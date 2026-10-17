@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/fleet_repository.dart';
 import '../core/localization.dart';
 import 'password_policy.dart';
+import 'auth_ui_text.dart';
 
 typedef PasswordUpdater = Future<void> Function(String password);
 typedef PasswordRecoveryCompleted = Future<void> Function();
@@ -28,7 +29,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   final _confirmation = TextEditingController();
   bool _busy = false;
   String _loc(String en, String pl) =>
-      AppLocale.language.value == 'pl' ? pl : en;
+      authText(en, pl);
   bool _completed = false;
   String? _error;
 

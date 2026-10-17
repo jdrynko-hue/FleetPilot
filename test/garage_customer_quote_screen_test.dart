@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/garage/customer_quote_repository.dart';
 import 'package:fleetpilot/garage/customer_quote_screen.dart';
+import 'package:fleetpilot/garage/garage_ui_text.dart';
 
 GarageCustomerQuote quote({int revision = 1, bool approved = false}) =>
     GarageCustomerQuoteRepository.parse({
@@ -225,4 +228,176 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  test('quote-approval labels and revision/amount placeholders exist in 12 languages', () {
+    for (final language in supportedLanguages) {
+      for (final key in [
+        'customerEstimateTitle', 'customerApprove', 'customerConfirm',
+        'customerCancel', 'customerLoadFailed', 'customerChanged',
+        'customerRecorded', 'customerApprovedMessage',
+        'customerApprovalUncertain', 'customerEmpty', 'customerRetry',
+        'customerApproved', 'customerPending', 'customerTax',
+        'customerSubtotal', 'customerTotalTax', 'customerTotal',
+        'customerApproving', 'customerScopeWarning',
+      ]) {
+        final label = GarageUiText.get(key, language: language);
+        expect(label.trim(), isNotEmpty, reason: '$language $key');
+        expect(label, isNot(key), reason: '$language $key');
+      }
+      final confirm = GarageUiText.format('customerConfirmBody',
+        {'revision': 7, 'total': 'GBP 72.00'}, language: language);
+      expect(confirm, contains('7'), reason: language);
+      expect(confirm, contains('GBP 72.00'), reason: language);
+      expect(confirm, isNot(contains('{revision}')), reason: language);
+      expect(confirm, isNot(contains('{total}')), reason: language);
+      expect(GarageUiText.format('customerRevision', {'revision': 7},
+        language: language), contains('7'), reason: language);
+    }
+  });
+
+  testWidgets('German mobile approval dialog retains revision and sum',
+      (tester) async {
+    AppLocale.language.value = 'de';
+    var approvals = 0;
+    await display(
+      tester, width: 390,
+      load: () async => quote(),
+      approve: (revision) async { approvals++; return revision; },
+    );
+    expect(find.text('Reparaturkostenvoranschlag'), findsOneWidget);
+    expect(find.text('Version 1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    expect(find.text('Kostenvoranschlag bestätigen'), findsOneWidget);
+    expect(find.textContaining('£72.00'), findsWidgets);
+    expect(approvals, 0);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(approvals, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Spanish mobile quote retains fail-closed stale revision check',
+      (tester) async {
+    AppLocale.language.value = 'es';
+    var loads = 0;
+    var approvals = 0;
+    await display(
+      tester, width: 375,
+      load: () async => quote(revision: ++loads == 1 ? 1 : 2),
+      approve: (revision) async { approvals++; return revision; },
+    );
+    expect(find.text('Presupuesto de reparación'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pumpAndSettle();
+    expect(approvals, 0);
+    expect(find.text('Versión 2'), findsOneWidget);
+    expect(find.textContaining('El presupuesto ha cambiado'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('old scope request never overwrites newly selected order',
+      (tester) async {
+    final previous = Completer<GarageCustomerQuote?>();
+    final oldLoad = () => previous.future;
+    final newLoad = () async => quote(revision: 2);
+    final approve = (int revision) async => revision;
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: oldLoad, approveRevision: approve,
+    )));
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: newLoad, approveRevision: approve,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    previous.complete(quote(revision: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    expect(find.text('Revision 1'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('approved revision marker is never shared across scopes',
+      (tester) async {
+    final approve = (int revision) async => revision;
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(approved: true), approveRevision: approve,
+    )));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(
+      find.byKey(const Key('garage_quote_approve'))).onPressed, isNull);
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(approved: false), approveRevision: approve,
+    )));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(
+      find.byKey(const Key('garage_quote_approve'))).onPressed, isNotNull);
+    expect(find.text('Awaiting approval'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scope switch while approval dialog is open cannot call old RPC',
+      (tester) async {
+    var previousApprovals = 0;
+    var newApprovals = 0;
+    final oldLoad = () async => quote();
+    final newLoad = () async => quote(revision: 2);
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: oldLoad,
+      approveRevision: (revision) async { previousApprovals++; return revision; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: newLoad,
+      approveRevision: (revision) async { newApprovals++; return revision; },
+    )));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pumpAndSettle();
+    expect(previousApprovals, 0);
+    expect(newApprovals, 0);
+    expect(find.text('Revision 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('late response from old approval cannot replace new scope',
+      (tester) async {
+    final oldRpc = Completer<int>();
+    var oldCalls = 0;
+    var newCalls = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(),
+      approveRevision: (revision) {
+        oldCalls++;
+        return oldRpc.future;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_approve')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('garage_quote_confirm')));
+    await tester.pump();
+    expect(oldCalls, 1);
+    await tester.pumpWidget(MaterialApp(home: GarageCustomerQuoteScreen(
+      loadQuote: () async => quote(revision: 2),
+      approveRevision: (revision) async { newCalls++; return revision; },
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    oldRpc.complete(1);
+    await tester.pumpAndSettle();
+    expect(find.text('Revision 2'), findsOneWidget);
+    expect(find.text('Approval recorded. Refresh to verify the current status.'),
+        findsNothing);
+    expect(newCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
 }

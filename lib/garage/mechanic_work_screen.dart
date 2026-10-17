@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
+import 'garage_ui_text.dart';
 import 'mechanic_board.dart';
 import 'mechanic_jobs_repository.dart';
 import 'media_repository.dart';
@@ -58,13 +58,45 @@ class _GarageMechanicWorkScreenState
   List<GarageMechanicAssignment> _assignments = const [];
   String? _error;
   int _requestVersion = 0;
-
-  bool get _pl => AppLocale.language.value == 'pl';
+  int _scope = 0;
+  MaterialPageRoute<void>? _evidenceRoute;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant GarageMechanicWorkScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadJobs != widget.loadJobs ||
+        oldWidget.evidenceScreen != widget.evidenceScreen) {
+      _scope++;
+      _dismissEvidenceRoute();
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scope++;
+    _requestVersion++;
+    _dismissEvidenceRoute();
+    super.dispose();
+  }
+
+  void _dismissEvidenceRoute() {
+    final route = _evidenceRoute;
+    final navigator = route?.navigator;
+    _evidenceRoute = null;
+    if (route == null || navigator == null) return;
+    // Scope changes can happen during a parent build. Remove only our route
+    // after that frame, including when another dialog is above it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigator.mounted && route.isActive) navigator.removeRoute(route);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _load() async {
@@ -84,9 +116,7 @@ class _GarageMechanicWorkScreenState
       if (!mounted || request != _requestVersion) return;
       setState(() {
         _assignments = const [];
-        _error = _pl
-            ? 'Nie udało się pobrać zleceń. Sprawdź dostęp i spróbuj ponownie.'
-            : 'Could not load assigned jobs. Check access and retry.';
+        _error = GarageUiText.get('mechanicLoadFailed');
       });
     } finally {
       if (mounted && request == _requestVersion) {
@@ -95,32 +125,41 @@ class _GarageMechanicWorkScreenState
     }
   }
 
-  Future<void> _open(String orderId) async {
-    if (_busy ||
+  Future<void> _open(String orderId, int scope, int listVersion) async {
+    if (!mounted || scope != _scope || listVersion != _requestVersion ||
+        _busy || _evidenceRoute != null ||
         !_assignments.any((assignment) => assignment.id == orderId)) {
       return;
     }
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => widget.evidenceScreen(orderId),
-      ),
+    final evidence = widget.evidenceScreen;
+    final route = MaterialPageRoute<void>(
+      builder: (_) => mounted && scope == _scope
+          ? evidence(orderId)
+          : const SizedBox.shrink(),
     );
-    if (mounted) {
-      // On return, refetch permission-filtered jobs. Assignment may have
-      // been revoked while the user was viewing the evidence.
-      await _load();
+    _evidenceRoute = route;
+    try {
+      await Navigator.of(context).push<void>(route);
+    } finally {
+      if (identical(_evidenceRoute, route)) _evidenceRoute = null;
+      if (mounted && scope == _scope) {
+        // Assignment may have been revoked while evidence was open.
+        await _load();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final scope = _scope;
+    final listVersion = _requestVersion;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_pl ? 'Flotaryx Garage' : 'Flotaryx Garage'),
+        title: const Text('Flotaryx Garage'),
         actions: [
           IconButton(
             key: const Key('garage_mechanic_work_refresh'),
-            tooltip: _pl ? 'Odśwież' : 'Refresh',
+            tooltip: GarageUiText.get('refresh'),
             onPressed: _busy ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -144,7 +183,7 @@ class _GarageMechanicWorkScreenState
                         OutlinedButton(
                           key: const Key('garage_mechanic_work_retry'),
                           onPressed: _load,
-                          child: Text(_pl ? 'Spróbuj ponownie' : 'Try again'),
+                          child: Text(GarageUiText.get('retry')),
                         ),
                       ],
                     ),
@@ -152,7 +191,7 @@ class _GarageMechanicWorkScreenState
                 )
               : GarageMechanicBoard(
                   assignments: _assignments,
-                  onOpenAssignment: _open,
+                  onOpenAssignment: (id) => _open(id, scope, listVersion),
                 ),
     );
   }

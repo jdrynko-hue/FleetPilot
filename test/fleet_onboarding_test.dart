@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -95,6 +97,58 @@ void main() {
     expect(created, 1);
   });
 
+  for (final outcome in ['disposed', 'changed', 'signed-out', 'current']) {
+    for (final fails in [false, true]) {
+      testWidgets('fleet creation ignores stale $outcome response (error=$fails)',
+          (tester) async {
+        final response = Completer<void>();
+        String? account = 'account-a';
+        var created = 0;
+        var requests = 0;
+        await tester.pumpWidget(MaterialApp(
+          home: CreateCompanyScreen(
+            onCreated: () => created++,
+            currentAccountId: () => account,
+            createCompany: ({required name, required country, required currency}) {
+              requests++;
+              return response.future;
+            },
+          ),
+        ));
+        await tester.enterText(find.byType(TextField), 'Second fleet');
+        await tester.ensureVisible(find.byType(CheckboxListTile));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(CheckboxListTile));
+        await tester.pump();
+        await tester.ensureVisible(find.byType(FilledButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        expect(requests, 1);
+        expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+            isNull);
+        if (outcome == 'disposed') {
+          await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+        } else if (outcome == 'changed') {
+          account = 'account-b';
+        } else if (outcome == 'signed-out') {
+          account = null;
+        }
+        if (fails) {
+          response.completeError(StateError('creation failed'));
+        } else {
+          response.complete();
+        }
+        await tester.pumpAndSettle();
+        expect(created, outcome == 'current' && !fails ? 1 : 0);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(find.byKey(const Key('fleet_creation_uncertain')),
+            outcome == 'current' && fails ? findsOneWidget : findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('Polish mobile fleet registration shows country names',
       (tester) async {
     AppLocale.language.value = 'pl';
@@ -113,5 +167,80 @@ void main() {
     expect(find.text('Wielka Brytania (GB)'), findsOneWidget);
     expect(find.text('GBP — funt brytyjski'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  for (final additional in [false, true]) {
+  testWidgets('uncertain creation requires membership check (additional=$additional)', (tester) async {
+    var writes = 0;
+    var checks = 0;
+    await tester.pumpWidget(MaterialApp(home: CreateCompanyScreen(
+      allowCancel: additional, currentAccountId: () => 'account', onCreated: () => checks++,
+      createCompany: ({required name, required country, required currency}) async {
+        writes++;
+        throw StateError('PRIVATE TRANSPORT DETAIL');
+      })));
+    await tester.enterText(find.byType(TextField), 'Additional fleet');
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    final create = find.byType(FilledButton);
+    await tester.ensureVisible(create);
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(writes, 1);
+    expect(tester.widget<FilledButton>(create).onPressed, isNull);
+    expect(find.byKey(const Key('fleet_creation_uncertain')), findsOneWidget);
+    expect(find.textContaining('PRIVATE TRANSPORT DETAIL'), findsNothing);
+    final check = find.byKey(const Key('fleet_creation_check_memberships'));
+    await tester.ensureVisible(check);
+    await tester.tap(check);
+    expect(checks, 1);
+    expect(writes, 1);
+  });
+  }
+
+  testWidgets('fleet name is limited before a request is sent', (tester) async {
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: CreateCompanyScreen(
+      onCreated: () {}, currentAccountId: () => 'account',
+      createCompany: ({required name, required country, required currency}) async {
+        expect(name.runes.length, 160);
+        writes++;
+      })));
+    final field = find.byType(TextField);
+    final controller = tester.widget<TextField>(field).controller!;
+    // Set the controller directly as well as testing the visible input limit:
+    // programmatic input must not bypass the submit guard.
+    controller.text = List.filled(161, 'a').join();
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile)); await tester.pump();
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
+    expect(writes, 0);
+    await tester.enterText(field, List.filled(160, 'a').join()); await tester.pump();
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNotNull);
+    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.tap(find.byType(FilledButton)); await tester.pumpAndSettle();
+    expect(writes, 1);
+  });
+
+  testWidgets('membership check after uncertain result ignores a changed account', (tester) async {
+    String? account = 'a';
+    var checks = 0;
+    await tester.pumpWidget(MaterialApp(home: CreateCompanyScreen(
+      onCreated: () => checks++, currentAccountId: () => account,
+      createCompany: ({required name, required country, required currency}) async {
+        throw StateError('PRIVATE');
+      })));
+    await tester.enterText(find.byType(TextField), 'Fleet');
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile)); await tester.pump();
+    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.tap(find.byType(FilledButton)); await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    expect(tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).onChanged, isNull);
+    account = 'b';
+    final refresh = find.byKey(const Key('fleet_creation_check_memberships'));
+    await tester.ensureVisible(refresh); await tester.tap(refresh); await tester.pump();
+    expect(checks, 0);
+    expect(find.textContaining('PRIVATE'), findsNothing);
   });
 }

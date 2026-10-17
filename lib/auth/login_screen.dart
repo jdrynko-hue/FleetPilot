@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
+import '../core/locale_preferences.dart';
 import 'forgot_password_screen.dart';
 import 'password_policy.dart';
+import 'auth_ui_text.dart';
+import 'portal_entry.dart';
+import '../core/app_config.dart';
 import '../data/fleet_repository.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.portal, this.onPortalChanged, this.onFindWorkshop});
+
+  final PortalEntry? portal;
+  final ValueChanged<PortalEntry>? onPortalChanged;
+  final VoidCallback? onFindWorkshop;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -32,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _busy = true);
@@ -42,14 +51,17 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _email.text.trim(),
           password: _password.text,
           locale: _language,
+          portal: widget.portal?.name,
         );
                 if (!signedIn && mounted) {
           await showDialog<void>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Check your email'),
+              title: Text(authText('Check your email', 'Sprawdź pocztę')),
               content: Text(
-                'We sent a confirmation link to ${_email.text.trim()}. Check your spam folder too.',
+                authText('We sent a confirmation link to {email}. Check your spam folder too.',
+                  'Na adres {email} wysłaliśmy link potwierdzający. Sprawdź również folder spam.')
+                    .replaceAll('{email}', _email.text.trim()),
               ),
               actions: [
                 TextButton(
@@ -67,12 +79,16 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _password.text,
         );
       }
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(_registerMode
+          ? authText('Could not create the account. Try again later.',
+              'Nie udało się utworzyć konta. Spróbuj później.')
+          : authText('Could not sign in. Check your details and try again.',
+              'Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.'))));
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -81,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _setLanguage(String value) {
-    AppLocale.language.value = value;
+    selectAppLanguage(value);
   }
 
   @override
@@ -137,6 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
+                        if (AppConfig.ecosystemEnabled)
+                          PortalEntryPicker(selected: widget.portal,
+                            onSelected: _busy ? null : widget.onPortalChanged,
+                            onFindWorkshop: _busy ? null : widget.onFindWorkshop),
+                        if (!AppConfig.ecosystemEnabled || _registerMode)
                         Text(
                           _registerMode
                               ? tr('create_account')
@@ -219,9 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                             child: Text(
-                              AppLocale.language.value == 'pl'
-                                  ? 'Nie pamiętasz hasła?'
-                                  : 'Forgot password?',
+                              authText('Forgot password?', 'Nie pamiętasz hasła?'),
                             ),
                           ),
                         const SizedBox(height: 8),

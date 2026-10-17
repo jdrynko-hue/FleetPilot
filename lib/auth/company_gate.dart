@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
+import '../core/locale_preferences.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
 import '../shell/fleet_shell.dart';
@@ -69,7 +70,7 @@ class _CompanyGateState extends State<CompanyGate> {
       try {
         final profile = await _repository!.fetchUserProfile();
         if (profile != null && supportedLanguages.contains(profile.locale)) {
-          AppLocale.language.value = profile.locale;
+          applyProfileLanguage(profile.locale);
         }
       } catch (_) {}
     }

@@ -28,6 +28,8 @@ void main() {
     bool compact = true,
     bool canManage = true,
     VoidCallback? onRefresh,
+    VoidCallback? onCreateFleet,
+    CompanyMembership? selected,
     VoidCallback? onSignOut,
     VoidCallback? onManager,
     ValueChanged<String>? onSelectFleet,
@@ -40,7 +42,8 @@ void main() {
         home: Scaffold(
           appBar: FleetAppBar(
             memberships: memberships,
-            selectedMembership: primary,
+            selectedMembership: selected ?? primary,
+            onCreateFleetPressed: onCreateFleet,
             compact: compact,
             canManage: canManage,
             businessReviewAlert: businessReviewAlert,
@@ -159,4 +162,31 @@ void main() {
     expect(find.byIcon(Icons.logout), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  for (final compact in [true, false]) {
+    testWidgets('fleet shortcut is reachable with compact=$compact', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      var calls = 0;
+      await showHeader(tester, width: compact ? 320 : 1200,
+        memberships: [primary], compact: compact, onCreateFleet: () => calls++);
+      if (compact) {
+        await tester.tap(find.byKey(const Key('fleet_mobile_menu')));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(Key(compact ? 'fleet_menu_create' : 'fleet_create_fleet')));
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('manager cannot use the owner/admin fleet shortcut', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await showHeader(tester, width: 320, memberships: [secondary],
+      selected: secondary, onCreateFleet: () => throw StateError('Not permitted'));
+    await tester.tap(find.byKey(const Key('fleet_mobile_menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('fleet_menu_create')), findsNothing);
+  });
+
 }

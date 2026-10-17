@@ -1,0 +1,118 @@
+name: QA Fleet security - disposable PostgreSQL
+
+on:
+  push:
+    branches:
+      - security/qa-fleet-rls-integrity-hardening-20261014
+    paths:
+      - '.github/workflows/qa-fleet-security.yml'
+      - 'tests/qa_fleet_*'
+      - 'supabase/qa_hardening/**'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+  pull_request:
+    paths:
+      - '.github/workflows/qa-fleet-security.yml'
+      - 'tests/qa_fleet_*'
+      - 'supabase/qa_hardening/**'
+      - 'supabase/migrations/001_fleetpilot.sql'
+      - 'supabase/migrations/002_saas_foundation.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  qa-fleet-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-fleet-rls-test-only
+          POSTGRES_DB: fleet_security_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fleet_security_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: disposable-fleet-rls-test-only
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: fleet_security_disposable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+      - name: Prepare disposable Fleet foundations, QA schema, and migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # No Supabase project ref, credentials, hosted connection or customer records.
+          psql -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql
+      - name: Assert permissions, role isolation, foreign keys and regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/qa_fleet_rls_isolation.sql
+      - name: Reject inconsistent legacy documents without partial DDL
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE fleet_security_bad'
+          psql -d fleet_security_bad -v ON_ERROR_STOP=1 \
+            -f tests/qa_fleet_auth_bootstrap.sql \
+            -f supabase/migrations/001_fleetpilot.sql \
+            -f supabase/migrations/002_saas_foundation.sql \
+            -f tests/qa_fleet_rls_fixture.sql
+          # Synthetic Fleet A document referring to Fleet A's *other* vehicle.
+          psql -d fleet_security_bad -v ON_ERROR_STOP=1 -c "
+            INSERT INTO public.fleet_documents
+              (company_id,vehicle_id,issue_id,storage_path)
+            VALUES
+              ('20000000-0000-4000-8000-000000000001',
+               '30000000-0000-4000-8000-000000000001',
+               '50000000-0000-4000-8000-000000000002',
+               '20000000-0000-4000-8000-000000000001/30000000-0000-4000-8000-000000000001/legacy.pdf');
+          "
+          if psql -d fleet_security_bad -v ON_ERROR_STOP=1 \
+            -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql \
+            > "$RUNNER_TEMP/bad_qa_migration.log" 2>&1; then
+            echo 'ERROR: malformed legacy document did not block migration' >&2
+            exit 1
+          fi
+          grep -q 'Existing QA document relationship mismatch' "$RUNNER_TEMP/bad_qa_migration.log"
+          if [[ "$(psql -d fleet_security_bad -tAc \
+            "select count(*) from pg_class where oid in
+             ('public.fleet_documents'::regclass,'public.driver_vehicle_checks'::regclass,
+              'public.vehicle_change_requests'::regclass) and relrowsecurity")" != "0" ]]; then
+            echo 'ERROR: failed migration left a partially enabled schema' >&2
+            exit 1
+          fi
+          echo 'PASS: invalid legacy attachments fail closed; transaction rolled back'
+      - name: Confirm migration is re-entrant only with explicit review
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -v ON_ERROR_STOP=1 -f supabase/qa_hardening/001_restrict_fleet_documents_checks_change_requests.sql >/tmp/second-application.log 2>&1; then
+            echo 'ERROR: Migration unexpectedly applied twice' >&2
+            exit 1
+          fi
+          grep -q 'Existing policy' /tmp/second-application.log
+          echo 'PASS: repeat install prevented before any schema mutation'

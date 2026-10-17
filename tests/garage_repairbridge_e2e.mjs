@@ -63,6 +63,14 @@ blocked(await rpc(f1,'garage_fleet_send_request',{
  p_company:b.company_id,p_shop:s1,p_issue:b.issue_id}),'foreign company defect');
 const rid=ok(await rpc(f1,'garage_fleet_send_request',{
  p_company:a.company_id,p_shop:s1,p_issue:a.issue_id}),'share minimal issue');
+blocked(await rpc(f1,'garage_fleet_send_request',{
+ p_company:a.company_id,p_shop:s1,p_issue:a.issue_id}),'duplicate defect request');
+const labels=ok(await rpc(g1,'garage_fleet_connection_labels_for_me'),'owner connection labels');
+assert.equal(labels.length,1);
+assert.equal(labels[0].workspace_name,'RB Workshop One');
+assert.ok(labels[0].company_name.length>0);
+assert.deepEqual(ok(await rpc(g2,'garage_fleet_connection_labels_for_me'),'foreign workshop labels'),[]);
+assert.deepEqual(ok(await rpc(f2,'garage_fleet_connection_labels_for_me'),'foreign Fleet labels'),[]);
 const pending=ok(await rpc(f1,'garage_fleet_snapshot',{p_request:rid}),'fleet reads request');
 assert.equal(pending.issue_title,'Brake defect');
 assert.equal(pending.shared_description,null);

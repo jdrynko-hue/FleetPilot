@@ -23,7 +23,8 @@ BEGIN
     has_table_privilege('authenticated','public.garage_fleet_approvals','INSERT') OR
     has_table_privilege('authenticated','public.garage_fleet_events','UPDATE') OR
     has_function_privilege('anon','public.garage_fleet_send_request(uuid,uuid,uuid,boolean,boolean)','EXECUTE') OR
-    has_function_privilege('anon','public.garage_fleet_snapshot(uuid)','EXECUTE') THEN
+    has_function_privilege('anon','public.garage_fleet_snapshot(uuid)','EXECUTE') OR
+    has_function_privilege('anon','public.garage_fleet_connection_labels_for_me()','EXECUTE') THEN
   RAISE EXCEPTION 'Unsafe bridge direct privileges';
  END IF;
 END $$;
@@ -65,6 +66,8 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN denied:=true;
  END;
  IF NOT denied THEN RAISE EXCEPTION 'Fleet B accepted workshop consent'; END IF;
+ IF EXISTS(SELECT 1 FROM public.garage_fleet_connection_labels_for_me()) THEN
+  RAISE EXCEPTION 'Foreign Fleet read connection names'; END IF;
 END $$;
 COMMIT;
 
@@ -82,6 +85,8 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN denied:=true;
  END;
  IF NOT denied THEN RAISE EXCEPTION 'Wrong workshop accepted Fleet connection'; END IF;
+ IF EXISTS(SELECT 1 FROM public.garage_fleet_connection_labels_for_me()) THEN
+  RAISE EXCEPTION 'Foreign workshop read connection names'; END IF;
 END $$;
 COMMIT;
 
@@ -110,6 +115,17 @@ BEGIN
   '00000000-0000-4000-8000-000000000101',
   current_setting('bridge.a.issue')::uuid);
  PERFORM set_config('bridge.a.request',req::text,false);
+ denied:=false;
+ BEGIN
+  PERFORM public.garage_fleet_send_request(current_setting('bridge.a.company')::uuid,
+   '00000000-0000-4000-8000-000000000101',current_setting('bridge.a.issue')::uuid);
+ EXCEPTION WHEN unique_violation THEN denied:=true;
+ END;
+ IF NOT denied THEN RAISE EXCEPTION 'Duplicate defect request permitted'; END IF;
+ IF (SELECT count(*) FROM public.garage_fleet_connection_labels_for_me()
+     WHERE company_id=current_setting('bridge.a.company')::uuid
+       AND length(company_name)>0 AND length(workspace_name)>0)<>1 THEN
+  RAISE EXCEPTION 'Missing scoped connection labels'; END IF;
  info:=public.garage_fleet_snapshot(req);
  IF info->>'issue_title'<>'Critical brakes' OR
   info->>'shared_description' IS NOT NULL OR
