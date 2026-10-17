@@ -24,6 +24,8 @@ on:
       - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - 'tests/garage_storage_operation_compat.sql'
+      - 'tests/garage_api_catalog_test.py'
+      - 'supabase/qa_hardening/preflight/03_garage_api_catalog.sql'
       - '.github/workflows/garage-rls.yml'
   push:
     branches: [main]
@@ -46,6 +48,8 @@ on:
       - 'tests/flotaryx_unified_ecosystem_e2e.mjs'
       - 'tests/garage_local_supabase_e2e.mjs'
       - 'tests/garage_storage_operation_compat.sql'
+      - 'tests/garage_api_catalog_test.py'
+      - 'supabase/qa_hardening/preflight/03_garage_api_catalog.sql'
       - '.github/workflows/garage-rls.yml'
   workflow_dispatch:
 
@@ -99,6 +103,11 @@ jobs:
             -f tests/garage_consumer_bookings_rls.sql \
             -f tests/garage_resource_calendar_rls.sql \
             -f tests/garage_mechanic_roster_rls.sql
+      - name: Verify read-only Garage API metadata and deliberate drift
+        if: matrix.suite == 'isolation'
+        env:
+          GARAGE_API_CATALOG_DISPOSABLE: '1'
+        run: python3 tests/garage_api_catalog_test.py -v
       - name: Rehearse booking upgrade with existing data
         if: matrix.suite == 'incremental-upgrade'
         shell: bash
