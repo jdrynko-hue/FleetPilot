@@ -8,6 +8,7 @@ import 'booking_status_text.dart';
 import 'booking_time_text.dart';
 import 'booking_local_start.dart';
 import 'garage_ui_text.dart';
+import 'booking_request_review.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -374,6 +375,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   Widget _field(String key, String label, TextEditingController controller,
       {int limit = 120, int min = 2, bool optional = false, int lines = 1}) =>
     TextFormField(key: Key(key), controller: controller,
+      enabled: !_busy && !_uncertain,
       maxLength: limit, maxLines: lines,
       decoration: InputDecoration(labelText: label,
         border: const OutlineInputBorder()),
@@ -491,8 +493,8 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             items: widget.shop.services.map((service) =>
               DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service),
                 maxLines: 2, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (value) {
-              if (mounted && serviceVersion == _serviceVersion &&
+            onChanged: _busy || _uncertain ? null : (value) {
+              if (mounted && !_busy && !_uncertain && serviceVersion == _serviceVersion &&
                   (value == null || widget.shop.services.contains(value))) {
                 setState(() => _service = value);
               }
@@ -511,9 +513,14 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             ? GarageUiText.get('bookingPickTime')
             : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
-        FilledButton(key: const Key('booking_send'),
-          onPressed: _busy || _picking || _uncertain ? null : _send,
-          child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (_service != null && _when != null)
+            BookingRequestReview(service: _service!, when: _when!,
+              workshopZone: widget.shop.timeZone),
+          FilledButton(key: const Key('booking_send'),
+            onPressed: _busy || _picking || _uncertain ? null : _send,
+            child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
+        ]),
       ],
     )),
   );
