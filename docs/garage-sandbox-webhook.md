@@ -24,3 +24,15 @@ The factory is not served or deployed. The dedicated Deno SDK test covers real
 HMAC validation, modified bytes, wrong secret, expired/malformed signatures and
 safe replay, without network or customer data. Service-only claim lookup, RPC
 wiring and database integration remain pending before endpoint activation.
+
+### Private storage composition
+
+`garageTrialWebhookStorage` now maps lookup and confirmation to service-only
+RPCs. `garage_lookup_test_trial` returns only a prepared, frozen billing identity,
+with no direct table privileges or execute permission for browser roles. The
+signed SDK factory can compose this adapter with a server service client. The
+Deno test exercises both real SDKs with intercepted transport; disposable PG16
+checks actual lookup ACLs, minimal projection, confirmation replay and conflicts.
+The SQL remains a proposal, not an applied hosted migration. No endpoint is
+served and no paid entitlement is granted. Cancellation, invoice lifecycle and
+end-to-end Sandbox delivery remain required before activation.

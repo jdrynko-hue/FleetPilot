@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
-import { createSignedGarageTrialWebhook } from '../supabase/functions/flotaryx-garage-test-checkout/trial_webhook_adapter.ts';
+import { createClient } from 'supabase';
+import { createSignedGarageTrialWebhook, createStoredGarageTrialWebhook } from '../supabase/functions/flotaryx-garage-test-checkout/trial_webhook_adapter.ts';
 
 const secret = 'whsec_disposablefixture';
 const config = { enabled: true, supabaseUrl: 'https://fyestmquqvkdebxxbcky.supabase.co',
@@ -50,6 +51,22 @@ Deno.test('signed subscription event retrieves current SDK state before confirmi
   globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (url.hostname === 'fyestmquqvkdebxxbcky.supabase.co') {
+      assert(headers.get('authorization') === 'Bearer disposable-fixture-service', 'Service RPC authorization missing');
+      const args = JSON.parse(String(init?.body));
+      assert(args.p_attempt === attempt, 'Wrong attempt sent to RPC');
+      if (url.pathname === '/rest/v1/rpc/garage_lookup_test_trial') {
+        calls.push('lookup');
+        return new Response(JSON.stringify({ attempt_id: attempt, workspace_id: workspace,
+          customer_id: 'cus_fixture', price_id: 'price_fixture', currency: 'gbp', billing_interval: 'month',
+        }), { headers: { 'content-type': 'application/json' } });
+      }
+      assert(url.pathname === '/rest/v1/rpc/garage_confirm_test_trial', 'Unexpected service RPC');
+      assert(args.p_subscription === 'sub_fixture' && args.p_livemode === false, 'Wrong confirmation');
+      assert(Date.parse(args.p_ends) - Date.parse(args.p_started) === 604800000, 'Wrong trial duration');
+      calls.push('confirm');
+      return new Response('true', { headers: { 'content-type': 'application/json' } });
+    }
     assert(url.href === 'https://api.stripe.com/v1/subscriptions/sub_fixture', 'Unexpected SDK request');
     assert(headers.get('authorization') === 'Bearer rk_test_fixture', 'Wrong environment credential');
     calls.push('retrieve');
@@ -61,16 +78,10 @@ Deno.test('signed subscription event retrieves current SDK state before confirmi
     }), { headers: { 'content-type': 'application/json' } });
   };
   try {
-    const handler = createSignedGarageTrialWebhook(config, {
-      lookupClaim: async id => { assert(id === attempt, 'Wrong claim'); calls.push('lookup'); return {
-        attempt_id: attempt, workspace_id: workspace, customer_id: 'cus_fixture', price_id: 'price_fixture', currency: 'gbp', billing_interval: 'month',
-      }; },
-      confirm: async (id, sub, from, to) => {
-        assert(id === attempt && sub === 'sub_fixture', 'Wrong confirmation identity');
-        assert(Date.parse(to) - Date.parse(from) === 604800000, 'Wrong trial duration');
-        calls.push('confirm'); return true;
-      },
+    const service = createClient(config.supabaseUrl, 'disposable-fixture-service', {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
+    const handler = createStoredGarageTrialWebhook(config, service);
     assert((await handler(request(event, await sign(event)))).status === 200, 'Signed trial rejected');
     assert(calls.join(',') === 'retrieve,lookup,confirm', 'Confirmation bypassed authoritative retrieval');
   } finally { globalThis.fetch = originalFetch; }
