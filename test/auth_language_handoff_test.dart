@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,8 @@ class _MemoryPkceStorage extends GotrueAsyncStorage {
 }
 
 void main() {
+  var authRequests = 0;
+  Completer<void>? authGate;
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -35,6 +38,10 @@ void main() {
         detectSessionInUri: false, localStorage: const EmptyLocalStorage(),
         pkceAsyncStorage: _MemoryPkceStorage()),
       httpClient: MockClient((request) async {
+        if (request.url.path == '/auth/v1/signup' || request.url.path == '/auth/v1/token') {
+          authRequests++;
+          await authGate?.future;
+        }
         if (request.url.path == '/auth/v1/signup') {
           return http.Response(jsonEncode({'user': {
             'id': '00000000-0000-4000-8000-000000000001',
@@ -48,6 +55,48 @@ void main() {
   });
   tearDownAll(() async => Supabase.instance.dispose());
   tearDown(() => initializeAppLanguage(uri: Uri.parse('https://example.test/app/'), device: 'en'));
+  for (final register in [false, true]) {
+    testWidgets('rapid repeated submit sends one Auth request (register=$register)', (tester) async {
+      initializeAppLanguage(uri: Uri.parse('https://example.test/app/?lang=pl'), device: 'en');
+      await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+      await tester.pumpAndSettle();
+      if (register) {
+        final toggle = find.text(tr('no_account'));
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+      }
+      await tester.enterText(find.byType(TextFormField).at(0), 'person@example.test');
+      await tester.enterText(find.byType(TextFormField).at(1), 'StrongPassword12!');
+      final button = find.byType(FilledButton);
+      await tester.ensureVisible(button);
+      final before = authRequests;
+      final gate = Completer<void>();
+      authGate = gate;
+      addTearDown(() { if (!gate.isCompleted) gate.complete(); authGate = null; });
+      // Two taps can reach the old enabled button before the next frame.
+      await tester.tap(button);
+      await tester.tap(button);
+      gate.complete();
+      authGate = null;
+      if (register) {
+        for (var frame = 0; frame < 20 && find.text('Sprawdź pocztę').evaluate().isEmpty; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(find.text('Sprawdź pocztę'), findsOneWidget);
+        expect(authRequests - before, 1);
+        await tester.tap(find.text('OK'));
+      }
+      await tester.pumpAndSettle();
+      expect(authRequests - before, 1);
+      expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(authRequests - before, 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('Polish login errors are safe and localized', (tester) async {
     initializeAppLanguage(uri: Uri.parse('https://example.test/app/?lang=pl'), device: 'en');
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
