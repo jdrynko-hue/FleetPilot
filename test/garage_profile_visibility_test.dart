@@ -48,6 +48,8 @@ void main() {
       final toggle = find.byKey(const Key('booking_profile_listed'));
       await tester.scrollUntilVisible(toggle, 250,
         scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
