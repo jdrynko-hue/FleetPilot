@@ -12,11 +12,13 @@ class GarageQuoteCurrencyPicker extends StatelessWidget {
   const GarageQuoteCurrencyPicker({
     required this.currency,
     required this.onChanged,
+    this.enabled = true,
     super.key,
   });
 
   final String currency;
   final ValueChanged<String> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +45,8 @@ class GarageQuoteCurrencyPicker extends StatelessWidget {
             ),
           ),
       ],
-      onChanged: (value) {
-        if (value != null && value != currency) {
+      onChanged: !enabled ? null : (value) {
+        if (enabled && value != null && value != currency) {
           onChanged(value);
         }
       },
