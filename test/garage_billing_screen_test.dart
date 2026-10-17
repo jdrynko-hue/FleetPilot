@@ -15,7 +15,7 @@ void main() {
   setUpAll(() async {
     transport = MockClient((request) async {
       requests++;
-      return http.Response('[]', 200,
+      return http.Response('[]', 200, request: request,
         headers: {'content-type': 'application/json'});
     });
     client = SupabaseClient('https://billing.example.test', 'test-key',
