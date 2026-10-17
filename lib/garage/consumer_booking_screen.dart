@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../auth/billing_markets.dart';
+import '../core/localization.dart';
 
 import 'consumer_booking_repository.dart';
 import 'booking_status_text.dart';
@@ -45,6 +47,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   final _city = TextEditingController();
   List<GarageBookingWorkshop> _shops = const [];
   String _serviceFilter = '';
+  String _countryFilter = '';
   bool _searched = false;
   int _scope = 0;
   bool _busy = false;
@@ -52,8 +55,11 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   String? _error;
   int _generation = 0;
 
-  List<GarageBookingWorkshop> get _visibleShops => _serviceFilter.isEmpty
-      ? _shops : _shops.where((shop) => shop.services.contains(_serviceFilter)).toList();
+  List<String> get _countries => _shops.map((shop) => shop.country.trim().toUpperCase())
+      .toSet().toList()..sort();
+  List<GarageBookingWorkshop> get _visibleShops => _shops.where((shop) =>
+      (_serviceFilter.isEmpty || shop.services.contains(_serviceFilter)) &&
+      (_countryFilter.isEmpty || shop.country.trim().toUpperCase() == _countryFilter)).toList();
 
   @override
   void initState() {
@@ -84,6 +90,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       _shops = const [];
       _searched = false;
       _serviceFilter = '';
+      _countryFilter = '';
       _city.clear();
       _error = null;
       _busy = false;
@@ -122,6 +129,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         final selected = ordered.indexWhere((shop) => shop.workspaceId == widget.initialWorkshopId);
         if (selected > 0) ordered.insert(0, ordered.removeAt(selected));
         _shops = List.unmodifiable(ordered);
+        if (!_countries.contains(_countryFilter)) _countryFilter = '';
         _searched = true;
         if (result.isEmpty) {
           _error = 'bookingSearchEmpty';
@@ -209,9 +217,27 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         if (_searched && _shops.isNotEmpty) ...[
           Text(GarageUiText.get('bookingSearchLimitHint'),
             key: const Key('booking_search_limit_hint')),
+          const SizedBox(height: 12),
+          KeyedSubtree(key: ValueKey('country_$_generation'),
+          child: DropdownButtonFormField<String>(key: const Key('booking_search_country'),
+            initialValue: _countryFilter, isExpanded: true,
+            decoration: InputDecoration(labelText: tr('country'),
+              border: const OutlineInputBorder()),
+            items: [
+              DropdownMenuItem(value: '', child: Text(
+                GarageUiText.get('bookingSearchAllCountries'), overflow: TextOverflow.ellipsis)),
+              for (final country in _countries)
+                DropdownMenuItem(value: country, child: Text(
+                  '${fleetCountryName(country, locale: AppLocale.language.value)} ($country)',
+                  overflow: TextOverflow.ellipsis)),
+            ],
+            onChanged: _busy ? null : (value) => setState(() => _countryFilter = value ?? ''),
+          )),
           if (_visibleShops.isEmpty)
-            Text(GarageUiText.get('bookingSearchNoService'),
-              key: const Key('booking_search_no_service'))
+            Text(GarageUiText.get(_countryFilter.isEmpty
+                ? 'bookingSearchNoService' : 'bookingSearchNoFilters'),
+              key: Key(_countryFilter.isEmpty
+                ? 'booking_search_no_service' : 'booking_search_no_filters'))
           else
             Text(GarageUiText.format('bookingSearchCount', {'count': _visibleShops.length}),
               key: const Key('booking_search_count')),

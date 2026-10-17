@@ -6,6 +6,8 @@ import '../core/localization.dart';
 class GarageUiText {
   const GarageUiText._();
   static const keys = <String>[
+    'bookingSearchAllCountries',
+    'bookingSearchNoFilters',
     'findWorkshop',
     'myBookings',
     'notifications',
@@ -186,6 +188,8 @@ class GarageUiText {
 
   static const labels = <String, List<String>>{
     'en': <String>[
+      'All countries',
+      'No workshops in these results match the selected country and service.',
       'Find a workshop',
       'My bookings',
       'Notifications',
@@ -364,6 +368,8 @@ class GarageUiText {
       "Booking update",
     ],
     'pl': <String>[
+      'Wszystkie kraje',
+      'Żaden warsztat w tych wynikach nie pasuje do wybranego kraju i usługi.',
       'Znajdź warsztat',
       'Moje rezerwacje',
       'Powiadomienia',
@@ -542,6 +548,8 @@ class GarageUiText {
       "Aktualizacja rezerwacji",
     ],
     'de': <String>[
+      'Alle Länder',
+      'Keine Werkstatt in diesen Ergebnissen entspricht dem gewählten Land und Service.',
       'Werkstatt finden',
       'Meine Buchungen',
       'Benachrichtigungen',
@@ -720,6 +728,8 @@ class GarageUiText {
       "Buchungsupdate",
     ],
     'sk': <String>[
+      'Všetky krajiny',
+      'Žiadny servis v týchto výsledkoch nezodpovedá vybranej krajine a službe.',
       'Nájsť servis',
       'Moje rezervácie',
       'Upozornenia',
@@ -898,6 +908,8 @@ class GarageUiText {
       "Aktualizácia rezervácie",
     ],
     'cs': <String>[
+      'Všechny země',
+      'Žádný servis v těchto výsledcích neodpovídá vybrané zemi a službě.',
       'Najít servis',
       'Moje rezervace',
       'Oznámení',
@@ -1076,6 +1088,8 @@ class GarageUiText {
       "Aktualizace rezervace",
     ],
     'hu': <String>[
+      'Minden ország',
+      'A találatok között nincs a kiválasztott országnak és szolgáltatásnak megfelelő műhely.',
       'Szerviz keresése',
       'Foglalásaim',
       'Értesítések',
@@ -1254,6 +1268,8 @@ class GarageUiText {
       "Foglalási frissítés",
     ],
     'ro': <String>[
+      'Toate țările',
+      'Niciun atelier din aceste rezultate nu corespunde țării și serviciului selectat.',
       'Găsește un service',
       'Rezervările mele',
       'Notificări',
@@ -1432,6 +1448,8 @@ class GarageUiText {
       "Actualizare rezervare",
     ],
     'es': <String>[
+      'Todos los países',
+      'Ningún taller de estos resultados coincide con el país y servicio seleccionados.',
       'Buscar taller',
       'Mis reservas',
       'Notificaciones',
@@ -1610,6 +1628,8 @@ class GarageUiText {
       "Actualización de cita",
     ],
     'fr': <String>[
+      'Tous les pays',
+      'Aucun atelier de ces résultats ne correspond au pays et au service sélectionnés.',
       'Trouver un garage',
       'Mes réservations',
       'Notifications',
@@ -1788,6 +1808,8 @@ class GarageUiText {
       "Mise à jour du rendez-vous",
     ],
     'it': <String>[
+      'Tutti i paesi',
+      'Nessuna officina tra questi risultati corrisponde al paese e al servizio selezionati.',
       'Trova un\'officina',
       'Le mie prenotazioni',
       'Notifiche',
@@ -1966,6 +1988,8 @@ class GarageUiText {
       "Aggiornamento prenotazione",
     ],
     'uk': <String>[
+      'Усі країни',
+      'Жодна майстерня в цих результатах не відповідає вибраній країні та послузі.',
       'Знайти СТО',
       'Мої бронювання',
       'Сповіщення',
@@ -2144,6 +2168,8 @@ class GarageUiText {
       "Оновлення запису",
     ],
     'pt': <String>[
+      'Todos os países',
+      'Nenhuma oficina nestes resultados corresponde ao país e serviço selecionados.',
       'Encontrar oficina',
       'As minhas marcações',
       'Notificações',
