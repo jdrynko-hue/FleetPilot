@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,6 +56,62 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  for (final failOldRequest in [false, true]) {
+    testWidgets('changed loader ignores old request failure=$failOldRequest',
+        (tester) async {
+      final oldRequest = Completer<List<GarageMechanicAssignment>>();
+      final newRequest = Completer<List<GarageMechanicAssignment>>();
+      Widget evidence(String id) => Text(id);
+      Future<void> mount(GarageJobsLoader loader) => tester.pumpWidget(
+        MaterialApp(home: GarageMechanicWorkScreen(
+          loadJobs: loader,
+          evidenceScreen: evidence,
+        )),
+      );
+      await mount(() => oldRequest.future);
+      await mount(() => newRequest.future);
+      if (failOldRequest) {
+        oldRequest.completeError(StateError('Old workspace'));
+      } else {
+        oldRequest.complete(jobs);
+      }
+      await tester.pump();
+      expect(find.text('FJ70 VDF'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      newRequest.complete(const []);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('garage_mechanic_empty')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('evidence scope change immediately clears cached assignments',
+      (tester) async {
+    final pending = Completer<List<GarageMechanicAssignment>>();
+    var loads = 0;
+    Future<List<GarageMechanicAssignment>> loader() {
+      loads++;
+      return loads == 1 ? Future.value(jobs) : pending.future;
+    }
+    Widget oldEvidence(String id) => Text('old $id');
+    Widget newEvidence(String id) => Text('new $id');
+    Future<void> mount(GarageEvidenceBuilder builder) => tester.pumpWidget(
+      MaterialApp(home: GarageMechanicWorkScreen(
+        loadJobs: loader,
+        evidenceScreen: builder,
+      )),
+    );
+    await mount(oldEvidence);
+    await tester.pumpAndSettle();
+    expect(find.text('FJ70 VDF'), findsOneWidget);
+    await mount(newEvidence);
+    expect(find.text('FJ70 VDF'), findsNothing);
+    expect(loads, 2);
+    pending.complete(const []);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('garage_mechanic_empty')), findsOneWidget);
+  });
 
   testWidgets('selecting an assignment routes to its private evidence',
       (tester) async {

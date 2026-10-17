@@ -65,6 +65,21 @@ class _GarageMechanicWorkScreenState
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant GarageMechanicWorkScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadJobs != widget.loadJobs ||
+        oldWidget.evidenceScreen != widget.evidenceScreen) {
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _requestVersion++;
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final request = ++_requestVersion;
     setState(() {
