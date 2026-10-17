@@ -313,6 +313,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   String? _error;
   bool _sent = false;
   bool _uncertain = false;
+  bool _picking = false;
   int _generation = 0;
   String _requestKey = newBookingRequestKey();
 
@@ -328,6 +329,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       _busy = false;
       _sent = false;
       _uncertain = false;
+      _picking = false;
       _requestKey = newBookingRequestKey();
       _error = null;
       _service = null;
@@ -361,20 +363,28 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       });
 
   Future<void> _pick() async {
-    if (_busy || _sent) return;
+    if (!mounted || _busy || _picking || _sent || _uncertain) return;
     final gen = _generation;
     final pickTime = widget.pickTime;
     // A rejected or cancelled replacement must not leave a previous time
     // ready to submit as though the new selection had succeeded.
-    setState(() { _when = null; _error = null; });
-    final when = await pickTime(context);
-    if (when != null && mounted && gen == _generation) {
-      setState(() { _when = when; _error = null; });
+    setState(() { _picking = true; _when = null; _error = null; });
+    try {
+      final when = await pickTime(context);
+      if (when != null && mounted && gen == _generation) {
+        setState(() { _when = when; _error = null; });
+      }
+    } catch (_) {
+      if (mounted && gen == _generation) {
+        setState(() => _error = 'bookingInvalidLocalTime');
+      }
+    } finally {
+      if (mounted && gen == _generation) setState(() => _picking = false);
     }
   }
 
   Future<void> _send() async {
-    if (_busy || _sent || _uncertain ||
+    if (_busy || _picking || _sent || _uncertain ||
         !(_form.currentState?.validate() ?? false)) return;
     final when = _when;
     if (when == null ||
@@ -467,13 +477,14 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
               _concern, limit: 1000, min: 3, lines: 3),
         ])),
         OutlinedButton(
-          key: const Key('booking_pick_time'), onPressed: _busy ? null : _pick,
+          key: const Key('booking_pick_time'),
+          onPressed: _busy || _picking || _uncertain ? null : _pick,
           child: Text(_when == null
             ? GarageUiText.get('bookingPickTime')
             : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
         FilledButton(key: const Key('booking_send'),
-          onPressed: _busy || _uncertain ? null : _send,
+          onPressed: _busy || _picking || _uncertain ? null : _send,
           child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
       ],
     )),
