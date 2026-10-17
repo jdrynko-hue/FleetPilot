@@ -42,6 +42,7 @@ jobs:
           --release
           --base-href "/app/"
           --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co
+          --dart-define=FLOTARYX_ECOSYSTEM_PRODUCTION=true
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_j638npcsGiRpQqYbVoz1Rg_qo4vA6tt
 
       - name: Assemble and validate public site

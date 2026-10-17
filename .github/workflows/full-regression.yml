@@ -75,7 +75,14 @@ jobs:
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=QA_AUTH_CALLBACK_URL=https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/
-      - name: Stage the actual Flutter portal entry
+      - name: Verify explicit production navigation with mocked Auth
+        # Exercise the production navigation flag with mocked sessions only.
+        # No production API, credentials, accounts or writes are involved.
+        run: >-
+          flutter test test/ecosystem_auth_routes_test.dart test/ecosystem_access_test.dart test/email_callback_test.dart
+          --dart-define=FLOTARYX_ECOSYSTEM_PRODUCTION=true
+          --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co
+      - name: Stage the actual Flutter portal entrypoint
         run: cp web/app/index.html web/index.html
       - name: Compile connected Flutter web for QA without deployment
         run: >-

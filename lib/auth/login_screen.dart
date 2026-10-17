@@ -153,11 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        if (AppConfig.ecosystemQaEnabled)
+                        if (AppConfig.ecosystemEnabled)
                           PortalEntryPicker(selected: widget.portal,
                             onSelected: _busy ? null : widget.onPortalChanged,
                             onFindWorkshop: _busy ? null : widget.onFindWorkshop),
-                        if (!AppConfig.ecosystemQaEnabled || _registerMode)
+                        if (!AppConfig.ecosystemEnabled || _registerMode)
                         Text(
                           _registerMode
                               ? tr('create_account')

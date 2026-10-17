@@ -53,7 +53,7 @@ class _AuthGateState extends State<AuthGate> {
         (widget.recoveryLinkOnLaunch ||
             Uri.base.fragment.contains('type=recovery') ||
             Uri.base.queryParameters['type'] == 'recovery');
-    if (AppConfig.ecosystemQaEnabled && Uri.base.queryParameters['portal'] == 'search') {
+    if (AppConfig.ecosystemEnabled && Uri.base.queryParameters['portal'] == 'search') {
       WidgetsBinding.instance.addPostFrameCallback((_) => _findWorkshop());
     }
     _subscription = _repository.authChanges.listen((state) {
@@ -124,11 +124,11 @@ class _AuthGateState extends State<AuthGate> {
     if (_user == null) return LoginScreen(
       portal: _portal,
       onPortalChanged: (entry) => setState(() => _portal = entry),
-      onFindWorkshop: AppConfig.ecosystemQaEnabled ? _findWorkshop : null,
+      onFindWorkshop: AppConfig.ecosystemEnabled ? _findWorkshop : null,
     );
     // Fleet invitation handling keeps priority, including its explicit errors.
     final invite = Uri.base.queryParameters['invite'];
-    if (AppConfig.ecosystemQaEnabled && (invite == null || invite.isEmpty)) {
+    if (AppConfig.ecosystemEnabled && (invite == null || invite.isEmpty)) {
       return EcosystemGate.forClient(
         Supabase.instance.client, preferredPortal: _portal,
         customerSearchFirst: _bookingWorkshopId != null || Uri.base.queryParameters['portal'] == 'search',

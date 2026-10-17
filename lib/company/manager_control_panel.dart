@@ -319,7 +319,7 @@ class _ManagerControlPanelState extends State<ManagerControlPanel> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
               children: [
-                if (AppConfig.ecosystemQaEnabled && canManageForRole(widget.company.role))
+                if (AppConfig.ecosystemEnabled && canManageForRole(widget.company.role))
                   Card(child: ListTile(title: Text(_t('Połączenia z warsztatami', 'Workshop connections')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
@@ -327,7 +327,7 @@ class _ManagerControlPanelState extends State<ManagerControlPanel> {
                         scopeId: widget.company.companyId, fleet: true),
                     )),
                   )),
-                if (AppConfig.ecosystemQaEnabled && canManageForRole(widget.company.role))
+                if (AppConfig.ecosystemEnabled && canManageForRole(widget.company.role))
                   Card(child: ListTile(
                     title: Text(_t('Naprawy Fleet ↔ Garage', 'Fleet ↔ Garage repairs')),
                     trailing: const Icon(Icons.chevron_right),

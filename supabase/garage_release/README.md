@@ -17,6 +17,15 @@ After an authorized installation, run the read-only Garage API catalogue probe,
 anonymous API denials, Storage checks and security advisors. Catalogue success
 alone does not establish authenticated role acceptance or email delivery.
 
-The application release remains separate. Its existing QA-only ecosystem flag
-does not enable production navigation. Production UI activation requires its own
-reviewed change and deployment after backend checks. Stripe Live remains off.
+The application release remains separate. The QA flag cannot enable production.
+The production build uses its separate `FLOTARYX_ECOSYSTEM_PRODUCTION=true` flag,
+accepted only with the exact production backend. Mocked Auth navigation tests
+exercise both builds. Backend checks must pass before publishing that build.
+Stripe Live remains off.
+
+The separate `driver_check_compatibility.sql` promotes only the previously tested
+private driver authorization helpers and inspection RPC used by the unified UI.
+It does not replace existing Fleet RPCs, change table privileges or edit records.
+It requires an explicit single-transaction installation and refuses an existing
+helper schema/RPC. Its disposable rehearsal runs the existing driver isolation
+suite after reconstructing that compatibility subset.
