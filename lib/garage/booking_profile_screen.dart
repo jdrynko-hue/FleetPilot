@@ -5,6 +5,7 @@ import 'booking_status_text.dart';
 import 'consumer_booking_repository.dart';
 import 'garage_ui_text.dart';
 import 'profile_visibility_text.dart';
+import 'workshop_time_zone.dart';
 
 typedef BookingProfileSaver = Future<bool> Function({required String city,
   required String timeZone, required List<String> services,
@@ -12,9 +13,11 @@ typedef BookingProfileSaver = Future<bool> Function({required String city,
 
 /// Owner-only QA configuration. A public listing never promises a free slot.
 class GarageBookingProfileScreen extends StatefulWidget {
-  const GarageBookingProfileScreen({required this.load, required this.save, super.key});
+  const GarageBookingProfileScreen({required this.load, required this.save,
+    this.initialTimeZone = 'Europe/London', super.key});
   factory GarageBookingProfileScreen.forRepository({required GarageBookingRepository repository,
-      required String workspaceId}) => GarageBookingProfileScreen(
+      required String workspaceId, String? country}) => GarageBookingProfileScreen(
+    initialTimeZone: suggestedWorkshopTimeZone(country),
     load: () => repository.profile(workspaceId),
     save: ({required city, required timeZone, required services,
       required durationMinutes, required listed}) => repository.configure(
@@ -22,6 +25,7 @@ class GarageBookingProfileScreen extends StatefulWidget {
         services: services, durationMinutes: durationMinutes, listed: listed));
   final Future<GarageBookingProfile?> Function() load;
   final BookingProfileSaver save;
+  final String initialTimeZone;
   @override
   State<GarageBookingProfileScreen> createState() => _ProfileState();
 }
@@ -45,7 +49,8 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
   @override
   void didUpdateWidget(covariant GarageBookingProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.load != widget.load || oldWidget.save != widget.save) {
+    if (oldWidget.load != widget.load || oldWidget.save != widget.save ||
+        oldWidget.initialTimeZone != widget.initialTimeZone) {
       _scope++; _load();
     }
   }
@@ -64,7 +69,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
       if (!mounted || version != _version) return;
       setState(() {
         _city.text = profile?.city ?? '';
-        _zone.text = profile?.timeZone ?? 'Europe/London';
+        _zone.text = profile?.timeZone ?? widget.initialTimeZone;
         _services = profile?.services.toSet() ?? {};
         _duration = profile?.durationMinutes ?? 60;
         _listed = profile?.listed ?? false;
@@ -99,6 +104,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
         children: [Text(GarageUiText.get('bookingProfileHint')),
           const SizedBox(height: 12),
+          Text('${GarageUiText.get('bookingTimeZone')}: $zone'),
           Text('${GarageUiText.get('bookingListed')}: ${listed ? tr('active') : tr('inactive')}')]),
       actions: [TextButton(onPressed: () => Navigator.pop(c, false),
         child: Text(GarageUiText.get('quoteBack'))),
@@ -153,7 +159,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
             TextField(key: const Key('booking_profile_zone'), controller: _zone,
               enabled: enabled, maxLength: 100, onChanged: (_) => setState(() {}),
               decoration: InputDecoration(labelText: GarageUiText.get('bookingTimeZone'),
-                hintText: 'Europe/London')),
+                hintText: widget.initialTimeZone)),
             Wrap(spacing: 8, children: [for (final service in GarageBookingService.values)
               FilterChip(key: Key('booking_profile_service_$service'),
                 label: Text(bookingServiceLabel(service)), selected: _services.contains(service),

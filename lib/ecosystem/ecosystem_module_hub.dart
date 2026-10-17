@@ -69,7 +69,7 @@ class EcosystemModuleHub extends StatelessWidget {
         if (destination.canConfigure)
           GarageUiText.get('bookingProfile'): () =>
             GarageBookingProfileScreen.forRepository(repository: bookings,
-              workspaceId: destination.workspaceId!),
+              workspaceId: destination.workspaceId!, country: destination.country),
         if (destination.canConfigure)
           GarageUiText.get('calendarSettings'): () =>
             GarageCalendarSettingsScreen.forRepository(repository: calendar,
