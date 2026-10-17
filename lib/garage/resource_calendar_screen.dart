@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/localization.dart';
 import 'consumer_booking_repository.dart';
 import 'resource_calendar_repository.dart';
 import 'booking_time_text.dart';
@@ -53,9 +52,6 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
   int _sequence = 0;
   int _scope = 0;
 
-  bool get _pl => AppLocale.language.value == 'pl';
-  String tr(String pl, String en) => _pl ? pl : en;
-
   @override
   void initState() { super.initState(); _refresh(); }
 
@@ -107,8 +103,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
         _resources = const [];
         _requests = const [];
         _calendar = const [];
-        _error = tr('Nie udało się odczytać grafiku lub uprawnień.',
-            'Could not load this schedule or verify access.');
+        _error = GarageUiText.get('calendarLoadError');
       });
     } finally {
       if (mounted && sequence == _sequence) setState(() => _busy = false);
@@ -128,18 +123,15 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(tr('Potwierdź termin', 'Confirm appointment')),
-        content: Text(tr('Sprawdź grafik. System ponownie zweryfikuje '
-            'stanowisko, mechanika i godziny otwarcia.',
-            'Check the calendar. The server will revalidate this bay, '
-            'mechanic and opening hours.')),
+        title: Text(GarageUiText.get('calendarConfirmTitle')),
+        content: Text(GarageUiText.get('calendarCheck')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context,false),
-            child: Text(tr('Wróć','Back'))),
+            child: Text(GarageUiText.get('quoteBack'))),
           FilledButton(
             key: const Key('calendar_confirm_action'),
             onPressed: () => Navigator.pop(context,true),
-            child: Text(tr('Potwierdź', 'Confirm'))),
+            child: Text(GarageUiText.get('inboxConfirm'))),
         ],
       ),
     );
@@ -167,9 +159,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
         final refreshSequence = _sequence;
         await refresh;
         if (mounted && scope == _scope && refreshSequence == _sequence && failed) {
-          setState(() => _error = tr(
-            'Potwierdzenie nie powiodło się. Sprawdź dostępność lub grafik.',
-            'Confirmation failed. Check availability or workshop hours.'));
+          setState(() => _error = GarageUiText.get('calendarConfirmFailed'));
         }
       }
     }
@@ -180,9 +170,10 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
     final active = _resources.where((r) => r.active).toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr('Kalendarz warsztatu', 'Workshop calendar')),
+        title: Text(GarageUiText.get('calendarTitle')),
         actions: [
           IconButton(key: const Key('garage_calendar_refresh'),
+            tooltip: GarageUiText.get('refresh'),
             onPressed: _busy ? null : _refresh,
             icon: const Icon(Icons.refresh)),
         ],
@@ -190,29 +181,25 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
       body: SafeArea(
         child: _busy ? const Center(child: CircularProgressIndicator()) :
           ListView(padding: const EdgeInsets.all(16), children: [
-            Text(tr('Każdą wizytę przypisz do konkretnego stanowiska. '
-                'Zgłoszenie klienta nie jest automatyczną rezerwacją.',
-                'Assign each booking to a specific bay. '
-                'Customer requests do not reserve capacity.')),
+            Text(GarageUiText.get('calendarIntro')),
             if (_error != null)
               Text(_error!, key: const Key('garage_calendar_error')),
             const SizedBox(height: 14),
-            Text(tr('Stanowiska', 'Workshop bays'),
+            Text(GarageUiText.get('calendarBaysTitle'),
               style: Theme.of(context).textTheme.titleLarge),
             for (final resource in _resources)
               ListTile(
                 key: Key('garage_calendar_resource_' + resource.id),
                 title: Text(resource.name),
                 subtitle: Text(resource.active
-                    ? tr('Aktywne', 'Active')
-                    : tr('Nieaktywne', 'Inactive')),
+                    ? GarageUiText.get('calendarActive')
+                    : GarageUiText.get('calendarInactive')),
               ),
             if (active.isEmpty)
-              Text(tr('Dodaj stanowisko w ustawieniach warsztatu.',
-                  'Add an active bay in workshop settings.'),
+              Text(GarageUiText.get('calendarAddBay'),
                 key: const Key('garage_calendar_no_resources')),
             const SizedBox(height: 14),
-            Text(tr('Oczekujące zgłoszenia', 'Pending requests'),
+            Text(GarageUiText.get('calendarPending'),
               style: Theme.of(context).textTheme.titleLarge),
             for (final request in _requests)
               if (request.status == GarageBookingStatus.requested)
@@ -222,17 +209,19 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
                       children: [
                         Text(request.customerName,
                           style: Theme.of(context).textTheme.titleMedium),
-                        Text(request.service + ' — ' + request.vehicleMake
+                        Text(bookingServiceLabel(request.service) + ' — ' + request.vehicleMake
                             + ' ' + request.vehicleModel),
                         Text(bookingLocalTimeLabel(request.startAt)),
                         DropdownButtonFormField<String>(
                           key: Key('garage_calendar_select_' + request.id),
                           value: _selection[request.id],
+                          isExpanded: true,
                           decoration: InputDecoration(labelText:
-                            tr('Wybierz stanowisko', 'Select a bay')),
+                            GarageUiText.get('calendarSelectBay')),
                           items: active.map((resource) =>
                             DropdownMenuItem<String>(
-                              value: resource.id, child: Text(resource.name)))
+                              value: resource.id, child: Text(resource.name,
+                                maxLines: 1, overflow: TextOverflow.ellipsis)))
                             .toList(),
                           onChanged: active.isEmpty ? null : (id) =>
                             setState(() {
@@ -244,15 +233,13 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
                           key: Key('garage_calendar_accept_' + request.id),
                           onPressed: _selection[request.id] == null
                               ? null : () => _accept(request),
-                          child: Text(tr('Zatwierdź wizytę',
-                              'Confirm appointment'))),
+                          child: Text(GarageUiText.get('calendarAccept'))),
                       ]))),
             const SizedBox(height: 14),
-            Text(tr('Potwierdzone w ciągu 7 dni', 'Confirmed in next 7 days'),
+            Text(GarageUiText.get('calendarNextSeven'),
               style: Theme.of(context).textTheme.titleLarge),
             if (_calendar.isEmpty)
-              Text(tr('Brak potwierdzonych terminów.',
-                  'No confirmed appointments.'),
+              Text(GarageUiText.get('calendarEmpty'),
                 key: const Key('garage_calendar_empty')),
             for (final booking in _calendar)
               Card(key: Key('garage_calendar_appointment_' + booking.bookingId),
@@ -261,7 +248,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
                   subtitle: Text(
                     bookingLocalTimeLabel(booking.startAt)
                     + ' — ' + (booking.resourceName ??
-                        tr('Starsza rezerwacja', 'Legacy booking'))),
+                        GarageUiText.get('calendarLegacy'))),
                   trailing: booking.status == 'cancellation_requested'
                       ? const Icon(Icons.hourglass_top)
                       : const Icon(Icons.check_circle_outline),
