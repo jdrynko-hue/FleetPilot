@@ -14,3 +14,13 @@ and exercise signed replay/invalid/stale signatures through the actual SDK and
 real PostgreSQL. The coordinator tests inject verification/storage; they do not
 prove cryptographic verification, database replay safety or real Stripe delivery.
 Cancellation before the first charge and paid-invoice lifecycle remain required.
+
+### Pinned SDK signature adapter
+
+The internal `trial_webhook_adapter.ts` factory now uses Stripe 23.0.0
+`constructEventAsync` with WebCrypto and an explicit 300-second tolerance. It
+refuses production URLs, Live keys, missing signing secrets and disabled config.
+The factory is not served or deployed. The dedicated Deno SDK test covers real
+HMAC validation, modified bytes, wrong secret, expired/malformed signatures and
+safe replay, without network or customer data. Service-only claim lookup, RPC
+wiring and database integration remain pending before endpoint activation.
