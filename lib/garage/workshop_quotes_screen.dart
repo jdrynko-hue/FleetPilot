@@ -171,8 +171,12 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   String? _error;
   bool _loading = true;
   bool _publishing = false;
+  bool _confirming = false;
   bool _uncertain = false;
   int? _published;
+
+  bool get _editing => !_loading && !_publishing && !_confirming &&
+      !_uncertain && _published == null;
 
   @override
   void initState() { super.initState(); _loadCurrency(); }
@@ -196,8 +200,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   }
 
   Future<void> _publish() async {
-    if (_loading || _publishing || _uncertain || _published != null ||
-        _currency == null) return;
+    if (!_editing || _currency == null) return;
     final currency = _currency!.code;
     List<GarageQuoteDraftLine> lines;
     try {
@@ -209,23 +212,37 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
     }
     final total = lines.fold<int>(0, (sum, line) =>
       sum + line.quantity * line.unitPriceMinor + line.taxMinor);
-    final accepted = await showDialog<bool>(
+    _confirming = true;
+    bool? accepted;
+    var decisionMade = false;
+    try {
+    accepted = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        void decide(bool result) {
+          if (decisionMade || !ctx.mounted || ModalRoute.of(ctx)?.isCurrent != true) return;
+          decisionMade = true;
+          Navigator.pop(ctx, result);
+        }
+        return AlertDialog(
         title: Text(GarageUiText.get('quotePublishQuestion')),
         content: Text(GarageUiText.format('quoteConfirmTotals', {
           'count': lines.length,
           'total': GarageCurrencies.formatMinor(currency, total),
         })),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false),
+          TextButton(onPressed: () => decide(false),
             child: Text(GarageUiText.get('quoteBack'))),
           FilledButton(key: const Key('garage_editor_confirm'),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => decide(true),
             child: Text(GarageUiText.get('quotePublish'))),
         ],
-      ),
+      );
+      },
     );
+    } finally {
+      _confirming = false;
+    }
     if (!mounted || accepted != true || _publishing) return;
     setState(() { _publishing = true; _error = null; });
     try {
@@ -253,9 +270,12 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                   style: Theme.of(context).textTheme.titleMedium)),
                 if (_lines.length > 1) IconButton(
                   key: Key('quote_remove_$index'),
-                  onPressed: () => setState(() {
+                  onPressed: !_editing ? null : () {
+                    if (!_editing) return;
+                    setState(() {
                     _lines.removeAt(index); draft.dispose();
-                  }),
+                    });
+                  },
                   icon: const Icon(Icons.delete_outline)),
               ]),
               DropdownButtonFormField<String>(
@@ -268,21 +288,23 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                    DropdownMenuItem(value: 'part', child: Text(GarageUiText.get('quotePart'))),
                    DropdownMenuItem(value: 'other', child: Text(GarageUiText.get('quoteOther'))),
                  ],
-                onChanged: (v) { if (v != null) draft.type = v; },
+                onChanged: !_editing ? null : (v) {
+                  if (_editing && v != null) draft.type = v;
+                },
               ),
-              TextField(controller: draft.description,
+              TextField(controller: draft.description, enabled: _editing,
                 key: Key('quote_description_$index'),
                 maxLength: 500, decoration: InputDecoration(
                   labelText: GarageUiText.get('quoteDescription'))),
-              TextField(controller: draft.quantity,
+              TextField(controller: draft.quantity, enabled: _editing,
                 key: Key('quote_quantity_$index'),
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: GarageUiText.get('quoteQuantity'))),
-              TextField(controller: draft.unitPrice,
+              TextField(controller: draft.unitPrice, enabled: _editing,
                 key: Key('quote_unit_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
                 decoration: InputDecoration(labelText: GarageUiText.format('quoteUnitPrice', {'currency': currency}))),
-              TextField(controller: draft.tax,
+              TextField(controller: draft.tax, enabled: _editing,
                 key: Key('quote_tax_$index'),
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
                 decoration: InputDecoration(labelText: GarageUiText.format('quoteLineTax', {'currency': currency}))),
@@ -309,18 +331,23 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
               Text(GarageUiText.format('quoteCurrencyLocked', {'currency': currency.code}))
             else GarageQuoteCurrencyPicker(
               currency: currency.code,
-              onChanged: (v) => setState(() => _currency =
-                GarageQuoteCurrencySelection(v, locked: false))),
+              enabled: _editing,
+              onChanged: (v) {
+                if (!_editing) return;
+                setState(() => _currency = GarageQuoteCurrencySelection(v, locked: false));
+              }),
             for (var i = 0; i < _lines.length; i++)
               _lineForm(_lines[i], i, currency.code),
             OutlinedButton.icon(
               key: const Key('quote_add_line'),
-              onPressed: _publishing || _lines.length >= 50 ? null :
-                () => setState(() => _lines.add(_QuoteDraft())),
+              onPressed: !_editing || _lines.length >= 50 ? null : () {
+                if (!_editing || _lines.length >= 50) return;
+                setState(() => _lines.add(_QuoteDraft()));
+              },
               icon: const Icon(Icons.add), label: Text(GarageUiText.get('addQuoteItem'))),
             const SizedBox(height: 12),
             FilledButton(key: const Key('quote_publish'),
-              onPressed: _publishing ? null : _publish,
+              onPressed: !_editing ? null : _publish,
               child: Text(_publishing ? GarageUiText.get('quotePublishing') :
                 GarageUiText.get('publishEstimate'))),
           ],
