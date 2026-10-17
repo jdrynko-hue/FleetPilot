@@ -45,7 +45,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(approvals, decision == true ? 1 : 0);
       expect(revisions, decision == true ? [7] : isEmpty);
-      expect(loads, decision == true ? 2 : 1);
+      // Initial read, revision revalidation, then authoritative post-write read.
+      expect(loads, decision == true ? 3 : 1);
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(GarageCustomerQuoteScreen), findsOneWidget);
       expect(find.byKey(const Key('open_quote')), findsNothing);
