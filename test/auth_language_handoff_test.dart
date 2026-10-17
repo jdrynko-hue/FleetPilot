@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,7 @@ class _MemoryPkceStorage extends GotrueAsyncStorage {
 
 void main() {
   var authRequests = 0;
+  Completer<void>? authGate;
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -38,6 +40,7 @@ void main() {
       httpClient: MockClient((request) async {
         if (request.url.path == '/auth/v1/signup' || request.url.path == '/auth/v1/token') {
           authRequests++;
+          await authGate?.future;
         }
         if (request.url.path == '/auth/v1/signup') {
           return http.Response(jsonEncode({'user': {
@@ -68,9 +71,14 @@ void main() {
       final button = find.byType(FilledButton);
       await tester.ensureVisible(button);
       final before = authRequests;
+      final gate = Completer<void>();
+      authGate = gate;
+      addTearDown(() { if (!gate.isCompleted) gate.complete(); authGate = null; });
       // Two taps can reach the old enabled button before the next frame.
       await tester.tap(button);
       await tester.tap(button);
+      gate.complete();
+      authGate = null;
       if (register) {
         for (var frame = 0; frame < 20 && find.text('Sprawdź pocztę').evaluate().isEmpty; frame++) {
           await tester.pump(const Duration(milliseconds: 100));
