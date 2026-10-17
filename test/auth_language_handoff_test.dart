@@ -13,14 +13,27 @@ import 'package:fleetpilot/auth/forgot_password_screen.dart';
 import 'package:fleetpilot/auth/password_recovery_screen.dart';
 import 'package:fleetpilot/auth/portal_entry.dart';
 
+class _MemoryPkceStorage extends GotrueAsyncStorage {
+  final _items = <String, String>{};
+  @override
+  Future<String?> getItem({required String key}) async => _items[key];
+  @override
+  Future<void> setItem({required String key, required String value}) async {
+    _items[key] = value;
+  }
+  @override
+  Future<void> removeItem({required String key}) async { _items.remove(key); }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('com.llfbandit.app_links/events'), (_) async => null);
     await Supabase.initialize(url: 'https://locale.example.test', publishableKey: 'mock-only',
-      authOptions: const FlutterAuthClientOptions(autoRefreshToken: false,
-        detectSessionInUri: false, localStorage: EmptyLocalStorage()),
+      authOptions: FlutterAuthClientOptions(autoRefreshToken: false,
+        detectSessionInUri: false, localStorage: const EmptyLocalStorage(),
+        pkceAsyncStorage: _MemoryPkceStorage()),
       httpClient: MockClient((request) async {
         if (request.url.path == '/auth/v1/signup') {
           return http.Response(jsonEncode({'user': {
@@ -61,7 +74,10 @@ void main() {
     final button = find.byType(FilledButton);
     await tester.ensureVisible(button);
     await tester.tap(button);
-    await tester.pumpAndSettle();
+    // Submission stays busy while its confirmation dialog is open.
+    for (var frame = 0; frame < 20 && find.text('Sprawdź pocztę').evaluate().isEmpty; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.text('Sprawdź pocztę'), findsOneWidget);
     expect(find.textContaining('Na adres person@example.test wysłaliśmy link'), findsOneWidget);
     expect(find.text('Check your email'), findsNothing);
