@@ -513,12 +513,14 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             ? GarageUiText.get('bookingPickTime')
             : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
-        if (_service != null && _when != null)
-          BookingRequestReview(service: _service!, when: _when!,
-            workshopZone: widget.shop.timeZone),
-        FilledButton(key: const Key('booking_send'),
-          onPressed: _busy || _picking || _uncertain ? null : _send,
-          child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (_service != null && _when != null)
+            BookingRequestReview(service: _service!, when: _when!,
+              workshopZone: widget.shop.timeZone),
+          FilledButton(key: const Key('booking_send'),
+            onPressed: _busy || _picking || _uncertain ? null : _send,
+            child: Text(GarageUiText.get(_busy ? 'bookingSending' : 'bookingSubmitRequest'))),
+        ]),
       ],
     )),
   );
