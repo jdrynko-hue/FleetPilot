@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_module_hub.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/garage/setup_guide.dart';
 
 void main() {
+  late SupabaseClient client;
+  late MockClient transport;
+  setUpAll(() async {
+    transport = MockClient((_) async => http.Response('[]', 200,
+      headers: {'content-type': 'application/json'}));
+    client = SupabaseClient('https://setup.example.test', 'mock-only', httpClient: transport,
+      authOptions: const AuthClientOptions(autoRefreshToken: false));
+    // Start the SDK JSON worker outside the widget test's fake clock.
+    await client.from('fixture_warmup').select();
+  });
+  tearDownAll(() async { await client.dispose(); transport.close(); });
   for (final owner in [false, true]) {
     testWidgets('setup navigation follows workshop configuration permission ($owner)', (tester) async {
-      final client = SupabaseClient('https://setup.example.test', 'mock-only',
-        authOptions: const AuthClientOptions(autoRefreshToken: false));
-      addTearDown(client.dispose);
       await tester.pumpWidget(MaterialApp(home: EcosystemModuleHub(client: client,
         destination: EcosystemDestination(EcosystemModule.workshop,
           workspaceId: '00000000-0000-4000-8000-000000000001', name: 'QA workshop',
