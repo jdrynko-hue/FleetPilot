@@ -73,6 +73,60 @@ void main() {
     expect(find.textContaining('PRIVATE DETAIL'), findsNothing);
     expect(tester.widget<FilledButton>(find.byKey(const Key('garage_create_submit'))).onPressed, isNull);
   });
+  for (final sameAccount in [true, false]) {
+    testWidgets('uncertain workshop check is guarded and never writes again (sameAccount=$sameAccount)', (tester) async {
+      var current = true;
+      var writes = 0;
+      var checks = 0;
+      await tester.pumpWidget(MaterialApp(home: GarageCreateWorkspaceScreen(
+        isCurrentAccount: () => current, onCreated: () => checks++,
+        create: ({required name, required country}) async {
+          writes++;
+          throw StateError('PRIVATE RESPONSE');
+        })));
+      await ready(tester);
+      await tester.tap(find.byKey(const Key('garage_create_submit')));
+      await tester.pumpAndSettle();
+      final refresh = find.byKey(const Key('garage_create_check_memberships'));
+      await tester.ensureVisible(refresh);
+      final action = tester.widget<OutlinedButton>(refresh).onPressed!;
+      current = sameAccount;
+      action(); action();
+      await tester.pumpAndSettle();
+      expect(checks, sameAccount ? 1 : 0);
+      expect(writes, 1);
+      expect(find.textContaining('PRIVATE RESPONSE'), findsNothing);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('garage_create_submit'))).onPressed, isNull);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('uncertain workshop refresh returns to chooser and reloads memberships', (tester) async {
+    var loads = 0;
+    var writes = 0;
+    await tester.pumpWidget(MaterialApp(home: EcosystemGate(
+      loadAccess: () async { loads++; return const EcosystemAccess(hasFleet: false, garages: []); },
+      destinationBuilder: (_) => const Scaffold(), signOut: () async {},
+      isCurrentAccount: () => true,
+      createWorkshopBuilder: (routeContext) => GarageCreateWorkspaceScreen(
+        isCurrentAccount: () => true, onCreated: () => Navigator.of(routeContext).pop(),
+        create: ({required name, required country}) async {
+          writes++; throw StateError('Ambiguous test response');
+        }))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ecosystem_create_workshop')));
+    await tester.pumpAndSettle();
+    await ready(tester);
+    await tester.tap(find.byKey(const Key('garage_create_submit')));
+    await tester.pumpAndSettle();
+    final refresh = find.byKey(const Key('garage_create_check_memberships'));
+    await tester.ensureVisible(refresh); await tester.tap(refresh);
+    await tester.pumpAndSettle();
+    expect(loads, 2);
+    expect(writes, 1);
+    expect(find.byType(GarageCreateWorkspaceScreen), findsNothing);
+    expect(find.byKey(const Key('ecosystem_create_workshop')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   for (final transition in ['account', 'disposed']) {
     testWidgets('late creation response cannot navigate after $transition change', (tester) async {
       final pending = Completer<void>();
