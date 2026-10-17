@@ -174,6 +174,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   bool _confirming = false;
   bool _uncertain = false;
   int? _published;
+  int _generation = 0;
 
   bool get _editing => !_loading && !_publishing && !_confirming &&
       !_uncertain && _published == null;
@@ -181,26 +182,51 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   @override
   void initState() { super.initState(); _loadCurrency(); }
   @override
+  void didUpdateWidget(covariant GarageQuoteEditorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.order.id != widget.order.id ||
+        oldWidget.order.status != widget.order.status ||
+        oldWidget.order.complaint != widget.order.complaint ||
+        oldWidget.loadCurrency != widget.loadCurrency ||
+        oldWidget.publish != widget.publish) {
+      _generation++;
+      for (final line in _lines) { line.dispose(); }
+      _lines..clear()..add(_QuoteDraft());
+      _publishing = false;
+      _confirming = false;
+      _uncertain = false;
+      _published = null;
+      _loadCurrency();
+    }
+  }
+  @override
   void dispose() {
+    _generation++;
     for (final line in _lines) { line.dispose(); }
     super.dispose();
   }
 
   Future<void> _loadCurrency() async {
+    final generation = _generation;
+    final loadCurrency = widget.loadCurrency;
     setState(() { _loading = true; _currency = null; _error = null; });
     try {
-      final currency = await widget.loadCurrency();
+      final currency = await loadCurrency();
       GarageCurrencies.digits(currency.code);
-      if (mounted) setState(() => _currency = currency);
+      if (mounted && generation == _generation) setState(() => _currency = currency);
     } catch (_) {
-      if (mounted) setState(() => _error = GarageUiText.get('quoteCurrencyBlocked'));
+      if (mounted && generation == _generation) {
+        setState(() => _error = GarageUiText.get('quoteCurrencyBlocked'));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && generation == _generation) setState(() => _loading = false);
     }
   }
 
   Future<void> _publish() async {
     if (!_editing || _currency == null) return;
+    final generation = _generation;
+    final publish = widget.publish;
     final currency = _currency!.code;
     List<GarageQuoteDraftLine> lines;
     try {
@@ -241,27 +267,28 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       },
     );
     } finally {
-      _confirming = false;
+      if (mounted && generation == _generation) _confirming = false;
     }
-    if (!mounted || accepted != true || _publishing) return;
+    if (!mounted || generation != _generation || accepted != true || _publishing) return;
     setState(() { _publishing = true; _error = null; });
     try {
-      final revision = await widget.publish(currency, lines);
-      if (mounted) setState(() => _published = revision);
+      final revision = await publish(currency, lines);
+      if (mounted && generation == _generation) setState(() => _published = revision);
     } catch (_) {
       // Network failure can occur *after* the server committed. Retrying here
       // could create a second revision and invalidate existing approval.
-      if (mounted) setState(() {
+      if (mounted && generation == _generation) setState(() {
         _uncertain = true;
         _error = GarageUiText.get('quoteUncertain');
       });
     } finally {
-      if (mounted) setState(() => _publishing = false);
+      if (mounted && generation == _generation) setState(() => _publishing = false);
     }
   }
 
-  Widget _lineForm(_QuoteDraft draft, int index, String currency) =>
-      Card(key: Key('quote_draft_$index'),
+  Widget _lineForm(_QuoteDraft draft, int index, String currency) {
+    final generation = _generation;
+    return Card(key: Key('quote_draft_$index'),
         child: Padding(padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -271,9 +298,9 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                 if (_lines.length > 1) IconButton(
                   key: Key('quote_remove_$index'),
                   onPressed: !_editing ? null : () {
-                    if (!_editing) return;
+                    if (!_editing || generation != _generation || !_lines.contains(draft)) return;
                     setState(() {
-                    _lines.removeAt(index); draft.dispose();
+                    _lines.remove(draft); draft.dispose();
                     });
                   },
                   icon: const Icon(Icons.delete_outline)),
@@ -289,7 +316,8 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                    DropdownMenuItem(value: 'other', child: Text(GarageUiText.get('quoteOther'))),
                  ],
                 onChanged: !_editing ? null : (v) {
-                  if (_editing && v != null) draft.type = v;
+                  if (_editing && generation == _generation && _lines.contains(draft) &&
+                      v != null) draft.type = v;
                 },
               ),
               TextField(controller: draft.description, enabled: _editing,
@@ -309,15 +337,18 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal:true),
                 decoration: InputDecoration(labelText: GarageUiText.format('quoteLineTax', {'currency': currency}))),
             ])));
+  }
 
   @override
   Widget build(BuildContext context) {
     final currency = _currency;
+    final generation = _generation;
     return Scaffold(
       appBar: AppBar(title: Text(GarageUiText.get('newEstimate'))),
       body: SafeArea(child: _loading
         ? const Center(child: CircularProgressIndicator())
-        : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 112), children: [
+        : ListView(key: ValueKey(_generation),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 112), children: [
           Text(widget.order.complaint,
             style: Theme.of(context).textTheme.titleMedium),
           if (_error != null) Text(_error!, key: const Key('quote_editor_error')),
@@ -333,7 +364,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
               currency: currency.code,
               enabled: _editing,
               onChanged: (v) {
-                if (!_editing) return;
+                if (!_editing || generation != _generation) return;
                 setState(() => _currency = GarageQuoteCurrencySelection(v, locked: false));
               }),
             for (var i = 0; i < _lines.length; i++)
@@ -341,13 +372,15 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
             OutlinedButton.icon(
               key: const Key('quote_add_line'),
               onPressed: !_editing || _lines.length >= 50 ? null : () {
-                if (!_editing || _lines.length >= 50) return;
+                if (!_editing || generation != _generation || _lines.length >= 50) return;
                 setState(() => _lines.add(_QuoteDraft()));
               },
               icon: const Icon(Icons.add), label: Text(GarageUiText.get('addQuoteItem'))),
             const SizedBox(height: 12),
             FilledButton(key: const Key('quote_publish'),
-              onPressed: !_editing ? null : _publish,
+              onPressed: !_editing ? null : () {
+                if (generation == _generation) _publish();
+              },
               child: Text(_publishing ? GarageUiText.get('quotePublishing') :
                 GarageUiText.get('publishEstimate'))),
           ],
