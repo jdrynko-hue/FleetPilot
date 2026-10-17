@@ -1,0 +1,35 @@
+name: Garage QA Checkout SDK runtime
+on:
+  pull_request:
+    paths:
+      - 'server/garage-billing/**'
+      - 'supabase/functions/flotaryx-garage-test-checkout/**'
+      - 'tests/garage-checkout-runtime.test.ts'
+      - '.github/workflows/garage-checkout-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sdk-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+      - name: Resolve and check pinned real SDK bootstrap
+        run: |
+          config=supabase/functions/flotaryx-garage-test-checkout/deno.json
+          lock=supabase/functions/flotaryx-garage-test-checkout/deno.lock
+          deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/index.ts
+      - name: Test disabled guards and actual SDKs with simulated transport only
+        run: deno test --allow-read=supabase/functions/flotaryx-garage-test-checkout,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-checkout-runtime.test.ts
+      - name: Preserve resolved dependency lock for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garage-checkout-deno-lock
+          path: supabase/functions/flotaryx-garage-test-checkout/deno.lock
+          if-no-files-found: error
+          retention-days: 3

@@ -3,7 +3,9 @@ on:
   pull_request:
     paths:
       - 'server/garage-billing/test_trial_ledger.sql'
+      - 'server/garage-billing/test_billing_catalog.sql'
       - 'tests/garage_trial_ledger.py'
+      - 'tests/garage_billing_catalog.py'
       - '.github/workflows/garage-trial-ledger.yml'
   workflow_dispatch:
 permissions:
@@ -45,3 +47,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_trial_ledger.sql
       - name: Verify authorization, durable replay and concurrent reservation
         run: python3 tests/garage_trial_ledger.py
+      - name: Install empty proposed Sandbox catalog
+        run: psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_billing_catalog.sql
+      - name: Verify owner-only catalog and server-derived billing markets
+        run: python3 tests/garage_billing_catalog.py

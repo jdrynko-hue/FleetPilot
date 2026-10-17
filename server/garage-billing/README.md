@@ -4,13 +4,31 @@ This internal service combines PR #153's seven-day parameter policy with
 PR #154's private trial ledger. It is not a public API or a working purchase
 button. No real Stripe requests are made by the tests.
 
+`http_handler.ts` is the dependency-injected Request/Response adapter. It
+requires explicit QA opt-in, the exact QA Supabase URL and a test-only key
+before any service calls. It verifies the bearer token using Auth `getUser`,
+rejects anonymous users, resolves the current owner/private catalog/customer
+mapping through a service-only RPC, and verifies Stripe metadata and amounts
+before invoking Checkout. Request JSON cannot override owner, price, currency,
+customer, amount or trial length. Runtime dependencies must be constructed from
+the checked QA configuration. The undeployed
+`supabase/functions/flotaryx-garage-test-checkout` entrypoint wires the actual
+pinned Stripe/Supabase SDKs, requires an explicit environment opt-in and rejects
+production URL/Live keys before constructing clients. SDK runtime tests trap
+all service requests with simulated transport; they do not use real accounts.
+
 `startGarageSandboxCheckout` requires a trusted server context, an instantiated
-Stripe client and a Supabase service RPC client. A future authenticated HTTP
-adapter must resolve the actor from verified Auth, verify the current owner,
-persist and verify the test Stripe customer for that business, select the
-approved Garage price from a server catalog, and reject all Live keys before
-instantiating the SDK. Never expose the service key or accept these fields as
-authoritative browser JSON. No such key-bearing adapter is included here.
+Stripe client and a Supabase service RPC client. The HTTP adapter derives the
+actor and terms on the server; the guarded runtime instantiates separate Auth
+and service clients using only the checked QA URL/test key. Never expose the
+service key or accept billing context as authoritative browser JSON.
+
+`test_billing_catalog.sql` proposes two private RLS-enabled tables and a
+service-only owner-checked resolver. It derives GBP/EUR/PLN from the workshop
+country, rejects inconsistent/unsupported markets, and returns only the active
+matching plan plus that owner's workshop customer mapping. Tables are empty by
+default; no prices or customer records are provisioned by the SQL. Fixtures
+exist only in disposable tests. Automatic customer provisioning is not built.
 
 The server reserves a durable attempt, freezes customer/terms and a one-hour
 session expiry in PostgreSQL, uses that attempt for a stable Stripe idempotency
@@ -29,8 +47,8 @@ The SQL file is an isolated QA proposal, not a hosted migration. Do not apply it
 over PR #154 as if it were an incremental migration: a reviewed incremental
 upgrade will be required if that earlier schema has ever been installed.
 
-Remaining before an actual Sandbox purchase: Auth/owner HTTP adapter and
-test-key bootstrap, approved Garage catalog and durable customer identity,
+Remaining before an actual Sandbox purchase: reviewed hosted QA rollout,
+approved Garage catalog and verified customer provisioning,
 signed replay-safe webhooks, trial cancellation, first charge/payment failure,
 invoices, UI wiring and full Stripe Sandbox lifecycle tests. Business-level
 eligibility and privacy retention still need definition. No Live activation.
