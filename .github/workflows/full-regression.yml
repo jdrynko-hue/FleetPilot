@@ -82,6 +82,15 @@ jobs:
           flutter test test/ecosystem_auth_routes_test.dart test/ecosystem_access_test.dart test/email_callback_test.dart
           --dart-define=FLOTARYX_ECOSYSTEM_PRODUCTION=true
           --dart-define=SUPABASE_URL=https://wqhymmtiawfwjikdaujo.supabase.co
+      - name: Render Garage layout previews without a backend
+        run: flutter test test/garage_shell_preview.dart --update-goldens
+      - name: Preserve Garage visual previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: garage-layout-preview
+          path: build/garage-preview/*.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Stage the actual Flutter portal entrypoint
         run: cp web/app/index.html web/index.html
       - name: Compile connected Flutter web for QA without deployment

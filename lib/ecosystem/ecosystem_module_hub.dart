@@ -14,6 +14,7 @@ import '../garage/resource_calendar_screen.dart';
 import '../garage/workshop_quotes_screen.dart';
 import '../garage/garage_ui_text.dart';
 import '../garage/setup_guide.dart';
+import '../garage/garage_shell.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -60,16 +61,16 @@ class EcosystemModuleHub extends StatelessWidget {
               scopeId: destination.workspaceId!, fleet: false),
         GarageUiText.get('calendarBays'): () =>
           GarageResourceCalendarScreen.forRepositories(calendar: calendar,
-            bookings: bookings, workspaceId: destination.workspaceId!),
+            bookings: bookings, workspaceId: destination.workspaceId!, embedded: true),
         GarageUiText.get('ordersEstimates'): () =>
           GarageWorkshopQuotesScreen.forClient(client: client,
-            workspaceId: destination.workspaceId!),
+            workspaceId: destination.workspaceId!, embedded: true),
         GarageUiText.get('fleetRequests'): () =>
           GarageRepairRequestsScreen.forClient(client: client,
             workspaceId: destination.workspaceId!, canAssign: destination.canConfigure),
         GarageUiText.get('customerRequests'): () =>
           GarageBookingWorkshopScreen.forRepository(repository: bookings,
-            workspaceId: destination.workspaceId!),
+            workspaceId: destination.workspaceId!, embedded: true),
         if (destination.canConfigure)
           GarageUiText.get('bookingProfile'): () =>
             GarageBookingProfileScreen.forRepository(repository: bookings,
@@ -82,25 +83,27 @@ class EcosystemModuleHub extends StatelessWidget {
     VoidCallback open(Widget Function() page) => () {
       Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => page()));
     };
-    return Scaffold(
-      appBar: AppBar(title: Text(customer
-        ? GarageUiText.get('workshopBookings')
-        : destination.name!)),
-      body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(padding: const EdgeInsets.all(20), children: [
-          if (destination.canConfigure)
-            GarageSetupGuide(
-              openProfile: open(pages[GarageUiText.get('bookingProfile')]!),
-              openCalendar: open(pages[GarageUiText.get('calendarSettings')]!),
-              openRequests: open(pages[GarageUiText.get('customerRequests')]!),
-            ),
-          for (final page in pages.entries)
-            Card(child: ListTile(title: Text(page.key),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (_) => page.value())))),
+    final tabs = ['calendarBays', 'ordersEstimates', 'customerRequests'];
+    return GarageShell(scopeId: '${destination.workspaceId}:${destination.canConfigure}',
+      workshopName: destination.name!, pages: [
+        (context) => GarageHome(workshopName: destination.name!,
+          onCalendar: () => GarageShell.selectTab(context, 1),
+          onOrders: () => GarageShell.selectTab(context, 2),
+          onRequests: () => GarageShell.selectTab(context, 3),
+          onFleetRequests: open(pages[GarageUiText.get('fleetRequests')]!),
+          setupGuide: destination.canConfigure ? GarageSetupGuide(
+            openProfile: open(pages[GarageUiText.get('bookingProfile')]!),
+            openCalendar: open(pages[GarageUiText.get('calendarSettings')]!),
+            openRequests: () => GarageShell.selectTab(context, 3),
+          ) : null),
+        for (final tab in tabs) (_) => pages[GarageUiText.get(tab)]!(),
+        (_) => ListView(padding: const EdgeInsets.all(16), children: [
+          for (final page in pages.entries.where((entry) =>
+              !tabs.any((tab) => GarageUiText.get(tab) == entry.key)))
+            Padding(padding: const EdgeInsets.only(bottom: 12),
+              child: Card(child: ListTile(title: Text(page.key),
+                trailing: const Icon(Icons.chevron_right), onTap: open(page.value)))),
         ]),
-      )),
-    );
+      ]);
   }
 }

@@ -135,6 +135,7 @@ void main() {
     await login(owner);
     for (var i = 0; i < 2; i++) {
       await tap(find.byKey(Key('ecosystem_${shops[i]}')));
+      await tap(find.byKey(const Key('garage_tab_4')));
       await tap(find.text('Fleet connections'));
       await see(find.byType(GarageBridgeConnectionsScreen), 'workshop connections');
       await see(find.text(names[i]), 'own workshop fleet');
