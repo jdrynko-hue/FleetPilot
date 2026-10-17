@@ -136,6 +136,11 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
   bool _busy = false;
   bool _loading = true;
   String? _error;
+  int _scope = 0;
+  int _listVersion = 0;
+  int _operationVersion = 0;
+  bool _savingPdf = false;
+  DialogRoute<void>? _previewRoute;
 
   bool get _pl => AppLocale.language.value == 'pl';
   String _tr(String pl, String en) => _pl ? pl : en;
@@ -149,20 +154,82 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
     _refresh();
   }
 
+  @override
+  void didUpdateWidget(covariant GarageOrderMediaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadFiles != widget.loadFiles ||
+        oldWidget.readFile != widget.readFile ||
+        oldWidget.uploadFile != widget.uploadFile ||
+        oldWidget.pickFile != widget.pickFile ||
+        oldWidget.savePdf != widget.savePdf ||
+        oldWidget.showDocuments != widget.showDocuments ||
+        oldWidget.canUploadPhotos != widget.canUploadPhotos ||
+        oldWidget.canUploadDocuments != widget.canUploadDocuments) {
+      _scope++;
+      _operationVersion++;
+      _busy = false;
+      _savingPdf = false;
+      _category = GarageMediaCategory.photo;
+      _dismissPreview();
+      _refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scope++;
+    _listVersion++;
+    _operationVersion++;
+    _dismissPreview();
+    super.dispose();
+  }
+
+  bool _currentOperation(int scope, int operation) => mounted &&
+      scope == _scope && operation == _operationVersion;
+
+  // Remove only our own preview, never a different route above it. Scope
+  // replacement may happen during build, so defer the Navigator mutation.
+  void _dismissPreview() {
+    final route = _previewRoute;
+    _previewRoute = null;
+    if (route == null) return;
+    final navigator = route.navigator;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigator != null && navigator.mounted && route.isActive) {
+        navigator.removeRoute(route);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  Future<void> _showPreview(WidgetBuilder builder) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(context: context, builder: builder);
+    _previewRoute = route;
+    try {
+      await navigator.push<void>(route);
+    } finally {
+      if (identical(_previewRoute, route)) _previewRoute = null;
+    }
+  }
+
   Future<void> _refresh() async {
-    if (_busy) return;
+    if (!mounted || _busy) return;
     final requested = _category;
+    final version = ++_listVersion;
+    final loadFiles = widget.loadFiles;
+    bool current() => mounted && version == _listVersion;
     setState(() {
       _loading = true;
       _files = const []; // Revoke previously cached names immediately.
       _error = null;
     });
     try {
-      final names = await widget.loadFiles(requested);
-      if (!mounted || requested != _category) return;
+      final names = await loadFiles(requested);
+      if (!current()) return;
       setState(() => _files = List.unmodifiable(names));
     } catch (_) {
-      if (!mounted || requested != _category) return;
+      if (!current()) return;
       setState(() {
         _error = _tr(
           'Nie udało się pobrać dokumentacji. Spróbuj ponownie.',
@@ -170,14 +237,15 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
         );
       });
     } finally {
-      if (mounted && requested == _category) {
+      if (current()) {
         setState(() => _loading = false);
       }
     }
   }
 
   void _switch(GarageMediaCategory category) {
-    if (_category == category || _busy) return;
+    if (_category == category || _busy ||
+        (category == GarageMediaCategory.document && !widget.showDocuments)) return;
     setState(() => _category = category);
     _refresh();
   }
@@ -185,24 +253,29 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
   Future<void> _upload() async {
     if (_busy || _loading || !_canUpload) return;
     final category = _category;
+    final scope = _scope;
+    final operation = ++_operationVersion;
+    final pickFile = widget.pickFile;
+    final uploadFile = widget.uploadFile;
+    bool current() => _currentOperation(scope, operation);
     setState(() => _busy = true);
     try {
-      final selected = await widget.pickFile(category);
-      if (selected == null) return;
+      final selected = await pickFile(category);
+      if (!current() || selected == null) return;
       if (selected.bytes.isEmpty ||
           selected.bytes.length > GarageMediaPaths.maxFileBytes) {
         throw const FormatException('Invalid upload size');
       }
       GarageMediaPaths.extensionFor(category, selected.mime);
-      await widget.uploadFile(category, selected.mime, selected.bytes);
-      if (!mounted) return;
+      await uploadFile(category, selected.mime, selected.bytes);
+      if (!current()) return;
       setState(() {
         _busy = false;
         _files = const [];
       });
       await _refresh();
     } catch (_) {
-      if (!mounted) return;
+      if (!current()) return;
       setState(() {
         _error = _tr(
           'Nie udało się dodać pliku. Sprawdź uprawnienia i spróbuj ponownie.',
@@ -210,24 +283,28 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
         );
       });
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (current()) setState(() => _busy = false);
     }
   }
 
   Future<void> _open(String fileName) async {
-    if (_busy || _loading) return;
+    if (_busy || _loading || !_files.contains(fileName)) return;
     final category = _category;
+    final scope = _scope;
+    final operation = ++_operationVersion;
+    final readFile = widget.readFile;
+    final savePdf = widget.savePdf;
+    bool current() => _currentOperation(scope, operation);
     setState(() => _busy = true);
     try {
-      final bytes = await widget.readFile(category, fileName);
-      if (!mounted || category != _category) return;
+      final bytes = await readFile(category, fileName);
+      if (!current()) return;
       if (category == GarageMediaCategory.document) {
         // Fetch privately first; Safari requires the final download action to
         // run in a *new* explicit user gesture, not after a network await.
         // Alert that a downloaded copy is no longer subject to Garage RLS.
-        await showDialog<void>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
+        await _showPreview((dialogContext) => !current()
+          ? const SizedBox.shrink() : AlertDialog(
             title: Text(_tr('Zapisz PDF', 'Save PDF')),
             content: Text(_tr(
               'Plik zostanie zapisany na tym urządzeniu. '
@@ -239,23 +316,23 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
             actions: [
               TextButton(
                 key: const Key('garage_media_cancel_pdf'),
-                onPressed: () => Navigator.of(dialogContext).pop(),
+                onPressed: () {
+                  if (current()) _dismissPreview();
+                },
                 child: Text(_tr('Anuluj', 'Cancel')),
               ),
               FilledButton(
                 key: const Key('garage_media_save_pdf'),
                 onPressed: () => _savePdfAndClose(
-                  dialogContext, fileName, bytes,
+                  fileName, bytes, savePdf, scope, operation,
                 ),
                 child: Text(_tr('Zapisz PDF', 'Save PDF')),
               ),
             ],
-          ),
-        );
+          ));
       } else {
-        await showDialog<void>(
-          context: context,
-          builder: (context) => Dialog(
+        await _showPreview((context) => !current()
+          ? const SizedBox.shrink() : Dialog(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -266,7 +343,9 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
                     IconButton(
                       key: const Key('garage_media_close_preview'),
                       tooltip: _tr('Zamknij', 'Close'),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        if (current()) _dismissPreview();
+                      },
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -281,11 +360,10 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
                 ),
               ],
             ),
-          ),
-        );
+          ));
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!current()) return;
       setState(() {
         _files = const [];
         _error = _tr(
@@ -294,22 +372,31 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
         );
       });
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (current()) {
+        setState(() { _busy = false; _savingPdf = false; });
+        // A dismissed preview's saved callbacks must not export its bytes.
+        _operationVersion++;
+      }
     }
   }
 
   Future<void> _savePdfAndClose(
-    BuildContext dialogContext,
     String fileName,
     Uint8List bytes,
+    GaragePdfSave savePdf,
+    int scope,
+    int operation,
   ) async {
+    bool current() => _currentOperation(scope, operation);
+    if (!current() || _savingPdf || _previewRoute?.isCurrent != true) return;
+    _savingPdf = true;
     try {
       // Invoke the save operation directly from the user button callback.
-      await widget.savePdf(fileName, bytes);
-      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+      await savePdf(fileName, bytes);
+      if (current()) _dismissPreview();
     } catch (_) {
-      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-      if (mounted) {
+      if (current()) {
+        _dismissPreview();
         setState(() {
           _error = _tr(
             'Zapis PDF nie powiódł się. Spróbuj ponownie.',
@@ -322,6 +409,8 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scope = _scope;
+    final version = _listVersion;
     return Scaffold(
       appBar: AppBar(
         title: Text(_tr('Dokumentacja naprawy', 'Repair evidence')),
@@ -337,7 +426,9 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
       floatingActionButton: _canUpload
           ? FloatingActionButton.extended(
               key: const Key('garage_media_upload'),
-              onPressed: _busy || _loading ? null : _upload,
+              onPressed: _busy || _loading ? null : () {
+                if (scope == _scope && version == _listVersion) _upload();
+              },
               icon: const Icon(Icons.upload_file),
               label: Text(_tr('Dodaj plik', 'Add file')),
             )
@@ -404,7 +495,11 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
                               ),
                               trailing: const Icon(Icons.open_in_new),
                               enabled: !_busy,
-                              onTap: () => _open(name),
+                              onTap: () {
+                                if (scope == _scope && version == _listVersion) {
+                                  _open(name);
+                                }
+                              },
                             );
                           },
                         ),
