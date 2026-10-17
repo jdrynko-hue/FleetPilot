@@ -4,6 +4,7 @@ import '../core/localization.dart';
 import 'booking_status_text.dart';
 import 'consumer_booking_repository.dart';
 import 'garage_ui_text.dart';
+import 'profile_visibility_text.dart';
 
 typedef BookingProfileSaver = Future<bool> Function({required String city,
   required String timeZone, required List<String> services,
@@ -31,6 +32,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
   Set<String> _services = {};
   int _duration = 60;
   bool _listed = false;
+  bool _savedListed = false;
   bool _busy = true;
   bool _loaded = false;
   bool _uncertain = false;
@@ -66,6 +68,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
         _services = profile?.services.toSet() ?? {};
         _duration = profile?.durationMinutes ?? 60;
         _listed = profile?.listed ?? false;
+        _savedListed = _listed;
         _loaded = true; _uncertain = false;
       });
     } catch (_) {
@@ -141,6 +144,9 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
           Text(GarageUiText.get('bookingProfileHint')),
           if (_notice != null) Text(_notice!, key: const Key('booking_profile_notice')),
           if (_loaded) ...[
+            Padding(padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(BookingVisibilityText.saved(_savedListed),
+                key: const Key('booking_profile_saved_visibility'))),
             TextField(key: const Key('booking_profile_city'), controller: _city,
               enabled: enabled, maxLength: 80, onChanged: (_) => setState(() {}),
               decoration: InputDecoration(labelText: tr('city'))),
