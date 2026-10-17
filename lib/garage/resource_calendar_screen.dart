@@ -14,6 +14,7 @@ class GarageResourceCalendarScreen extends StatefulWidget {
     required this.loadRequests,
     required this.loadCalendar,
     required this.confirmSlot,
+    this.embedded = false,
     super.key,
   });
 
@@ -21,9 +22,10 @@ class GarageResourceCalendarScreen extends StatefulWidget {
     required GarageResourceCalendarRepository calendar,
     required GarageBookingRepository bookings,
     required String workspaceId,
+    bool embedded = false,
     Key? key,
   }) => GarageResourceCalendarScreen(
-    key: key,
+    key: key, embedded: embedded,
     loadResources: () => calendar.resources(workspaceId),
     loadRequests: () => bookings.workshopInbox(workspaceId),
     loadCalendar: () => calendar.calendar(
@@ -36,6 +38,7 @@ class GarageResourceCalendarScreen extends StatefulWidget {
   final Future<List<GarageBookingInboxItem>> Function() loadRequests;
   final Future<List<GarageCalendarAppointment>> Function() loadCalendar;
   final Future<String> Function(String bookingId, String resourceId) confirmSlot;
+  final bool embedded;
 
   @override
   State<GarageResourceCalendarScreen> createState() =>
@@ -178,6 +181,9 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
     final active = _resources.where((r) => r.active).toList();
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.embedded,
+        backgroundColor: widget.embedded ? Theme.of(context).scaffoldBackgroundColor : null,
+        foregroundColor: widget.embedded ? Theme.of(context).colorScheme.onSurface : null,
         title: Text(GarageUiText.get('calendarTitle')),
         actions: [
           IconButton(key: const Key('garage_calendar_refresh'),

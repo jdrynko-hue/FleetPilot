@@ -9,17 +9,18 @@ import 'garage_ui_text.dart';
 class GarageBookingWorkshopScreen extends StatefulWidget {
   const GarageBookingWorkshopScreen({
     required this.loadInbox, required this.respond,
-    required this.confirmCancellation, super.key,
+    required this.confirmCancellation, this.embedded = false, super.key,
   });
   factory GarageBookingWorkshopScreen.forRepository({
     required GarageBookingRepository repository,
-    required String workspaceId, Key? key,
-  }) => GarageBookingWorkshopScreen(key: key,
+    required String workspaceId, bool embedded = false, Key? key,
+  }) => GarageBookingWorkshopScreen(key: key, embedded: embedded,
     loadInbox: () => repository.workshopInbox(workspaceId),
     respond: (id, accept) => repository.respond(id, confirm: accept),
     confirmCancellation: repository.confirmCancellation);
 
   final Future<List<GarageBookingInboxItem>> Function() loadInbox;
+  final bool embedded;
   final Future<GarageBookingStatus> Function(String, bool) respond;
   final Future<void> Function(String) confirmCancellation;
   @override
@@ -138,6 +139,9 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      automaticallyImplyLeading: !widget.embedded,
+      backgroundColor: widget.embedded ? Theme.of(context).scaffoldBackgroundColor : null,
+      foregroundColor: widget.embedded ? Theme.of(context).colorScheme.onSurface : null,
       title: Text(GarageUiText.get('inboxTitle')),
       actions: [IconButton(key: const Key('workshop_booking_refresh'),
         tooltip: GarageUiText.get('refresh'),

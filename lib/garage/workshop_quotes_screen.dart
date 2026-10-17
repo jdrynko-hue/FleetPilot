@@ -20,16 +20,16 @@ void _closeQuoteRoute(Route<dynamic>? route) {
 class GarageWorkshopQuotesScreen extends StatefulWidget {
   const GarageWorkshopQuotesScreen({
     required this.loadOrders, required this.loadCurrency,
-    required this.publish, super.key,
+    required this.publish, this.embedded = false, super.key,
   });
 
   factory GarageWorkshopQuotesScreen.forClient({
-    required SupabaseClient client, required String workspaceId, Key? key,
+    required SupabaseClient client, required String workspaceId, bool embedded = false, Key? key,
   }) {
     final orders = GarageQuoteOrderRepository(client);
     final publisher = GarageWorkshopQuotePublisher(client);
     return GarageWorkshopQuotesScreen(
-      key: key,
+      key: key, embedded: embedded,
       loadOrders: () => orders.orders(workspaceId),
       loadCurrency: (id) => orders.currency(workspaceId, id),
       publish: (id, currency, lines) => publisher.publish(
@@ -40,6 +40,7 @@ class GarageWorkshopQuotesScreen extends StatefulWidget {
   }
 
   final Future<List<GarageQuoteOrder>> Function() loadOrders;
+  final bool embedded;
   final Future<GarageQuoteCurrencySelection> Function(String) loadCurrency;
   final Future<int> Function(String, String, List<GarageQuoteDraftLine>) publish;
 
@@ -164,6 +165,9 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
     final version = _version;
     return Scaffold(
     appBar: AppBar(title: Text(GarageUiText.get('workshopEstimates')),
+      automaticallyImplyLeading: !widget.embedded,
+      backgroundColor: widget.embedded ? Theme.of(context).scaffoldBackgroundColor : null,
+      foregroundColor: widget.embedded ? Theme.of(context).colorScheme.onSurface : null,
       actions: [IconButton(key: const Key('quote_orders_refresh'),
         icon: const Icon(Icons.refresh), onPressed: _loading ? null : _refresh)]),
     body: SafeArea(child: _loading
