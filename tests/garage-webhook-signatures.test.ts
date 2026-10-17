@@ -38,3 +38,40 @@ Deno.test('real Stripe SDK verifies signatures, timestamp tolerance and exact ra
     assert(network === 0 && storage === 0, 'Invalid/unrelated event touched external state');
   } finally { globalThis.fetch = originalFetch; }
 });
+
+Deno.test('signed subscription event retrieves current SDK state before confirming a frozen claim', async () => {
+  const originalFetch = globalThis.fetch;
+  const attempt = '11111111-1111-4111-8111-111111111111';
+  const workspace = '22222222-2222-4222-8222-222222222222';
+  const start = Math.floor(Date.now() / 1000) - 10;
+  const calls: string[] = [];
+  const event = JSON.stringify({ id: 'evt_fixture', type: 'customer.subscription.created', livemode: false,
+    data: { object: { id: 'sub_fixture', status: 'active' } } });
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    assert(url.href === 'https://api.stripe.com/v1/subscriptions/sub_fixture', 'Unexpected SDK request');
+    assert(headers.get('authorization') === 'Bearer rk_test_fixture', 'Wrong environment credential');
+    calls.push('retrieve');
+    return new Response(JSON.stringify({ id: 'sub_fixture', livemode: false, status: 'trialing',
+      customer: 'cus_fixture', trial_start: start, trial_end: start + 604800,
+      metadata: { product: 'garage', attempt_id: attempt, workspace_id: workspace, currency: 'gbp', billing_interval: 'month' },
+      items: { has_more: false, data: [{ quantity: 1, price: { id: 'price_fixture', livemode: false,
+        currency: 'gbp', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } } }] },
+    }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const handler = createSignedGarageTrialWebhook(config, {
+      lookupClaim: async id => { assert(id === attempt, 'Wrong claim'); calls.push('lookup'); return {
+        attempt_id: attempt, workspace_id: workspace, customer_id: 'cus_fixture', price_id: 'price_fixture', currency: 'gbp', billing_interval: 'month',
+      }; },
+      confirm: async (id, sub, from, to) => {
+        assert(id === attempt && sub === 'sub_fixture', 'Wrong confirmation identity');
+        assert(Date.parse(to) - Date.parse(from) === 604800000, 'Wrong trial duration');
+        calls.push('confirm'); return true;
+      },
+    });
+    assert((await handler(request(event, await sign(event)))).status === 200, 'Signed trial rejected');
+    assert(calls.join(',') === 'retrieve,lookup,confirm', 'Confirmation bypassed authoritative retrieval');
+  } finally { globalThis.fetch = originalFetch; }
+});
