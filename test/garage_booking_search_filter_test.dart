@@ -70,7 +70,9 @@ void main() {
     expect(find.byKey(Key('booking_shop_${tyreShop.workspaceId}')), findsOneWidget);
     await selectCountry(tester, '');
     await selectService(tester, '');
-    expect(find.byType(Card), findsNWidgets(3));
+    // ListView virtualizes off-screen cards; assert the complete filtered count.
+    expect(tester.widget<Text>(find.byKey(const Key('booking_search_count'))).data,
+      GarageUiText.format('bookingSearchCount', {'count': 3}));
     expect(calls, 1);
     expect(tester.takeException(), isNull);
   });
