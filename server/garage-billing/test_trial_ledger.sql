@@ -10,10 +10,13 @@ CREATE TABLE garage_private.test_trial_claims (
   price_id text NOT NULL CHECK (price_id ~ '^price_[A-Za-z0-9]+$'),
   currency text NOT NULL CHECK (currency IN ('gbp','eur','pln')),
   billing_interval text NOT NULL CHECK (billing_interval IN ('month','year')),
-  state text NOT NULL DEFAULT 'reserved' CHECK (state IN ('reserved','trial_started')),
+  state text NOT NULL DEFAULT 'reserved' CHECK (
+    state IN ('reserved','trial_started','cancel_pending','trial_canceled')),
   stripe_subscription_id text UNIQUE,
   trial_started_at timestamptz,
   trial_ends_at timestamptz,
+  cancellation_requested_at timestamptz,
+  canceled_at timestamptz,
   checkout_customer_id text,
   checkout_prepared_at timestamptz,
   checkout_expires_at timestamptz,
@@ -29,11 +32,24 @@ CREATE TABLE garage_private.test_trial_claims (
            (checkout_session_id IS NOT NULL AND checkout_session_id ~ '^cs_test_[A-Za-z0-9]+$' AND
             checkout_url IS NOT NULL)))),
   CHECK ((state='reserved' AND stripe_subscription_id IS NULL AND
-          trial_started_at IS NULL AND trial_ends_at IS NULL) OR
+          trial_started_at IS NULL AND trial_ends_at IS NULL AND
+          cancellation_requested_at IS NULL AND canceled_at IS NULL) OR
          (state='trial_started' AND stripe_subscription_id IS NOT NULL AND
           stripe_subscription_id ~ '^sub_[A-Za-z0-9]+$' AND
           trial_started_at IS NOT NULL AND trial_ends_at IS NOT NULL AND
-          trial_ends_at-trial_started_at=interval '168 hours'))
+          trial_ends_at-trial_started_at=interval '168 hours' AND
+          cancellation_requested_at IS NULL AND canceled_at IS NULL) OR
+         (state='cancel_pending' AND stripe_subscription_id IS NOT NULL AND
+          stripe_subscription_id ~ '^sub_[A-Za-z0-9]+$' AND
+          trial_started_at IS NOT NULL AND trial_ends_at IS NOT NULL AND
+          trial_ends_at-trial_started_at=interval '168 hours' AND
+          cancellation_requested_at IS NOT NULL AND canceled_at IS NULL) OR
+         (state='trial_canceled' AND stripe_subscription_id IS NOT NULL AND
+          stripe_subscription_id ~ '^sub_[A-Za-z0-9]+$' AND
+          trial_started_at IS NOT NULL AND trial_ends_at IS NOT NULL AND
+          trial_ends_at-trial_started_at=interval '168 hours' AND
+          cancellation_requested_at IS NOT NULL AND canceled_at IS NOT NULL AND
+          canceled_at>=trial_started_at AND canceled_at<trial_ends_at))
 );
 -- Deliberately no cascading foreign keys: recreating a workspace or removing
 -- membership must not erase trial history. New Auth identities/business-level
@@ -107,7 +123,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Unknown trial reservation' USING ERRCODE='22023';
   END IF;
-  IF claim.state='trial_started' THEN
+  IF claim.state IN ('trial_started','cancel_pending','trial_canceled') THEN
     IF claim.stripe_subscription_id IS DISTINCT FROM p_subscription OR
        claim.trial_started_at IS DISTINCT FROM p_started OR
        claim.trial_ends_at IS DISTINCT FROM p_ends THEN
@@ -226,4 +242,97 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.garage_lookup_test_trial(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.garage_lookup_test_trial(uuid) TO service_role;
+
+-- A cancellation request derives the subscription from the private claim and
+-- rechecks current owner membership. Calling this function again is the owner
+-- recheck immediately before the external Stripe mutation and returns the same
+-- frozen identity/idempotency source.
+CREATE FUNCTION public.garage_prepare_test_trial_cancellation(
+  p_actor uuid, p_workspace uuid
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $$
+DECLARE claim garage_private.test_trial_claims%ROWTYPE;
+BEGIN
+  IF p_actor IS NULL OR p_workspace IS NULL THEN
+    RAISE EXCEPTION 'Workshop owner required' USING ERRCODE='42501';
+  END IF;
+  SELECT c.* INTO claim
+    FROM garage_private.test_trial_claims c
+    JOIN public.garage_members m ON m.workspace_id=c.workspace_id
+      AND m.user_id=c.owner_user_id AND m.role='owner'
+    WHERE c.owner_user_id=p_actor AND c.workspace_id=p_workspace
+    FOR UPDATE OF c FOR SHARE OF m;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Workshop owner required' USING ERRCODE='42501';
+  END IF;
+  IF claim.state='reserved' THEN
+    RAISE EXCEPTION 'Trial has not started' USING ERRCODE='55000';
+  END IF;
+  IF claim.state='trial_started' THEN
+    UPDATE garage_private.test_trial_claims
+      SET state='cancel_pending',
+          cancellation_requested_at=date_trunc('second',clock_timestamp())
+      WHERE attempt_id=claim.attempt_id RETURNING * INTO claim;
+  END IF;
+  RETURN jsonb_build_object(
+    'state',claim.state,'attempt_id',claim.attempt_id,
+    'workspace_id',claim.workspace_id,'customer_id',claim.checkout_customer_id,
+    'subscription_id',claim.stripe_subscription_id,'price_id',claim.price_id,
+    'currency',claim.currency,'billing_interval',claim.billing_interval,
+    'trial_started_at',claim.trial_started_at,'trial_ends_at',claim.trial_ends_at,
+    'canceled_at',claim.canceled_at);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.garage_prepare_test_trial_cancellation(uuid,uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.garage_prepare_test_trial_cancellation(uuid,uuid)
+  TO service_role;
+
+-- Persist the authoritative canceled Subscription after the external write.
+-- Current membership was checked twice before that write; confirmation binds
+-- the original verified actor/workspace and cannot switch the private claim.
+CREATE FUNCTION public.garage_confirm_test_trial_cancellation(
+  p_actor uuid, p_workspace uuid, p_attempt uuid, p_subscription text,
+  p_canceled_at timestamptz, p_livemode boolean
+) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $$
+DECLARE claim garage_private.test_trial_claims%ROWTYPE;
+BEGIN
+  IF p_actor IS NULL OR p_workspace IS NULL OR p_attempt IS NULL OR
+     p_livemode IS DISTINCT FROM false OR p_subscription IS NULL OR
+     p_subscription !~ '^sub_[A-Za-z0-9]+$' OR p_canceled_at IS NULL OR
+     NOT isfinite(p_canceled_at) THEN
+    RAISE EXCEPTION 'Invalid Sandbox trial cancellation' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO claim FROM garage_private.test_trial_claims
+    WHERE attempt_id=p_attempt FOR UPDATE;
+  IF NOT FOUND OR claim.owner_user_id IS DISTINCT FROM p_actor OR
+     claim.workspace_id IS DISTINCT FROM p_workspace THEN
+    RAISE EXCEPTION 'Unknown trial cancellation' USING ERRCODE='42501';
+  END IF;
+  IF claim.stripe_subscription_id IS DISTINCT FROM p_subscription OR
+     p_canceled_at<claim.trial_started_at OR p_canceled_at>=claim.trial_ends_at THEN
+    RAISE EXCEPTION 'Trial cancellation conflict' USING ERRCODE='55000';
+  END IF;
+  IF claim.state='trial_canceled' THEN
+    IF claim.canceled_at IS DISTINCT FROM p_canceled_at THEN
+      RAISE EXCEPTION 'Trial cancellation conflict' USING ERRCODE='55000';
+    END IF;
+    RETURN true;
+  END IF;
+  IF claim.state<>'cancel_pending' THEN
+    RAISE EXCEPTION 'Trial cancellation not prepared' USING ERRCODE='55000';
+  END IF;
+  UPDATE garage_private.test_trial_claims
+    SET state='trial_canceled',canceled_at=p_canceled_at
+    WHERE attempt_id=p_attempt;
+  RETURN true;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.garage_confirm_test_trial_cancellation(
+  uuid,uuid,uuid,text,timestamptz,boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.garage_confirm_test_trial_cancellation(
+  uuid,uuid,uuid,text,timestamptz,boolean) TO service_role;
 COMMIT;
