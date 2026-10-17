@@ -9,12 +9,13 @@ const now = start + 100;
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
 }
+type CapturedRequest = { method: string; idempotency: string | null;
+  rawBody: string; search: string };
 
 Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', async () => {
   const originalFetch = globalThis.fetch;
   const transport: string[] = [];
-  let cancelRequest: { method: string; idempotency: string | null;
-    rawBody: string; search: string } | null = null;
+  let cancelRequest: CapturedRequest | null = null;
   let prepares = 0;
   let confirmed = false;
   const claim = { state: 'cancel_pending', attempt_id: attempt, workspace_id: workspace,
@@ -70,8 +71,9 @@ Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', a
     assert(result.status === 'canceled' && prepares === 2 && confirmed,
       'Cancellation lifecycle did not complete');
     // TypeScript does not model assignments made inside the mocked async fetch.
-    const observed = cancelRequest as unknown as NonNullable<typeof cancelRequest>;
-    assert(observed?.method === 'DELETE', 'Cancellation did not use DELETE');
+    const observed = cancelRequest as CapturedRequest | null;
+    if (observed === null) throw new Error('Cancellation request was not captured');
+    assert(observed.method === 'DELETE', 'Cancellation did not use DELETE');
     assert(observed.idempotency === `flotaryx:garage:sandbox:cancel:${attempt}`,
       'Missing durable idempotency key');
     const form = new URLSearchParams(observed.rawBody || observed.search);
