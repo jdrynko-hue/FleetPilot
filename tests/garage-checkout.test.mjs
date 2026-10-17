@@ -104,6 +104,7 @@ for (const [name, mutate] of [
   ['wrong price', s => s.line_items.data[0].price.id = 'price_other'],
   ['wrong quantity', s => s.line_items.data[0].quantity = 2],
   ['hidden extra prices', s => s.line_items.has_more = true],
+  ['malformed price list', s => s.line_items.data = { length: 1 }],
   ['completed session', s => s.status = 'complete'],
   ['expired session', s => s.status = 'expired'],
   ['foreign URL', s => s.url = 'https://checkout.stripe.com.evil.test/c/pay/cs_test_fixture'],
@@ -120,4 +121,9 @@ test('database failures do not expose backend details', async () => {
     async rpc() { throw new Error('PRIVATE DATABASE DETAIL'); } });
   await assert.rejects(f.start(), { message: 'garage_checkout_storage_unavailable' });
   assert.equal(f.creates.length, 0);
+});
+test('null Stripe retrieval fails with a generic error and no save', async () => {
+  const f = fixture(); f.dependencies.stripe.checkout.sessions.retrieve = async () => null;
+  await assert.rejects(f.start(), { message: 'garage_checkout_retrieve_uncertain' });
+  assert.equal(f.saved.length, 0);
 });

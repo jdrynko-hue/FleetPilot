@@ -11,7 +11,7 @@ type Prepared = Reservation & {
   session_id: string | null; checkout_url: string | null;
 };
 type RpcClient = {
-  rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>;
 };
 export function garageTrialLedger(client: RpcClient) {
   async function rpc(name: string, args: Record<string, unknown>) {
@@ -44,7 +44,7 @@ type Session = {
 type StripeClient = {
   checkout: { sessions: {
     create(params: Record<string, unknown>, options: { idempotencyKey: string }): Promise<{ id: string; livemode: boolean }>;
-    retrieve(id: string, params: { expand: string[] }): Promise<Session>;
+    retrieve(id: string, params: { expand: string[] }): Promise<unknown>;
   } };
 };
 type CheckoutContext = Context & { actorId: string };
@@ -57,8 +57,9 @@ function validateSession(session: Session, prepared: Prepared) {
       session.expires_at !== prepared.expires_at ||
       session.metadata?.workspace_id !== prepared.workspace_id || session.metadata?.product !== 'garage' ||
       session.metadata?.attempt_id !== prepared.attempt_id ||
-      session.line_items?.has_more === true || session.line_items?.data?.length !== 1 ||
-      session.line_items.data[0].price?.id !== prepared.price_id || session.line_items.data[0].quantity !== 1) {
+      session.line_items?.has_more === true || !Array.isArray(session.line_items?.data) ||
+      session.line_items.data.length !== 1 ||
+      session.line_items.data[0]?.price?.id !== prepared.price_id || session.line_items.data[0]?.quantity !== 1) {
     throw new Error('garage_checkout_reconciliation_required');
   }
   let url: URL;
@@ -126,7 +127,11 @@ export async function startGarageSandboxCheckout(context: CheckoutContext, depen
     } catch { throw new Error('garage_checkout_create_uncertain'); }
   }
   let session: Session;
-  try { session = await dependencies.stripe.checkout.sessions.retrieve(sessionId!, { expand: ['line_items'] }); }
+  try {
+    const retrieved = await dependencies.stripe.checkout.sessions.retrieve(sessionId!, { expand: ['line_items'] });
+    if (!retrieved || typeof retrieved !== 'object') throw new Error('Invalid Stripe response');
+    session = retrieved as Session;
+  }
   catch { throw new Error('garage_checkout_retrieve_uncertain'); }
   if (session.id !== sessionId) throw new Error('garage_checkout_reconciliation_required');
   validateSession(session, prepared);
