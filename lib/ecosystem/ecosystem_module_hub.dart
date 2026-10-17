@@ -13,6 +13,7 @@ import '../garage/resource_calendar_repository.dart';
 import '../garage/resource_calendar_screen.dart';
 import '../garage/workshop_quotes_screen.dart';
 import '../garage/garage_ui_text.dart';
+import '../garage/setup_guide.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -74,12 +75,21 @@ class EcosystemModuleHub extends StatelessWidget {
             GarageCalendarSettingsScreen.forRepository(repository: calendar,
               workspaceId: destination.workspaceId!),
     };
+    VoidCallback open(Widget Function() page) => () {
+      Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => page()));
+    };
     return Scaffold(
       appBar: AppBar(title: Text(customer
         ? GarageUiText.get('workshopBookings')
         : destination.name!)),
       body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(padding: const EdgeInsets.all(20), children: [
+          if (destination.canConfigure)
+            GarageSetupGuide(
+              openProfile: open(pages[GarageUiText.get('bookingProfile')]!),
+              openCalendar: open(pages[GarageUiText.get('calendarSettings')]!),
+              openRequests: open(pages[GarageUiText.get('customerRequests')]!),
+            ),
           for (final page in pages.entries)
             Card(child: ListTile(title: Text(page.key),
               trailing: const Icon(Icons.chevron_right),
