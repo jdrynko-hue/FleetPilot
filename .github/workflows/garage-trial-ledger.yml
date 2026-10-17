@@ -1,0 +1,47 @@
+name: Garage Sandbox trial ledger
+on:
+  pull_request:
+    paths:
+      - 'server/garage-billing/test_trial_ledger.sql'
+      - 'tests/garage_trial_ledger.py'
+      - '.github/workflows/garage-trial-ledger.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trial-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-trial-ci-only
+          POSTGRES_DB: garage_trial_qa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d garage_trial_qa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: garage_trial_qa
+      PGPASSWORD: disposable-trial-ci-only
+      GARAGE_TRIAL_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Create disposable roles and test the existing workshop boundaries
+        run: |
+          psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE service_role NOLOGIN BYPASSRLS; GRANT USAGE ON SCHEMA public TO service_role;'
+          psql -v ON_ERROR_STOP=1 -f tests/garage_rls_isolation.sql
+      - name: Install proposed test ledger in disposable database only
+        run: psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_trial_ledger.sql
+      - name: Verify authorization, durable replay and concurrent reservation
+        run: python3 tests/garage_trial_ledger.py
