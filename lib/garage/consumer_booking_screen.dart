@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import '../auth/billing_markets.dart';
 import '../core/localization.dart';
 
@@ -322,6 +323,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _picking = false;
   int _generation = 0;
   String _requestKey = newBookingRequestKey();
+  int _serviceVersion = 0;
 
   @override
   void didUpdateWidget(covariant GarageBookingRequestScreen oldWidget) {
@@ -332,6 +334,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       // Never reuse private customer details, service selection, or
       // submission outcome for a different workshop/account scope.
       _generation++;
+      _serviceVersion++;
       _busy = false;
       _sent = false;
       _uncertain = false;
@@ -343,6 +346,18 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       for (final controller in
           [_name, _make, _model, _registration, _concern]) {
         controller.clear();
+      }
+    } else if (!listEquals(oldWidget.shop.services, widget.shop.services) ||
+        oldWidget.shop.timeZone != widget.shop.timeZone) {
+      _serviceVersion++;
+      _service = null;
+      _when = null;
+      // Profile changes must never turn an in-flight, sent or uncertain
+      // request into a new submission. Keep its key and outcome guard.
+      if (!_busy && !_sent && !_uncertain) {
+        _generation++;
+        _picking = false;
+        _error = null;
       }
     }
   }
@@ -433,7 +448,9 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final serviceVersion = _serviceVersion;
+    return Scaffold(
     appBar: AppBar(title: Text(widget.shop.name)),
     body: SafeArea(child: ListView(
       padding: const EdgeInsets.all(16),
@@ -460,7 +477,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
           _field('booking_model', GarageUiText.get('bookingVehicleModel'), _model, limit: 80, min: 1),
           _field('booking_registration', GarageUiText.get('bookingRegistration'),
               _registration, limit: 30, min: 1, optional: true),
-          DropdownButtonFormField<String>(
+          KeyedSubtree(key: ValueKey(serviceVersion), child: DropdownButtonFormField<String>(
             key: const Key('booking_service'),
             value: _service,
             isExpanded: true,
@@ -474,10 +491,15 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             items: widget.shop.services.map((service) =>
               DropdownMenuItem(value: service, child: Text(bookingServiceLabel(service),
                 maxLines: 2, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (value) => setState(() => _service = value),
+            onChanged: (value) {
+              if (mounted && serviceVersion == _serviceVersion &&
+                  (value == null || widget.shop.services.contains(value))) {
+                setState(() => _service = value);
+              }
+            },
             validator: (value) => value == null
                 ? GarageUiText.get('bookingChooseService') : null,
-          ),
+          )),
           const SizedBox(height: 10),
           _field('booking_concern', GarageUiText.get('bookingConcern'),
               _concern, limit: 1000, min: 3, lines: 3),
@@ -495,4 +517,5 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       ],
     )),
   );
+  }
 }
