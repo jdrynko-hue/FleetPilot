@@ -11,12 +11,16 @@ rejects anonymous users, resolves the current owner/private catalog/customer
 mapping through a service-only RPC, and verifies Stripe metadata and amounts
 before invoking Checkout. Request JSON cannot override owner, price, currency,
 customer, amount or trial length. Runtime dependencies must be constructed from
-the checked QA configuration; no Deno entrypoint or hosted deployment is added.
+the checked QA configuration. The undeployed
+`supabase/functions/flotaryx-garage-test-checkout` entrypoint wires the actual
+pinned Stripe/Supabase SDKs, requires an explicit environment opt-in and rejects
+production URL/Live keys before constructing clients. SDK runtime tests trap
+all service requests with simulated transport; they do not use real accounts.
 
 `startGarageSandboxCheckout` requires a trusted server context, an instantiated
 Stripe client and a Supabase service RPC client. The HTTP adapter derives the
-actor and terms on the server; an actual runtime bootstrap still needs to
-instantiate both SDKs using the checked QA URL/test key. Never expose the
+actor and terms on the server; the guarded runtime instantiates separate Auth
+and service clients using only the checked QA URL/test key. Never expose the
 service key or accept billing context as authoritative browser JSON.
 
 `test_billing_catalog.sql` proposes two private RLS-enabled tables and a
@@ -43,7 +47,7 @@ The SQL file is an isolated QA proposal, not a hosted migration. Do not apply it
 over PR #154 as if it were an incremental migration: a reviewed incremental
 upgrade will be required if that earlier schema has ever been installed.
 
-Remaining before an actual Sandbox purchase: hosted runtime/SDK bootstrap,
+Remaining before an actual Sandbox purchase: reviewed hosted QA rollout,
 approved Garage catalog and verified customer provisioning,
 signed replay-safe webhooks, trial cancellation, first charge/payment failure,
 invoices, UI wiring and full Stripe Sandbox lifecycle tests. Business-level
