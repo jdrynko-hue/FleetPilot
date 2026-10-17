@@ -43,7 +43,10 @@ Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', a
     assert(method === 'DELETE', 'Cancellation did not use DELETE');
     assert(headers.get('idempotency-key') === `flotaryx:garage:sandbox:cancel:${attempt}`,
       'Missing durable idempotency key');
-    const form = new URLSearchParams(String(init?.body ?? ''));
+    // FetchHttpClient can pass DELETE as a Request object rather than `init`.
+    const rawBody = init?.body != null ? String(init.body)
+      : input instanceof Request ? await input.clone().text() : '';
+    const form = new URLSearchParams(rawBody);
     assert(form.get('invoice_now') === 'false' && form.get('prorate') === 'false',
       'Cancellation could create an unexpected invoice or proration');
     return json(subscription('canceled'));
