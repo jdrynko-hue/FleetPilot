@@ -15,6 +15,7 @@ import '../garage/workshop_quotes_screen.dart';
 import '../garage/garage_ui_text.dart';
 import '../garage/setup_guide.dart';
 import '../garage/garage_shell.dart';
+import '../garage/billing_screen.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -54,7 +55,9 @@ class EcosystemModuleHub extends StatelessWidget {
       ]);
     }
     final pages = <String, Widget Function()>{
-
+        if (destination.canConfigure)
+          GarageBillingScreen.text(0): () => GarageBillingScreen(
+            workshopName: destination.name!, isOwner: destination.canConfigure),
         if (destination.canConfigure)
           GarageUiText.get('fleetConnections'): () =>
             GarageBridgeConnectionsScreen.forClient(client: client,
