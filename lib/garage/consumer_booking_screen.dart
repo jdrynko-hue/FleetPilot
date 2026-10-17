@@ -18,19 +18,22 @@ typedef BookingSubmit = Future<String> Function({
   required DateTime desiredStart, required String requestKey, String? registration,
 });
 typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
+enum BookingRequestExit { bookings }
 
 /// Staging only. No production Fleet navigation or guaranteed availability.
 class GarageBookingSearchScreen extends StatefulWidget {
   const GarageBookingSearchScreen({
     required this.search, required this.submit,
     this.pickTime = pickBookingTime, this.beforeRequest, this.onWorkshopSelected,
-    this.initialCity, this.initialWorkshopId, super.key,
+    this.initialCity, this.initialWorkshopId, this.onViewBookings, super.key,
   });
 
   factory GarageBookingSearchScreen.forRepository(
-    GarageBookingRepository repository, {Key? key, String? initialCity, String? initialWorkshopId}) =>
+    GarageBookingRepository repository, {Key? key, String? initialCity, String? initialWorkshopId,
+      VoidCallback? onViewBookings}) =>
       GarageBookingSearchScreen(
-        key: key, initialCity: initialCity, initialWorkshopId: initialWorkshopId, search: repository.findWorkshops,
+        key: key, initialCity: initialCity, initialWorkshopId: initialWorkshopId,
+        onViewBookings: onViewBookings, search: repository.findWorkshops,
         submit: repository.request);
 
   final BookingSearch search;
@@ -40,6 +43,7 @@ class GarageBookingSearchScreen extends StatefulWidget {
   final void Function(String workspaceId, String city)? onWorkshopSelected;
   final String? initialCity;
   final String? initialWorkshopId;
+  final VoidCallback? onViewBookings;
 
   @override
   State<GarageBookingSearchScreen> createState() => _GarageBookingSearchState();
@@ -88,6 +92,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         oldWidget.pickTime != widget.pickTime ||
         oldWidget.beforeRequest != widget.beforeRequest ||
         oldWidget.onWorkshopSelected != widget.onWorkshopSelected ||
+        oldWidget.onViewBookings != widget.onViewBookings ||
         oldWidget.initialCity != widget.initialCity ||
         oldWidget.initialWorkshopId != widget.initialWorkshopId) {
       // Repository callbacks define the authenticated directory scope.
@@ -170,11 +175,18 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         handedOff = true;
         return;
       }
-      await Navigator.of(context).push<void>(MaterialPageRoute(
+      final viewBookings = widget.onViewBookings;
+      final result = await Navigator.of(context).push<BookingRequestExit>(MaterialPageRoute(
         builder: (_) => GarageBookingRequestScreen(
-          shop: shop, submit: widget.submit, pickTime: widget.pickTime),
+          shop: shop, submit: widget.submit, pickTime: widget.pickTime,
+          canViewBookings: viewBookings != null),
       ));
-      if (mounted && generation == _generation) await _search();
+      if (!mounted || generation != _generation) return;
+      if (result == BookingRequestExit.bookings && viewBookings != null) {
+        viewBookings();
+      } else {
+        await _search();
+      }
     } catch (_) {
       if (mounted && generation == _generation) {
         setState(() => _error = 'bookingSearchFailed');
@@ -298,11 +310,12 @@ Future<DateTime?> pickBookingTime(BuildContext context) async {
 class GarageBookingRequestScreen extends StatefulWidget {
   const GarageBookingRequestScreen({
     required this.shop, required this.submit,
-    this.pickTime = pickBookingTime, super.key,
+    this.pickTime = pickBookingTime, this.canViewBookings = false, super.key,
   });
   final GarageBookingWorkshop shop;
   final BookingSubmit submit;
   final BookingTimePicker pickTime;
+  final bool canViewBookings;
 
   @override
   State<GarageBookingRequestScreen> createState() => _GarageBookingRequestState();
@@ -322,6 +335,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   bool _sent = false;
   bool _uncertain = false;
   bool _picking = false;
+  bool _leaving = false;
   int _generation = 0;
   String _requestKey = newBookingRequestKey();
   int _serviceVersion = 0;
@@ -340,6 +354,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       _sent = false;
       _uncertain = false;
       _picking = false;
+      _leaving = false;
       _requestKey = newBookingRequestKey();
       _error = null;
       _service = null;
@@ -452,6 +467,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final serviceVersion = _serviceVersion;
+    final requestGeneration = _generation;
     return Scaffold(
     appBar: AppBar(title: Text(widget.shop.name)),
     body: SafeArea(child: ListView(
@@ -460,8 +476,9 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
         const Icon(Icons.mark_email_read_outlined, size: 48),
         Text(GarageUiText.get('bookingRequestSent'),
           key: const Key('booking_sent_notice')),
+        if (widget.canViewBookings) _viewBookingsButton(),
         OutlinedButton(key: const Key('booking_done'),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _leaving ? null : () => _leave(null, requestGeneration),
           child: Text(GarageUiText.get('bookingDone'))),
       ] : [
         Text(GarageUiText.get('bookingRequestDisclaimer'),
@@ -513,6 +530,7 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             ? GarageUiText.get('bookingPickTime')
             : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
+        if (_uncertain && widget.canViewBookings) _viewBookingsButton(),
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_service != null && _when != null)
             BookingRequestReview(service: _service!, when: _when!,
@@ -524,5 +542,19 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
       ],
     )),
   );
+  }
+
+  Widget _viewBookingsButton() {
+    final generation = _generation;
+    return OutlinedButton(key: const Key('booking_view_bookings'),
+      onPressed: _leaving ? null : () => _leave(BookingRequestExit.bookings, generation),
+      child: Text(GarageUiText.get('myBookings')));
+  }
+
+  void _leave(BookingRequestExit? result, int generation) {
+    if (!mounted || _leaving || generation != _generation || (!_sent && !_uncertain) ||
+        (result == BookingRequestExit.bookings && !widget.canViewBookings)) return;
+    setState(() => _leaving = true);
+    Navigator.of(context).pop(result);
   }
 }

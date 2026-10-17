@@ -42,8 +42,12 @@ class EcosystemModuleHub extends StatelessWidget {
     }
     final customer = destination.module == EcosystemModule.customer;
     if (customer) {
-      return CustomerPortal(searchFirst: customerSearchFirst, pages: [
-        (_) => GarageBookingSearchScreen.forRepository(bookings, initialCity: customerCity, initialWorkshopId: customerWorkshopId),
+      Widget search({VoidCallback? onViewBookings}) => GarageBookingSearchScreen.forRepository(
+        bookings, initialCity: customerCity, initialWorkshopId: customerWorkshopId,
+        onViewBookings: onViewBookings);
+      return CustomerPortal(searchFirst: customerSearchFirst,
+        searchPage: (_, showBookings) => search(onViewBookings: showBookings), pages: [
+        (_) => search(),
         (_) => GarageMyBookingsScreen.forRepository(bookings),
         (_) => GarageBookingNotificationsScreen.forRepository(calendar),
       ]);
