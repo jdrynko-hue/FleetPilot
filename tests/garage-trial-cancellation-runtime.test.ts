@@ -69,10 +69,12 @@ Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', a
     const result = await cancel({ actorId: actor, workspaceId: workspace }, () => now * 1000);
     assert(result.status === 'canceled' && prepares === 2 && confirmed,
       'Cancellation lifecycle did not complete');
-    assert(cancelRequest?.method === 'DELETE', 'Cancellation did not use DELETE');
-    assert(cancelRequest.idempotency === `flotaryx:garage:sandbox:cancel:${attempt}`,
+    // TypeScript does not model assignments made inside the mocked async fetch.
+    const observed = cancelRequest as unknown as NonNullable<typeof cancelRequest>;
+    assert(observed?.method === 'DELETE', 'Cancellation did not use DELETE');
+    assert(observed.idempotency === `flotaryx:garage:sandbox:cancel:${attempt}`,
       'Missing durable idempotency key');
-    const form = new URLSearchParams(cancelRequest.rawBody || cancelRequest.search);
+    const form = new URLSearchParams(observed.rawBody || observed.search);
     assert(form.get('invoice_now') === 'false' && form.get('prorate') === 'false',
       'Cancellation could create an unexpected invoice or proration');
     assert(transport.join(',') === 'GET /v1/subscriptions/sub_fixture,DELETE /v1/subscriptions/sub_fixture',
