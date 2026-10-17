@@ -64,11 +64,16 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   @override
   void initState() {
     super.initState();
+    _restoreInitialIntent();
+  }
+
+  void _restoreInitialIntent() {
     final city = widget.initialCity?.trim();
     if (city != null && city.length <= 80) _city.text = city;
     if (widget.initialWorkshopId != null) {
+      final generation = _generation;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _search();
+        if (mounted && generation == _generation) _search();
       });
     }
   }
@@ -95,6 +100,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       _error = null;
       _busy = false;
       _opening = false;
+      _restoreInitialIntent();
     }
   }
 
@@ -106,7 +112,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _search() async {
-    if (_busy) return;
+    if (!mounted || _busy) return;
     final city = _city.text.trim();
     if (city.isNotEmpty && city.length < 2) {
       setState(() {
