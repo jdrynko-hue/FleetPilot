@@ -328,9 +328,12 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
     }
   }
 
-  Future<void> _read(GarageBookingNotice notice) async {
-    if (_busy || !notice.unread) return;
-    final scope = _scope;
+  bool _current(int scope, int version) =>
+      mounted && scope == _scope && version == _version;
+
+  Future<void> _read(GarageBookingNotice notice, int scope, int version) async {
+    if (!_current(scope, version) || _busy || !notice.unread ||
+        !_notices.any((current) => current.id == notice.id && current.unread)) return;
     final acknowledge = widget.acknowledge;
     setState(() { _busy = true; _notices = const []; });
     var failed = false;
@@ -349,11 +352,16 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final scope = _scope;
+    final version = _version;
+    return Scaffold(
     appBar: AppBar(title: Text(GarageUiText.get('notifications')),
       actions: [IconButton(key: const Key('garage_notifications_refresh'),
         tooltip: GarageUiText.get('refresh'),
-        onPressed: _busy ? null : _refresh,
+        onPressed: _busy ? null : () {
+          if (_current(scope, version)) _refresh();
+        },
         icon: const Icon(Icons.refresh))]),
     body: SafeArea(child: _busy
       ? const Center(child: CircularProgressIndicator())
@@ -377,9 +385,10 @@ class _GarageBookingNotificationsState extends State<GarageBookingNotificationsS
               if (notice.unread) Align(alignment: AlignmentDirectional.centerEnd,
                 child: TextButton(
                   key: Key('garage_notification_mark_' + notice.id),
-                  onPressed: () => _read(notice),
+                  onPressed: () => _read(notice, scope, version),
                   child: Text(GarageUiText.get('noticeMarkRead')))),
             ]))),
       ])),
   );
+  }
 }
