@@ -6,6 +6,7 @@ import '../auth/create_company_screen.dart';
 import '../core/constants.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
+import '../core/locale_preferences.dart';
 import 'vehicle_change_requests_screen.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -128,7 +129,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
   Future<void> _changeLanguage(String value) async {
     await _repository.updateUserLocale(value);
-    AppLocale.language.value = value;
+    selectAppLanguage(value);
 
     if (mounted) setState(() {});
   }
