@@ -46,7 +46,7 @@ try {
             assert.equal(await link.locator('.nav-compact-label').innerText(), label);
             assert.equal(await link.getAttribute('aria-label'), null,
               'Accessible name must use the translated visible label');
-            assert.equal(await link.getAttribute('href'), '/app/');
+            assert.equal(await link.getAttribute('href'), '/app/?lang=' + locale);
             assert.equal(visible, width <= 1050, `${browserName} ${route} ${width} ${locale}`);
             const entry = width <= 1050 ? link : page.locator('.nav-action');
             assert.equal(await entry.isVisible(), true);
