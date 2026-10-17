@@ -116,6 +116,53 @@ assert responses[0] == responses[1] and responses[0]['state'] == 'reserved'
 assert run(f"SELECT count(*) FROM garage_private.test_trial_claims WHERE owner_user_id='{B}';") == '1'
 checks += 1
 
+# Snapshot session parameters before talking to Stripe. Once saved, they can
+# only replay; they cannot be replaced with a second session or another owner.
+checkout_attempt = responses[0]['attempt_id']
+prepare = (f"SELECT public.garage_prepare_test_checkout('{B}',"
+           f"'{checkout_attempt}','cus_fixture');")
+for role in ['anon', 'authenticated']:
+    run(prepare, role, error='42501')
+run(prepare.replace(B, A), 'service_role', error='42501')
+prepared = json.loads(run(prepare, 'service_role'))
+assert prepared['state'] == 'prepared' and prepared['customer_id'] == 'cus_fixture'
+assert json.loads(run(prepare, 'service_role')) == prepared
+checks += 1
+run(prepare.replace('cus_fixture', 'cus_other'), 'service_role', error='55000')
+
+
+def save(session='cs_test_fixture', url='https://checkout.stripe.com/c/pay/cs_test_fixture#token',
+         expiry=prepared['expires_at'], live='false', actor=B):
+    return (f"SELECT public.garage_save_test_checkout('{actor}','{checkout_attempt}',"
+            f"{literal(session)},{literal(url)},{expiry},{live});")
+
+
+for role in ['anon', 'authenticated']:
+    run(save(), role, error='42501')
+run(save(actor=A), 'service_role', error='42501')
+run(save(live='true'), 'service_role', error='22023')
+run(save(expiry=prepared['expires_at'] + 1), 'service_role', error='22023')
+run(save(url='https://checkout.stripe.com.evil.test/c/pay/cs_test_fixture'),
+    'service_role', error='22023')
+run(save(url='https://checkout.stripe.com/c/pay/csXtestXfixture'),
+    'service_role', error='22023')
+
+# Ambiguous, old preparation blocks creation; the reservation is not reset.
+run(f"UPDATE garage_private.test_trial_claims SET checkout_prepared_at=checkout_prepared_at-interval '21 minutes', "
+    f"checkout_expires_at=checkout_expires_at-interval '21 minutes' WHERE attempt_id='{checkout_attempt}';")
+assert json.loads(run(prepare, 'service_role'))['state'] == 'reconciliation_required'
+checks += 1
+run(f"UPDATE garage_private.test_trial_claims SET checkout_prepared_at=checkout_prepared_at+interval '21 minutes', "
+    f"checkout_expires_at=checkout_expires_at+interval '21 minutes' WHERE attempt_id='{checkout_attempt}';")
+assert run(save(), 'service_role') == 't'
+assert run(save(), 'service_role') == 't'
+ready = json.loads(run(prepare, 'service_role'))
+assert ready['state'] == 'ready' and ready['session_id'] == 'cs_test_fixture'
+assert ready['expires_at'] == prepared['expires_at']
+checks += 1
+run(save(session='cs_test_other', url='https://checkout.stripe.com/c/pay/cs_test_other'),
+    'service_role', error='55000')
+
 # Database security metadata, including default PUBLIC function grants.
 assert run("SELECT relrowsecurity FROM pg_class WHERE oid='garage_private.test_trial_claims'::regclass;") == 't'
 for role in ['anon', 'authenticated']:

@@ -10,6 +10,7 @@ on:
       - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
+      - 'server/garage-billing/**'
       - '.github/workflows/full-regression.yml'
   push:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
+      - 'server/garage-billing/**'
       - '.github/workflows/full-regression.yml'
   workflow_dispatch:
 
@@ -41,7 +43,9 @@ jobs:
         with:
           node-version: '24'
       - name: Test current Sandbox backend sources without external services
-        run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs tests/webhook.test.mjs tests/landing_language_handoff.test.mjs
+        run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs tests/webhook.test.mjs tests/landing_language_handoff.test.mjs tests/garage-trial-policy.test.mjs tests/garage-checkout.test.mjs
+      - name: Type-check internal Garage Sandbox Checkout contracts
+        run: npm exec --yes --package typescript@5.9.3 -- tsc --noEmit --strict --allowImportingTsExtensions --target ES2022 --module nodenext --moduleResolution nodenext server/garage-billing/checkout.ts server/garage-billing/trial_policy.ts
 
   flutter:
     runs-on: ubuntu-latest
