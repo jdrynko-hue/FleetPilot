@@ -78,10 +78,12 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
   bool get _valid => _city.text.trim().length >= 2 && _city.text.trim().length <= 80 &&
       _zone.text.trim().isNotEmpty && _zone.text.trim().length <= 100 && _services.isNotEmpty;
 
-  Future<void> _save() async {
-    if (_busy || _confirming || !_loaded || _uncertain || !_valid) return;
-    final scope = _scope;
-    final version = _version;
+  bool _current(int scope, int version) =>
+      mounted && scope == _scope && version == _version;
+
+  Future<void> _save(int scope, int version) async {
+    if (!_current(scope, version) || _busy || _confirming ||
+        !_loaded || _uncertain || !_valid) return;
     final save = widget.save;
     final city = _city.text.trim(), zone = _zone.text.trim();
     final services = List<String>.unmodifiable(_services);
@@ -126,10 +128,14 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scope = _scope;
+    final version = _version;
     final enabled = !_busy && _loaded && !_uncertain;
     return Scaffold(appBar: AppBar(title: Text(GarageUiText.get('bookingProfile')),
       actions: [IconButton(key: const Key('booking_profile_reload'),
-        onPressed: _busy ? null : _load, icon: const Icon(Icons.refresh))]),
+        onPressed: _busy ? null : () {
+          if (_current(scope, version)) _load();
+        }, icon: const Icon(Icons.refresh))]),
       body: SafeArea(child: _busy ? const Center(child: CircularProgressIndicator())
         : ListView(padding: const EdgeInsets.all(20), children: [
           Text(GarageUiText.get('bookingProfileHint')),
@@ -156,7 +162,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
               title: Text(GarageUiText.get('bookingListed')),
               onChanged: enabled ? (value) => setState(() => _listed = value) : null),
             FilledButton(key: const Key('booking_profile_save'),
-              onPressed: enabled && _valid ? _save : null,
+              onPressed: enabled && _valid ? () => _save(scope, version) : null,
               child: Text(GarageUiText.get('bookingSave'))),
           ],
         ])));
