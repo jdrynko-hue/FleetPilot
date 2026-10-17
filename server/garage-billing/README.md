@@ -57,8 +57,25 @@ already canceled. A late created/updated webhook cannot restore canceled state.
 The SQL and runtime remain isolated proposals: there is no served cancellation
 endpoint and no hosted schema change.
 
+`paid_webhook.ts` adds a separate, still-unserved Sandbox reconciliation path
+for `invoice.paid`, `invoice.payment_failed` and deleted subscriptions. A
+signed event supplies only identifiers: the coordinator retrieves the current
+invoice and subscription, verifies the frozen attempt/customer/workshop/price,
+and accepts only a positive, fully paid `subscription_cycle` invoice as paid
+access. A delayed failure delivery that now observes a paid invoice records the
+current paid state instead of downgrading it.
+
+`test_paid_lifecycle.sql` is an incremental disposable-QA proposal. Its private
+event and invoice ledgers reject divergent event replays, permit the legitimate
+`failed` to `paid` transition, and never let a late failure shorten an already
+paid period. Trial access ends on cancellation; post-trial access is calculated
+only from a paid invoice period and is capped by authoritative subscription
+deletion. The time-parameterized test helper remains private, while the narrow
+service RPC always uses the database clock. No `active` subscription status,
+success redirect, zero-value initial invoice or failed invoice grants access.
+
 Remaining before an actual Sandbox purchase: reviewed hosted QA rollout,
 approved Garage catalog and verified customer provisioning, a served Auth
-cancellation endpoint, first charge/payment failure, invoices, UI wiring and
-full Stripe Sandbox lifecycle tests. Business-level eligibility and privacy
-retention still need definition. No Live activation.
+cancellation endpoint, reviewed paid lifecycle rollout, UI wiring and full
+Stripe Sandbox lifecycle tests. Recovery/dunning policy, business-level
+eligibility and privacy retention still need definition. No Live activation.
