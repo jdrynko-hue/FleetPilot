@@ -3,10 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 enum EcosystemModule { fleet, workshop, mechanic, customer }
 
 class EcosystemDestination {
-  const EcosystemDestination(this.module, {this.workspaceId, this.name, this.canConfigure = false});
+  const EcosystemDestination(this.module, {this.workspaceId, this.name, this.country, this.canConfigure = false});
   final EcosystemModule module;
   final String? workspaceId;
   final String? name;
+  final String? country;
   final bool canConfigure;
 }
 
@@ -33,7 +34,7 @@ class EcosystemAccessRepository {
         fleetRows: (id) => client.from('company_members')
             .select('user_id,company_id,role').eq('user_id', id),
         garageRows: (id) => client.from('garage_members')
-            .select('user_id,workspace_id,role,garage_workspaces(name)')
+            .select('user_id,workspace_id,role,garage_workspaces(name,country)')
             .eq('user_id', id),
       );
 
@@ -66,6 +67,7 @@ class EcosystemAccessRepository {
             ? EcosystemModule.mechanic : EcosystemModule.workshop,
         workspaceId: row['workspace_id'] as String,
         name: workspace['name'] as String,
+        country: workspace['country'] is String ? workspace['country'] as String : null,
         canConfigure: row['role'] == 'owner',
       ));
     }
