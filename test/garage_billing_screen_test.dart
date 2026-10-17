@@ -43,8 +43,9 @@ void main() {
   for (final owner in [true, false]) {
     testWidgets('More exposes billing only to owner=$owner without API reads', (tester) async {
       AppLocale.language.value = 'en';
-      final client = SupabaseClient('https://example.supabase.co', 'test-key');
-      addTearDown(client.dispose);
+      final client = SupabaseClient('https://example.supabase.co', 'test-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false));
+      addTearDown(() => tester.runAsync(client.dispose));
       await tester.pumpWidget(MaterialApp(home: EcosystemModuleHub(client: client,
         destination: EcosystemDestination(EcosystemModule.workshop,
           workspaceId: '11111111-1111-4111-8111-111111111111',
