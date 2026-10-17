@@ -48,6 +48,7 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
   List<GarageCalendarAppointment> _calendar = const [];
   final Map<String,String> _selection = {};
   bool _busy = true;
+  bool _confirming = false;
   String? _error;
   int _sequence = 0;
   int _scope = 0;
@@ -115,12 +116,16 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
     final sequence = _sequence;
     final confirmSlot = widget.confirmSlot;
     final resourceId = _selection[request.id];
-    if (_busy || resourceId == null ||
+    if (_busy || _confirming || resourceId == null ||
         !_resources.any((resource) => resource.id == resourceId &&
             resource.active) ||
         request.status != GarageBookingStatus.requested) return;
 
-    final confirmed = await showDialog<bool>(
+    // Lock the intent synchronously, before the dialog's first frame.
+    _confirming = true;
+    bool? confirmed;
+    try {
+    confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(GarageUiText.get('calendarConfirmTitle')),
@@ -135,6 +140,9 @@ class _GarageResourceCalendarState extends State<GarageResourceCalendarScreen> {
         ],
       ),
     );
+    } finally {
+      _confirming = false;
+    }
     if (!mounted || scope != _scope || sequence != _sequence ||
         confirmed != true || _busy) return;
     setState(() {
