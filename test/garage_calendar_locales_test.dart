@@ -104,6 +104,9 @@ void main() {
 
   testWidgets('long bay names fit the selected dropdown on a 320px screen',
       (tester) async {
+    final previousFatal = WidgetController.hitTestWarningShouldBeFatal;
+    WidgetController.hitTestWarningShouldBeFatal = true;
+    addTearDown(() => WidgetController.hitTestWarningShouldBeFatal = previousFatal);
     AppLocale.language.value = 'pl';
     final longName = List.filled(12, 'Stanowisko ciężarówek').join(' ');
     await fixture.mount(tester, GarageResourceCalendarScreen(
@@ -117,12 +120,16 @@ void main() {
     final select = find.byKey(
         const Key('garage_calendar_select_' + fixture.requestId));
     await tester.scrollUntilVisible(select, 250);
+    await tester.ensureVisible(select);
+    await tester.pumpAndSettle();
+    expect(select.hitTestable(), findsOneWidget);
     await tester.tap(select);
     await tester.pumpAndSettle();
     await tester.tap(find.text(longName).last);
     await tester.pumpAndSettle();
     final dropdown = tester.widget<DropdownButton<String>>(find.descendant(
         of: select, matching: find.byType(DropdownButton<String>)));
+    expect(dropdown.value, fixture.bay1);
     expect(dropdown.isExpanded, isTrue);
     final selected = dropdown.items!.single.child as Text;
     expect(selected.overflow, TextOverflow.ellipsis);
