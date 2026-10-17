@@ -170,4 +170,29 @@ for role in ['anon', 'authenticated']:
                "'public.garage_reserve_test_trial(uuid,uuid,text,text,text)','EXECUTE');") == 'f'
     assert run(f"SELECT has_table_privilege('{role}','garage_private.test_trial_claims','INSERT,UPDATE,DELETE');") == 'f'
     checks += 1
+# Webhook lookup exposes only the prepared immutable identity to the backend.
+lookup = f"SELECT public.garage_lookup_test_trial('{checkout_attempt}');"
+for role in ['anon', 'authenticated']:
+    run(lookup, role, error='42501')
+    assert run(f"SELECT has_function_privilege('{role}',"
+               "'public.garage_lookup_test_trial(uuid)','EXECUTE');") == 'f'
+    checks += 1
+assert run("SELECT public.garage_lookup_test_trial(NULL);", 'service_role') == ''
+assert run("SELECT public.garage_lookup_test_trial('ffffffff-ffff-4fff-8fff-ffffffffffff');",
+           'service_role') == ''
+checks += 2
+identity = json.loads(run(lookup, 'service_role'))
+assert identity == {'attempt_id': checkout_attempt, 'workspace_id': WS_B,
+                    'customer_id': 'cus_fixture', 'price_id': 'price_fixture',
+                    'currency': 'pln', 'billing_interval': 'month'}, identity
+checks += 1
+# Real database confirmation and replay through exactly the RPC used by SDK.
+confirmation = (f"SELECT public.garage_confirm_test_trial('{checkout_attempt}',"
+                "'sub_webhookfixture','2030-01-01T00:00:00Z','2030-01-08T00:00:00Z',false);")
+assert run(confirmation, 'service_role') == 't'
+assert run(confirmation, 'service_role') == 't'
+assert json.loads(run(lookup, 'service_role')) == identity
+checks += 3
+run(confirmation.replace('sub_webhookfixture', 'sub_webhookconflict'),
+    'service_role', error='55000')
 print(f'Garage Sandbox trial ledger: {checks} checks PASS (including concurrent connections)')

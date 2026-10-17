@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { garageTrialWebhookStorage } from '../../../server/garage-billing/trial_webhook_storage.ts';
 import { createGarageTrialWebhook } from '../../../server/garage-billing/trial_webhook.ts';
 
 type Coordinator = Parameters<typeof createGarageTrialWebhook>[0];
@@ -30,4 +31,12 @@ export function createSignedGarageTrialWebhook(configuration: {
     },
     retrieveSubscription: id => stripe.subscriptions.retrieve(id),
   });
+}
+
+// Internal composition for a trusted server service client; still not served.
+export function createStoredGarageTrialWebhook(
+  configuration: Parameters<typeof createSignedGarageTrialWebhook>[0],
+  serviceClient: Parameters<typeof garageTrialWebhookStorage>[0],
+) {
+  return createSignedGarageTrialWebhook(configuration, garageTrialWebhookStorage(serviceClient));
 }

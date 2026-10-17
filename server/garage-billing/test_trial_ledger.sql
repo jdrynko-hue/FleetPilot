@@ -209,4 +209,21 @@ $$;
 REVOKE ALL ON FUNCTION public.garage_save_test_checkout(uuid,uuid,text,text,bigint,boolean)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.garage_save_test_checkout(uuid,uuid,text,text,bigint,boolean) TO service_role;
+
+-- Internal webhook reconciliation only. The service role cannot select the
+-- private table; expose only the immutable prepared billing identity, no owner,
+-- checkout URL, email or other customer profile data. Do not require a current
+-- browser session: signed Stripe retries must survive an owner's sign-out.
+CREATE FUNCTION public.garage_lookup_test_trial(p_attempt uuid) RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $$
+  SELECT jsonb_build_object(
+    'attempt_id',attempt_id,'workspace_id',workspace_id,
+    'customer_id',checkout_customer_id,'price_id',price_id,
+    'currency',currency,'billing_interval',billing_interval)
+  FROM garage_private.test_trial_claims
+  WHERE attempt_id=p_attempt AND checkout_customer_id IS NOT NULL;
+$$;
+REVOKE ALL ON FUNCTION public.garage_lookup_test_trial(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.garage_lookup_test_trial(uuid) TO service_role;
 COMMIT;
