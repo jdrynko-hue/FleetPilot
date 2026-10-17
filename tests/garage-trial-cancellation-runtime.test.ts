@@ -13,6 +13,8 @@ function assert(value: unknown, message: string): asserts value {
 Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', async () => {
   const originalFetch = globalThis.fetch;
   const transport: string[] = [];
+  let cancelRequest: { method: string; idempotency: string | null;
+    rawBody: string; search: string } | null = null;
   let prepares = 0;
   let confirmed = false;
   const claim = { state: 'cancel_pending', attempt_id: attempt, workspace_id: workspace,
@@ -40,15 +42,11 @@ Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', a
       status: 200, headers: { 'content-type': 'application/json', 'request-id': 'req_fixture' },
     });
     if (method === 'GET') return json(subscription('trialing'));
-    assert(method === 'DELETE', 'Cancellation did not use DELETE');
-    assert(headers.get('idempotency-key') === `flotaryx:garage:sandbox:cancel:${attempt}`,
-      'Missing durable idempotency key');
     // FetchHttpClient can pass DELETE as a Request object rather than `init`.
     const rawBody = init?.body != null ? String(init.body)
       : input instanceof Request ? await input.clone().text() : '';
-    const form = new URLSearchParams(rawBody);
-    assert(form.get('invoice_now') === 'false' && form.get('prorate') === 'false',
-      'Cancellation could create an unexpected invoice or proration');
+    cancelRequest = { method, idempotency: headers.get('idempotency-key'), rawBody,
+      search: url.search };
     return json(subscription('canceled'));
   };
   try {
@@ -71,6 +69,12 @@ Deno.test('real Stripe SDK sends one idempotent immediate trial cancellation', a
     const result = await cancel({ actorId: actor, workspaceId: workspace }, () => now * 1000);
     assert(result.status === 'canceled' && prepares === 2 && confirmed,
       'Cancellation lifecycle did not complete');
+    assert(cancelRequest?.method === 'DELETE', 'Cancellation did not use DELETE');
+    assert(cancelRequest.idempotency === `flotaryx:garage:sandbox:cancel:${attempt}`,
+      'Missing durable idempotency key');
+    const form = new URLSearchParams(cancelRequest.rawBody || cancelRequest.search);
+    assert(form.get('invoice_now') === 'false' && form.get('prorate') === 'false',
+      'Cancellation could create an unexpected invoice or proration');
     assert(transport.join(',') === 'GET /v1/subscriptions/sub_fixture,DELETE /v1/subscriptions/sub_fixture',
       'Unexpected SDK request ordering');
   } finally { globalThis.fetch = originalFetch; }
