@@ -246,6 +246,7 @@ void main() {
     await tester.tap(find.byKey(const Key('booking_pick_time')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('booking_send')));
     await tester.pumpAndSettle();
     expect(count,1);
@@ -432,6 +433,7 @@ void main() {
     await tester.tap(find.byKey(const Key('booking_pick_time')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('booking_send')));
     await tester.pump();
     expect(oldSubmissions, 1);
@@ -622,6 +624,7 @@ void main() {
     await tester.tap(find.byKey(const Key('booking_pick_time')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('booking_send')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('booking_send')));
     await tester.pumpAndSettle();
     expect(submissions, 1);
