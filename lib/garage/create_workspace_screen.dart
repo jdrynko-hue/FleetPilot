@@ -34,6 +34,7 @@ class _CreateWorkspaceState extends State<GarageCreateWorkspaceScreen> {
   bool _business = false;
   bool _busy = false;
   bool _uncertain = false;
+  bool _checkingMemberships = false;
   int _scope = 0;
 
   @override
@@ -43,7 +44,7 @@ class _CreateWorkspaceState extends State<GarageCreateWorkspaceScreen> {
         oldWidget.isCurrentAccount != widget.isCurrentAccount) {
       _scope++;
       _name.clear(); _country = 'GB'; _business = false;
-      _busy = false; _uncertain = false;
+      _busy = false; _uncertain = false; _checkingMemberships = false;
     }
   }
   @override
@@ -68,6 +69,14 @@ class _CreateWorkspaceState extends State<GarageCreateWorkspaceScreen> {
     } finally {
       if (mounted && scope == _scope) setState(() => _busy = false);
     }
+  }
+
+  void _checkMemberships() {
+    if (_busy || !_uncertain || _checkingMemberships || !widget.isCurrentAccount()) return;
+    // The parent returns to the chooser and reloads server-filtered memberships.
+    // Never infer failure or repeat the create request after a lost response.
+    setState(() => _checkingMemberships = true);
+    widget.onCreated();
   }
 
   @override
@@ -100,6 +109,10 @@ class _CreateWorkspaceState extends State<GarageCreateWorkspaceScreen> {
             onChanged: enabled ? (value) => setState(() => _business = value ?? false) : null),
           if (_uncertain) Text(GarageUiText.get('workshopCreateUncertain'),
             key: const Key('garage_create_uncertain')),
+          if (_uncertain) OutlinedButton(
+            key: const Key('garage_create_check_memberships'),
+            onPressed: _checkingMemberships || _busy ? null : _checkMemberships,
+            child: Text(GarageUiText.get('refresh'))),
           FilledButton(key: const Key('garage_create_submit'),
             onPressed: enabled && _business && _name.text.trim().length >= 2 ? _create : null,
             child: Text(_busy ? tr('creating') : GarageUiText.get('createWorkshop'))),
