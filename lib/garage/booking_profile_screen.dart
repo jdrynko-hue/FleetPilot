@@ -34,6 +34,7 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
   bool _busy = true;
   bool _loaded = false;
   bool _uncertain = false;
+  bool _confirming = false;
   String? _notice;
   int _version = 0;
   int _scope = 0;
@@ -78,14 +79,17 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
       _zone.text.trim().isNotEmpty && _zone.text.trim().length <= 100 && _services.isNotEmpty;
 
   Future<void> _save() async {
-    if (_busy || !_loaded || _uncertain || !_valid) return;
+    if (_busy || _confirming || !_loaded || _uncertain || !_valid) return;
     final scope = _scope;
     final version = _version;
     final save = widget.save;
     final city = _city.text.trim(), zone = _zone.text.trim();
     final services = List<String>.unmodifiable(_services);
     final duration = _duration, listed = _listed;
-    final confirmed = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+    _confirming = true;
+    bool? confirmed;
+    try {
+    confirmed = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: Text(GarageUiText.get('bookingProfile')),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
         children: [Text(GarageUiText.get('bookingProfileHint')),
@@ -96,6 +100,9 @@ class _ProfileState extends State<GarageBookingProfileScreen> {
         FilledButton(key: const Key('booking_profile_confirm'),
           onPressed: () => Navigator.pop(c, true),
           child: Text(GarageUiText.get('bookingSave')))]));
+    } finally {
+      _confirming = false;
+    }
     if (!mounted || scope != _scope || version != _version || confirmed != true || _busy) return;
     setState(() { _busy = true; _notice = null; });
     try {
