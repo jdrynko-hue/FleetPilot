@@ -80,9 +80,16 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
     // Lock before the dialog's first frame, not only once a write starts.
     confirming = true;
     bool? accepted;
+    var decisionMade = false;
     try {
     accepted = await showDialog<bool>(context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) {
+        void decide(bool result) {
+          if (decisionMade || !c.mounted || ModalRoute.of(c)?.isCurrent != true) return;
+          decisionMade = true;
+          Navigator.pop(c, result);
+        }
+        return AlertDialog(
         title: Text(GarageUiText.get('inboxConfirmTitle')),
         content: Text(type == 'accept'
           ? GarageUiText.get('inboxAcceptQuestion')
@@ -90,13 +97,14 @@ class _WorkshopBookingState extends State<GarageBookingWorkshopScreen> {
             ? GarageUiText.get('inboxDeclineQuestion')
             : GarageUiText.get('inboxCancelQuestion')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c,false),
+          TextButton(onPressed: () => decide(false),
             child: Text(GarageUiText.get('inboxBack'))),
           FilledButton(key: const Key('workshop_booking_confirm'),
-            onPressed: () => Navigator.pop(c,true),
+            onPressed: () => decide(true),
             child: Text(GarageUiText.get('inboxConfirm'))),
         ],
-      ));
+      );
+      });
     } finally {
       confirming = false;
     }
@@ -243,20 +251,28 @@ class _MyBookingsState extends State<GarageMyBookingsScreen> {
     final cancel = widget.cancel;
     confirming = true;
     bool? accepted;
+    var decisionMade = false;
     try {
     accepted = await showDialog<bool>(context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) {
+        void decide(bool result) {
+          if (decisionMade || !c.mounted || ModalRoute.of(c)?.isCurrent != true) return;
+          decisionMade = true;
+          Navigator.pop(c, result);
+        }
+        return AlertDialog(
         title: Text(GarageUiText.get('customerCancelQuestion')),
         content: Text(entry.isOnlyRequested
           ? GarageUiText.get('customerWithdrawQuestion')
           : GarageUiText.get('customerRequestCancelQuestion')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c,false),
+          TextButton(onPressed: () => decide(false),
             child: Text(GarageUiText.get('customerCancelNo'))),
           FilledButton(key: const Key('customer_booking_confirm_cancel'),
-            onPressed: () => Navigator.pop(c,true),
+            onPressed: () => decide(true),
             child: Text(GarageUiText.get('customerCancelYes'))),
-        ]));
+        ]);
+      });
     } finally {
       confirming = false;
     }
