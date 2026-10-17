@@ -18,6 +18,10 @@ void main() {
     loader.addFont(File('$root/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf')
       .readAsBytes().then((b) => ByteData.sublistView(b)));
     await loader.load();
+    final icons = FontLoader('MaterialIcons');
+    icons.addFont(File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
+      .readAsBytes().then((b) => ByteData.sublistView(b)));
+    await icons.load();
   });
   for (final size in [const Size(390, 844), const Size(1200, 900)]) {
     testWidgets('render Polish Garage at ${size.width.toInt()}px', (tester) async {
@@ -36,6 +40,9 @@ void main() {
             setupGuide: GarageSetupGuide(openProfile: () {}, openCalendar: () {}, openRequests: () {})),
           for (var i=1;i<5;i++) (_) => const SizedBox.shrink(),
         ])));
+      await tester.runAsync(() => precacheImage(
+        const AssetImage('assets/branding/flotaryx_mark.png'),
+        tester.element(find.byType(GarageShell))));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await expectLater(find.byType(GarageShell), matchesGoldenFile(

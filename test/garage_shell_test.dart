@@ -23,6 +23,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('draft_2')), 'Keep this draft');
     await tester.tap(find.byKey(const Key('garage_tab_1')));
     await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
     await tester.tap(find.byKey(const Key('garage_tab_2')));
     await tester.pumpAndSettle();
     expect(find.text('Keep this draft'), findsOneWidget);

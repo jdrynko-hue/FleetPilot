@@ -29,11 +29,15 @@ class _GarageShellState extends State<GarageShell> {
   void didUpdateWidget(covariant GarageShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.scopeId != widget.scopeId) {
+      FocusManager.instance.primaryFocus?.unfocus();
       _index = 0;
       _visited.clear();
     }
   }
-  void _select(int index) => setState(() => _index = index);
+  void _select(int index) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _index = index);
+  }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
