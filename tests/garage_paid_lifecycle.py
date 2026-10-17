@@ -26,6 +26,7 @@ def run(sql, role=None, error=None):
     return result.stdout.strip()
 
 
+run(f"INSERT INTO auth.users(id) VALUES('{OWNER}');")
 run(f"SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub','{OWNER}',false); "
     f"INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) "
     f"VALUES('{WORKSPACE}','{OWNER}','Paid lifecycle fixture','GB','GBP');")
