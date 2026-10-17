@@ -104,6 +104,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(keys, hasLength(1));
       if (fails) {
+        await fields.reveal(tester, 'booking_send');
         expect(tester.widget<FilledButton>(find.byKey(const Key('booking_send'))).onPressed, isNull);
         expect(tester.widget<OutlinedButton>(find.byKey(const Key('booking_pick_time'))).onPressed, isNull);
         expect(find.textContaining('Private uncertain result'), findsNothing);
