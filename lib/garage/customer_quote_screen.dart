@@ -25,6 +25,7 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
   GarageCustomerQuote? _quote;
   bool _loading = true;
   bool _approving = false;
+  bool _confirming = false;
   bool _approvalSucceeded = false;
   int? _approvedRevision;
   String? _notice;
@@ -116,16 +117,27 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
 
   Future<void> _requestApproval() async {
     final selected = _quote;
-    if (_loading || _approving || _approvalSucceeded ||
+    if (_loading || _approving || _confirming || _approvalSucceeded ||
         selected == null || selected.approved) {
       return;
     }
     final generation = _generation;
     final load = widget.loadQuote;
     final approve = widget.approveRevision;
-    final accepted = await showDialog<bool>(
+    _confirming = true;
+    bool? accepted;
+    var decisionMade = false;
+    try {
+    accepted = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) {
+        void decide(bool result) {
+          if (decisionMade || !dialogContext.mounted ||
+              ModalRoute.of(dialogContext)?.isCurrent != true) return;
+          decisionMade = true;
+          Navigator.pop(dialogContext, result);
+        }
+        return AlertDialog(
         title: Text(GarageUiText.get('customerConfirm')),
         content: Text(
           GarageUiText.format('customerConfirmBody', {
@@ -135,17 +147,21 @@ class _GarageCustomerQuoteScreenState extends State<GarageCustomerQuoteScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
+            onPressed: () => decide(false),
             child: Text(GarageUiText.get('customerCancel')),
           ),
           FilledButton(
             key: const Key('garage_quote_confirm'),
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () => decide(true),
             child: Text(GarageUiText.get('customerApprove')),
           ),
         ],
-      ),
+      );
+      },
     );
+    } finally {
+      _confirming = false;
+    }
     if (!mounted || generation != _generation || accepted != true || _approving) return;
     setState(() {
       _approving = true;
