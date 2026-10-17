@@ -7,6 +7,15 @@ import 'quote_currency_picker.dart';
 import 'quote_order_repository.dart';
 import 'workshop_quote_publisher.dart';
 
+// Remove only the route owned by this flow, after widget updates finish.
+void _closeQuoteRoute(Route<dynamic>? route) {
+  if (route == null) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final navigator = route.navigator;
+    if (navigator != null) navigator.removeRoute(route);
+  });
+}
+
 /// Staff-only QA order inbox. Backend RLS is authoritative for every row.
 class GarageWorkshopQuotesScreen extends StatefulWidget {
   const GarageWorkshopQuotesScreen({
@@ -43,6 +52,9 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   bool _loading = true;
   String? _error;
   int _version = 0;
+  int _scope = 0;
+  bool _opening = false;
+  Route<void>? _editorRoute;
 
   String _statusLabel(String status) => switch (status) {
     'received' => GarageUiText.get('received'),
@@ -59,13 +71,37 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   @override
   void initState() { super.initState(); _refresh(); }
   @override
-  void dispose() { _version++; super.dispose(); }
+  void didUpdateWidget(covariant GarageWorkshopQuotesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.loadOrders != widget.loadOrders ||
+        oldWidget.loadCurrency != widget.loadCurrency ||
+        oldWidget.publish != widget.publish) {
+      _scope++;
+      _refresh();
+    }
+  }
+  @override
+  void dispose() {
+    _version++; _scope++;
+    _closeEditor();
+    super.dispose();
+  }
+
+  void _closeEditor() {
+    final route = _editorRoute;
+    _editorRoute = null;
+    _opening = false;
+    _closeQuoteRoute(route);
+  }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     final current = ++_version;
+    final loadOrders = widget.loadOrders;
+    _closeEditor();
     setState(() { _orders = const []; _loading = true; _error = null; });
     try {
-      final rows = await widget.loadOrders();
+      final rows = await loadOrders();
       if (mounted && _version == current) {
         setState(() => _orders = List.unmodifiable(rows));
       }
@@ -81,19 +117,52 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   }
 
   Future<void> _open(GarageQuoteOrder order) async {
-    if (_loading || !order.canQuote) return;
-    await Navigator.of(context).push<void>(MaterialPageRoute(
+    if (!mounted || _loading || _opening || !order.canQuote || !_orders.contains(order)) return;
+    final scope = _scope;
+    final version = _version;
+    final loadCurrency = widget.loadCurrency;
+    final publish = widget.publish;
+    void requireCurrent() {
+      if (!mounted || scope != _scope || version != _version) {
+        throw StateError('Quote order scope changed');
+      }
+    }
+    Future<GarageQuoteCurrencySelection> loadBoundCurrency() async {
+      requireCurrent();
+      final result = await loadCurrency(order.id);
+      requireCurrent();
+      return result;
+    }
+    Future<int> publishBound(String currency, List<GarageQuoteDraftLine> lines) async {
+      requireCurrent();
+      final result = await publish(order.id, currency, lines);
+      requireCurrent();
+      return result;
+    }
+    _opening = true;
+    final route = MaterialPageRoute<void>(
       builder: (_) => GarageQuoteEditorScreen(
         order: order,
-        loadCurrency: () => widget.loadCurrency(order.id),
-        publish: (currency, lines) => widget.publish(order.id, currency, lines),
+        loadCurrency: loadBoundCurrency,
+        publish: publishBound,
       ),
-    ));
-    if (mounted) await _refresh();
+    );
+    _editorRoute = route;
+    try {
+      await Navigator.of(context).push<void>(route);
+    } finally {
+      if (identical(_editorRoute, route)) {
+        _editorRoute = null;
+        _opening = false;
+      }
+    }
+    if (mounted && scope == _scope && version == _version) await _refresh();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final version = _version;
+    return Scaffold(
     appBar: AppBar(title: Text(GarageUiText.get('workshopEstimates')),
       actions: [IconButton(key: const Key('quote_orders_refresh'),
         icon: const Icon(Icons.refresh), onPressed: _loading ? null : _refresh)]),
@@ -112,11 +181,14 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
             subtitle: Text(_statusLabel(order.status)),
             trailing: order.canQuote
               ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
-            onTap: order.canQuote ? () => _open(order) : null,
+            onTap: order.canQuote ? () {
+              if (mounted && version == _version) _open(order);
+            } : null,
           ),
         ),
       ])),
   );
+  }
 }
 
 class _QuoteDraft {
@@ -175,6 +247,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   bool _uncertain = false;
   int? _published;
   int _generation = 0;
+  ModalRoute<dynamic>? _confirmationRoute;
 
   bool get _editing => !_loading && !_publishing && !_confirming &&
       !_uncertain && _published == null;
@@ -190,6 +263,8 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
         oldWidget.loadCurrency != widget.loadCurrency ||
         oldWidget.publish != widget.publish) {
       _generation++;
+      _closeQuoteRoute(_confirmationRoute);
+      _confirmationRoute = null;
       for (final line in _lines) { line.dispose(); }
       _lines..clear()..add(_QuoteDraft());
       _publishing = false;
@@ -202,6 +277,8 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
   @override
   void dispose() {
     _generation++;
+    _closeQuoteRoute(_confirmationRoute);
+    _confirmationRoute = null;
     for (final line in _lines) { line.dispose(); }
     super.dispose();
   }
@@ -241,10 +318,13 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
     _confirming = true;
     bool? accepted;
     var decisionMade = false;
+    ModalRoute<dynamic>? confirmationRoute;
     try {
     accepted = await showDialog<bool>(
       context: context,
       builder: (ctx) {
+        confirmationRoute = ModalRoute.of(ctx);
+        _confirmationRoute = confirmationRoute;
         void decide(bool result) {
           if (decisionMade || !ctx.mounted || ModalRoute.of(ctx)?.isCurrent != true) return;
           decisionMade = true;
@@ -267,6 +347,7 @@ class _QuoteEditorState extends State<GarageQuoteEditorScreen> {
       },
     );
     } finally {
+      if (identical(_confirmationRoute, confirmationRoute)) _confirmationRoute = null;
       if (mounted && generation == _generation) _confirming = false;
     }
     if (!mounted || generation != _generation || accepted != true || _publishing) return;
