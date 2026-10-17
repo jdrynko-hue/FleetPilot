@@ -251,7 +251,6 @@ void main() {
       } else {
         await tester.tap(find.byKey(const Key('garage_media_cancel_pdf')));
       }
-      await tester.pumpAndSettle();
       action();
       await tester.pumpAndSettle();
       expect(saves, 0);
@@ -259,6 +258,22 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('stale upload button cannot start a new-scope picker', (tester) async {
+    var picks = 0;
+    final GarageMediaPick picker = (_) async { picks++; return null; };
+    await mount(tester, media(pickFile: picker));
+    final oldTap = tester.widget<FloatingActionButton>(find.byKey(
+      const Key('garage_media_upload'))).onPressed!;
+    await mount(tester, media(pickFile: picker, canUploadDocuments: true));
+    oldTap();
+    await tester.pumpAndSettle();
+    expect(picks, 0);
+    await tester.tap(find.byKey(const Key('garage_media_upload')));
+    await tester.pumpAndSettle();
+    expect(picks, 1);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('disposed media picker never writes selected bytes', (tester) async {
     final pending = Completer<GarageSelectedMedia?>();

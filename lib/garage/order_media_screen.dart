@@ -388,7 +388,7 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
     int operation,
   ) async {
     bool current() => _currentOperation(scope, operation);
-    if (!current() || _savingPdf) return;
+    if (!current() || _savingPdf || _previewRoute?.isCurrent != true) return;
     _savingPdf = true;
     try {
       // Invoke the save operation directly from the user button callback.
@@ -426,7 +426,9 @@ class _GarageOrderMediaScreenState extends State<GarageOrderMediaScreen> {
       floatingActionButton: _canUpload
           ? FloatingActionButton.extended(
               key: const Key('garage_media_upload'),
-              onPressed: _busy || _loading ? null : _upload,
+              onPressed: _busy || _loading ? null : () {
+                if (scope == _scope && version == _listVersion) _upload();
+              },
               icon: const Icon(Icons.upload_file),
               label: Text(_tr('Dodaj plik', 'Add file')),
             )
