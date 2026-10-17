@@ -12,7 +12,7 @@ void main() {
   late SupabaseClient client;
   late MockClient transport;
   setUpAll(() async {
-    transport = MockClient((_) async => http.Response('[]', 200,
+    transport = MockClient((request) async => http.Response('[]', 200, request: request,
       headers: {'content-type': 'application/json'}));
     client = SupabaseClient('https://setup.example.test', 'mock-only', httpClient: transport,
       authOptions: const AuthClientOptions(autoRefreshToken: false));
