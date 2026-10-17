@@ -13,7 +13,11 @@ secret, add the service-only claim lookup, connect the existing confirmation RPC
 and exercise signed replay/invalid/stale signatures through the actual SDK and
 real PostgreSQL. The coordinator tests inject verification/storage; they do not
 prove cryptographic verification, database replay safety or real Stripe delivery.
-Cancellation before the first charge and paid-invoice lifecycle remain required.
+The next stacked proposal adds durable cancellation before the first charge.
+It rechecks current ownership immediately before the idempotent Stripe DELETE,
+reconciles a lost response from authoritative subscription state, and prevents
+late webhook replay from restoring canceled state. It is not served or deployed.
+The paid-invoice lifecycle remains required.
 
 ### Pinned SDK signature adapter
 

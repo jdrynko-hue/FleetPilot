@@ -195,4 +195,60 @@ assert json.loads(run(lookup, 'service_role')) == identity
 checks += 3
 run(confirmation.replace('sub_webhookfixture', 'sub_webhookconflict'),
     'service_role', error='55000')
+
+# Owner-requested cancellation is prepared durably and replayed with the same
+# attempt/subscription. Browser roles cannot prepare or confirm it.
+prepare_cancel = (f"SELECT public.garage_prepare_test_trial_cancellation('{B}',"
+                  f"'{WS_B}');")
+for role in ['anon', 'authenticated']:
+    run(prepare_cancel, role, error='42501')
+run(prepare_cancel.replace(B, A), 'service_role', error='42501')
+cancel_claim = json.loads(run(prepare_cancel, 'service_role'))
+assert cancel_claim == json.loads(run(prepare_cancel, 'service_role'))
+assert cancel_claim['state'] == 'cancel_pending'
+assert cancel_claim['attempt_id'] == checkout_attempt
+assert cancel_claim['subscription_id'] == 'sub_webhookfixture'
+checks += 1
+
+# Every prepare/retry checks current ownership again before the Stripe write.
+run(f"UPDATE public.garage_members SET role='service_adviser' "
+    f"WHERE workspace_id='{WS_B}' AND user_id='{B}';")
+run(prepare_cancel, 'service_role', error='42501')
+run(f"UPDATE public.garage_members SET role='owner' "
+    f"WHERE workspace_id='{WS_B}' AND user_id='{B}';")
+assert json.loads(run(prepare_cancel, 'service_role')) == cancel_claim
+checks += 1
+
+canceled_at = '2030-01-02T00:00:00Z'
+confirm_cancel = (
+    f"SELECT public.garage_confirm_test_trial_cancellation('{B}','{WS_B}',"
+    f"'{checkout_attempt}','sub_webhookfixture','{canceled_at}',false);")
+for role in ['anon', 'authenticated']:
+    run(confirm_cancel, role, error='42501')
+run(confirm_cancel.replace(',false)', ',true)'), 'service_role', error='22023')
+run(confirm_cancel.replace(f"'{B}'", f"'{A}'", 1), 'service_role', error='42501')
+run(confirm_cancel.replace('sub_webhookfixture', 'sub_other'),
+    'service_role', error='55000')
+run(confirm_cancel.replace(canceled_at, '2030-01-08T00:00:00Z'),
+    'service_role', error='55000')
+assert run(confirm_cancel, 'service_role') == 't'
+assert run(confirm_cancel, 'service_role') == 't'
+replayed_cancel = json.loads(run(prepare_cancel, 'service_role'))
+assert replayed_cancel['state'] == 'trial_canceled'
+assert replayed_cancel['canceled_at'].startswith('2030-01-02T00:00:00')
+checks += 2
+run(confirm_cancel.replace(canceled_at, '2030-01-03T00:00:00Z'),
+    'service_role', error='55000')
+
+# A late/replayed created or updated event cannot resurrect canceled state.
+assert run(confirmation, 'service_role') == 't'
+assert json.loads(run(prepare_cancel, 'service_role'))['state'] == 'trial_canceled'
+checks += 1
+
+for role in ['anon', 'authenticated']:
+    assert run(f"SELECT has_function_privilege('{role}',"
+               "'public.garage_prepare_test_trial_cancellation(uuid,uuid)','EXECUTE');") == 'f'
+    assert run(f"SELECT has_function_privilege('{role}',"
+               "'public.garage_confirm_test_trial_cancellation(uuid,uuid,uuid,text,timestamptz,boolean)','EXECUTE');") == 'f'
+    checks += 1
 print(f'Garage Sandbox trial ledger: {checks} checks PASS (including concurrent connections)')

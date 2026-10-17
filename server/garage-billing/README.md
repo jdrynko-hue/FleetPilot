@@ -47,8 +47,18 @@ The SQL file is an isolated QA proposal, not a hosted migration. Do not apply it
 over PR #154 as if it were an incremental migration: a reviewed incremental
 upgrade will be required if that earlier schema has ever been installed.
 
+`trial_cancellation.ts` now proposes immediate cancellation while the
+authoritative subscription is still `trialing`. The private ledger records a
+durable pending intent, rechecks current owner membership after the Stripe read
+and immediately before the DELETE, and derives one stable idempotency key from
+the existing attempt. If Stripe's response is lost, the coordinator retrieves
+the subscription and records success only when the authoritative object is
+already canceled. A late created/updated webhook cannot restore canceled state.
+The SQL and runtime remain isolated proposals: there is no served cancellation
+endpoint and no hosted schema change.
+
 Remaining before an actual Sandbox purchase: reviewed hosted QA rollout,
-approved Garage catalog and verified customer provisioning,
-signed replay-safe webhooks, trial cancellation, first charge/payment failure,
-invoices, UI wiring and full Stripe Sandbox lifecycle tests. Business-level
-eligibility and privacy retention still need definition. No Live activation.
+approved Garage catalog and verified customer provisioning, a served Auth
+cancellation endpoint, first charge/payment failure, invoices, UI wiring and
+full Stripe Sandbox lifecycle tests. Business-level eligibility and privacy
+retention still need definition. No Live activation.
