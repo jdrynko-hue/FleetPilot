@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 assert os.environ.get('GARAGE_TRIAL_DISPOSABLE') == '1'
 assert os.environ.get('PGHOST') in ('127.0.0.1', 'localhost')
@@ -22,6 +23,14 @@ def run(sql, role=None, error=None):
         assert result.returncode != 0 and error in result.stderr, result.stderr
         checks += 1
         return None
+    assert result.returncode == 0, result.stderr
+    return result.stdout.strip()
+
+
+def run_parallel(sql):
+    result = subprocess.run(
+        CMD + ['-c', 'SET ROLE service_role; ' + sql],
+        text=True, capture_output=True, timeout=15)
     assert result.returncode == 0, result.stderr
     return result.stdout.strip()
 
@@ -121,6 +130,49 @@ late_paid = paid('evt_renewalpaidlate', 'in_renewal',
 assert run(late_paid, 'service_role') == 't'
 assert entitlement('2030-02-09T00:00:00Z')['active'] is False
 checks += 6
+
+# Stripe can deliver distinct events concurrently and in either order. Both
+# transactions lock the frozen claim, and the paid state must win whether the
+# failed or paid write reaches the invoice first. The prior subscription end
+# still caps access even though the invoice remains available for audit.
+race_failed = failed('evt_racefailed', 'in_concurrent',
+                     '2030-03-08T00:00:00Z', '2030-04-08T00:00:00Z', 2,
+                     '2030-03-08T00:00:40Z')
+race_paid = paid('evt_racepaid', 'in_concurrent',
+                 '2030-03-08T00:00:00Z', '2030-04-08T00:00:00Z',
+                 '2030-03-08T00:00:20Z', '2030-03-08T00:00:30Z')
+with ThreadPoolExecutor(max_workers=2) as pool:
+    results = list(pool.map(run_parallel, [race_failed, race_paid]))
+assert results == ['t', 't']
+assert run("SELECT payment_state||':'||amount_paid FROM "
+           "garage_private.test_billing_invoices "
+           "WHERE invoice_id='in_concurrent';") == 'paid:4900'
+assert run("SELECT count(*) FROM garage_private.test_billing_events "
+           "WHERE event_id IN ('evt_racefailed','evt_racepaid');") == '2'
+assert entitlement('2030-03-20T00:00:00Z')['active'] is False
+checks += 4
+
+# Event receipt and state mutation are one transaction. A conflict after the
+# receipt insert must roll the receipt back, allowing Stripe to retry the same
+# event. Reusing that ID for a different action is then rejected.
+atomic_bad = paid('evt_atomicretry', 'in_concurrent',
+                  '2030-03-08T00:00:00Z', '2030-04-09T00:00:00Z',
+                  '2030-03-08T00:00:20Z', '2030-03-08T00:00:50Z')
+run(atomic_bad, 'service_role', error='55000')
+assert run("SELECT count(*) FROM garage_private.test_billing_events "
+           "WHERE event_id='evt_atomicretry';") == '0'
+atomic_good = paid('evt_atomicretry', 'in_concurrent',
+                   '2030-03-08T00:00:00Z', '2030-04-08T00:00:00Z',
+                   '2030-03-08T00:00:20Z', '2030-03-08T00:00:50Z')
+assert run(atomic_good, 'service_role') == 't'
+assert run("SELECT count(*) FROM garage_private.test_billing_events "
+           "WHERE event_id='evt_atomicretry';") == '1'
+same_id_other_action = failed(
+    'evt_atomicretry', 'in_concurrent',
+    '2030-03-08T00:00:00Z', '2030-04-08T00:00:00Z', 3,
+    '2030-03-08T00:00:50Z')
+run(same_id_other_action, 'service_role', error='55000')
+checks += 4
 
 # Private rows and deterministic time helper remain inaccessible even to the
 # service client; only narrow RPCs are executable by it.
