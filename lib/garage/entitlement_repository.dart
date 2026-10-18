@@ -88,13 +88,14 @@ typedef GarageEntitlementInvoke = Future<Object?> Function(String workspaceId);
 class GarageEntitlementRepository {
   const GarageEntitlementRepository({required this.enabled,
     required this.supabaseUrl, required this.currentUserId,
-    required this.invoke});
+    this.currentSessionKey, required this.invoke});
 
   factory GarageEntitlementRepository.forClient(SupabaseClient client) =>
       GarageEntitlementRepository(
         enabled: AppConfig.garageSandboxEntitlementEnabled,
         supabaseUrl: AppConfig.supabaseUrl,
         currentUserId: () => client.auth.currentUser?.id,
+        currentSessionKey: () => client.auth.currentSession?.accessToken,
         invoke: (workspaceId) async => (await client.functions.invoke(
           'flotaryx-garage-test-entitlement',
           body: {'workspace_id': workspaceId},
@@ -104,6 +105,9 @@ class GarageEntitlementRepository {
   final bool enabled;
   final String supabaseUrl;
   final String? Function() currentUserId;
+  // Compare the SDK access token in memory only; never send or log it.
+  // Same user ID does not imply the same authenticated session.
+  final String? Function()? currentSessionKey;
   final GarageEntitlementInvoke invoke;
 
   static final _uuid = RegExp(
@@ -119,9 +123,15 @@ class GarageEntitlementRepository {
     if (actor == null || !_uuid.hasMatch(actor)) {
       return const GarageEntitlementRead.unavailable();
     }
+    // A disabled or replaced SDK session must never inherit an older grant.
+    final sessionKey = currentSessionKey?.call();
+    if (currentSessionKey != null && (sessionKey == null || sessionKey.isEmpty)) {
+      return const GarageEntitlementRead.unavailable();
+    }
     try {
       final raw = await invoke(workspaceId).timeout(const Duration(seconds: 12));
-      if (currentUserId() != actor) {
+      if (currentUserId() != actor ||
+          (currentSessionKey != null && currentSessionKey!() != sessionKey)) {
         return const GarageEntitlementRead.unavailable();
       }
       return GarageEntitlementRead.verified(GarageEntitlement.parse(raw));
