@@ -23,6 +23,7 @@ test('Checkout remains disabled unless exact QA and test Stripe configuration op
   const entry=load(root+'index.ts');
   assert.ok(entry.includes("Deno.env.get('FLOTARYX_GARAGE_SANDBOX_CHECKOUT') === 'true'"));
   assert.ok(entry.includes("url !== qaUrl"));
+  assert.ok(entry.includes("anonKey === serviceKey"));
   assert.ok(entry.includes("/^(sk|rk)_test_"));
   assert.ok(entry.includes("status: 503"));
   assert.ok(entry.includes('https://fyestmquqvkdebxxbcky.supabase.co'));
