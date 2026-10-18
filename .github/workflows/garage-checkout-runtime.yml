@@ -7,6 +7,7 @@ on:
       - 'tests/garage-checkout-runtime.test.ts'
       - 'tests/garage-webhook-signatures.test.ts'
       - 'tests/garage-trial-cancellation-runtime.test.ts'
+      - 'tests/garage-entitlement-runtime.test.ts'
       - '.github/workflows/garage-checkout-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -27,8 +28,9 @@ jobs:
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/index.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/trial_cancellation_adapter.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/paid_webhook_adapter.ts
+          deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/entitlement_adapter.ts
       - name: Test disabled guards and actual SDKs with simulated transport only
-        run: deno test --allow-read=supabase/functions/flotaryx-garage-test-checkout,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-checkout-runtime.test.ts tests/garage-webhook-signatures.test.ts tests/garage-trial-cancellation-runtime.test.ts
+        run: deno test --allow-read=supabase/functions/flotaryx-garage-test-checkout,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-checkout-runtime.test.ts tests/garage-webhook-signatures.test.ts tests/garage-trial-cancellation-runtime.test.ts tests/garage-entitlement-runtime.test.ts
       - name: Preserve resolved dependency lock for review
         if: always()
         uses: actions/upload-artifact@v4
