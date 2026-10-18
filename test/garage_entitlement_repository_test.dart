@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fleetpilot/core/app_config.dart';
@@ -147,6 +148,57 @@ void main() {
     });
     expect((await read.load(workspace)).state,
       GarageEntitlementReadState.unavailable);
+  });
+
+  test('session replacement discards an in-flight positive result', () async {
+    var session = 'first-token';
+    final pending = Completer<Object?>();
+    var calls = 0;
+    final repo = GarageEntitlementRepository(
+      enabled: true, supabaseUrl: qa,
+      currentUserId: () => user,
+      currentSessionKey: () => session,
+      invoke: (_) {
+        calls++;
+        return pending.future;
+      },
+    );
+    final read = repo.load(workspace);
+    expect(calls, 1);
+    session = 'second-token';
+    pending.complete(activeTrial);
+    final result = await read;
+    expect(result.state, GarageEntitlementReadState.unavailable);
+    expect(result.allowsPaidFeatures, isFalse);
+  });
+
+  test('signed-out or missing session blocks read without invoking backend', () async {
+    String? session;
+    var calls = 0;
+    final repo = GarageEntitlementRepository(
+      enabled: true, supabaseUrl: qa,
+      currentUserId: () => user,
+      currentSessionKey: () => session,
+      invoke: (_) async { calls++; return activeTrial; },
+    );
+    expect((await repo.load(workspace)).allowsPaidFeatures, isFalse);
+    session = '';
+    expect((await repo.load(workspace)).allowsPaidFeatures, isFalse);
+    expect(calls, 0);
+  });
+
+  test('unchanged valid session accepts authoritative response', () async {
+    var session = 'session-123';
+    final repo = GarageEntitlementRepository(
+      enabled: true, supabaseUrl: qa,
+      currentUserId: () => user,
+      currentSessionKey: () => session,
+      invoke: (_) async => activeTrial,
+    );
+    final read = await repo.load(workspace);
+    expect(read.state, GarageEntitlementReadState.verified);
+    expect(read.allowsPaidFeaturesAt(DateTime.utc(2026, 10, 20)), isTrue);
+    session = 'session-456';
   });
 
   test('configured factory uses authenticated SDK transport and exact body',
