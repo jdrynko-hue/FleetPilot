@@ -1,9 +1,9 @@
 import Stripe from 'stripe';
 import { createClient } from 'supabase';
-import { createGarageSandboxCheckoutHandler } from '../../../server/garage-billing/http_handler.ts';
+import { createGarageSandboxCheckoutHandler } from './http_handler.ts';
 
-// Undeployed QA bootstrap. Neither production URL nor Live keys can enter the
-// SDK construction branch, even if this file is accidentally deployed there.
+// QA-only, default-off bootstrap. Production URL and Live Stripe keys are
+// rejected before SDK construction. Deployment does not enable Checkout.
 const qaUrl = 'https://fyestmquqvkdebxxbcky.supabase.co';
 const url = Deno.env.get('SUPABASE_URL');
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
