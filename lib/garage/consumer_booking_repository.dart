@@ -142,10 +142,11 @@ class GarageBookingRepository {
     }
   }
 
-  // A private read started under one session must never render after another
-  // account/login takes over the same client (even with the same user ID).
-  // Compare the token only in memory. No token is logged or sent elsewhere.
-  Future<T> _privateRead<T>(Future<T> Function() request) async {
+  // Private RPC results are scoped to the exact authenticated session.
+  // For mutations, a replaced session makes the outcome uncertain: callers
+  // must reconcile the original idempotency key, never blindly retry.
+  // Compare the token in memory only; never log or expose it.
+  Future<T> _sessionBoundRpc<T>(Future<T> Function() request) async {
     _requireSignIn();
     final actor = client.auth.currentUser!.id;
     final sessionKey = client.auth.currentSession?.accessToken;
@@ -315,7 +316,7 @@ class GarageBookingRepository {
 
   Future<GarageBookingProfile?> profile(String workspaceId) async {
     final id = _id(workspaceId);
-    final raw = await _privateRead(() => client.rpc(
+    final raw = await _sessionBoundRpc(() => client.rpc(
       'garage_booking_profile', params: {'p_workspace': id}));
     return parseProfile(raw, id);
   }
@@ -375,7 +376,7 @@ class GarageBookingRepository {
         desiredStart.isAfter(DateTime.now().add(const Duration(days:90)))) {
       throw ArgumentError('Invalid booking preference');
     }
-    final raw = await client.rpc(requestKey == null
+    final raw = await _sessionBoundRpc(() => client.rpc(requestKey == null
         ? 'garage_booking_request' : 'garage_booking_request_once', params: {
       if (requestKey != null) 'p_request_key': requestKey,
       'p_workspace': workspaceId,
@@ -386,18 +387,18 @@ class GarageBookingRepository {
       'p_service': service,
       'p_concern': concern.trim(),
       'p_start_at': desiredStart.toUtc().toIso8601String(),
-    });
+    }));
     return _uuidResult(raw);
   }
 
   Future<List<GarageBookingSummary>> myRequests() async {
-    final rows = await _privateRead(() => client.rpc('garage_booking_my_requests'));
+    final rows = await _sessionBoundRpc(() => client.rpc('garage_booking_my_requests'));
     return parseMyRequests(rows);
   }
 
   Future<List<GarageBookingInboxItem>> workshopInbox(String workspaceId) async {
     final id = _id(workspaceId);
-    final rows = await _privateRead(() => client.rpc(
+    final rows = await _sessionBoundRpc(() => client.rpc(
       'garage_booking_shop_inbox', params: {'p_workspace': id}));
     return parseInbox(rows);
   }
