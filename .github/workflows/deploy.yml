@@ -74,6 +74,12 @@ jobs:
           grep -Fq 'flutter_bootstrap.js' site/app/index.html
           grep -Fq 'flotaryx.com' site/CNAME
 
+      # Only run the publisher after the *assembled production build* passes
+      # the same privacy, legal/PWA and portal integrity validation as QA.
+      # This gate does not authorize billing or establish hosted E2E readiness.
+      - name: Validate production release artifact before upload
+        run: python3 tools/verify_release_candidate.py site
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
