@@ -58,6 +58,7 @@ void main() {
       var rpcCalls = 0;
       final enteredRpc = Completer<void>();
       final pendingResponse = Completer<http.Response>();
+      http.Request? pendingRpcRequest;
       final transport = MockClient((request) async {
         if (request.url.path == '/auth/v1/token') {
           logins++;
@@ -76,6 +77,7 @@ void main() {
         }
         expect(request.url.path, '/rest/v1/rpc/$path');
         rpcCalls++;
+        pendingRpcRequest = request;
         if (!enteredRpc.isCompleted) enteredRpc.complete();
         return pendingResponse.future;
       });
@@ -94,7 +96,11 @@ void main() {
           email: 'fixture@example.test', password: 'fixture-only');
       expect(client.auth.currentUser?.id, userId);
       expect(client.auth.currentSession?.accessToken, isNot(tokenBefore));
+      // PostgrestBuilder reads response.request when parsing an RPC. Preserve
+      // it in the delayed mock as the synchronous success fixtures already do.
+      expect(pendingRpcRequest, isNotNull);
       pendingResponse.complete(http.Response('[]', 200,
+          request: pendingRpcRequest,
           headers: {'content-type': 'application/json'}));
       await denied;
       expect(logins, 2);
