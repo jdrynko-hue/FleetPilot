@@ -1,4 +1,3 @@
-import copy
 import sys
 import unittest
 from pathlib import Path
@@ -55,9 +54,9 @@ class StripeGarageTestPreflight(unittest.TestCase):
     def test_missing_or_zero_amount_fails(self):
         data = valid_inventory()
         data["prices"][0]["unit_amount"] = None
-        self.assertTrue(any("eur/month" in e for e in verify_inventory(data)))
+        self.assertTrue(any("gbp/month" in e for e in verify_inventory(data)))
         data["prices"][0]["unit_amount"] = 0
-        self.assertTrue(any("eur/month" in e for e in verify_inventory(data)))
+        self.assertTrue(any("gbp/month" in e for e in verify_inventory(data)))
 
     def test_test_mode_webhook_pointing_to_production_fails(self):
         data = valid_inventory()
