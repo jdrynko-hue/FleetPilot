@@ -1,6 +1,6 @@
 import {
   createGarageSandboxTrialCancellationRuntime,
-} from "../flotaryx-garage-test-checkout/trial_cancellation_http_adapter.ts";
+} from "./trial_cancellation_http_adapter.ts";
 
 // Source-only QA endpoint. Default Supabase JWT verification must remain on;
 // the handler also calls Auth getUser and private storage rechecks the current
