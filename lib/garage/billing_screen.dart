@@ -72,6 +72,25 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
 
   DateTime _now() => (widget.now?.call() ?? DateTime.now()).toUtc();
 
+  // Browser timers cannot reliably accept multi-month/year delays; schedule
+  // only bounded checkpoints and recheck the actual UTC clock at each tick.
+  // Expiry invalidates the current label without any new billing request.
+  void _scheduleExpiry(DateTime until, int generation) {
+    if (!mounted || generation != _readGeneration) return;
+    final remaining = until.difference(_now());
+    if (remaining <= Duration.zero) {
+      setState(() {});
+      return;
+    }
+    const maxDelay = Duration(days: 1);
+    final delay = remaining > maxDelay ? maxDelay : remaining;
+    _expiryTimer = Timer(delay, () {
+      if (mounted && generation == _readGeneration) {
+        _scheduleExpiry(until, generation);
+      }
+    });
+  }
+
   // Refresh this widget when the server-confirmed expiry is reached, even if
   // the owner leaves this page open. Never re-query or activate billing.
   Future<void> _refreshAtExpiry(
@@ -81,14 +100,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
       if (!mounted || generation != _readGeneration) return;
       final until = read.entitlement?.accessEndsAt;
       if (until == null || !read.allowsPaidFeaturesAt(_now())) return;
-      final remaining = until.difference(_now());
-      if (remaining <= Duration.zero) {
-        setState(() {});
-        return;
-      }
-      _expiryTimer = Timer(remaining, () {
-        if (mounted && generation == _readGeneration) setState(() {});
-      });
+      _scheduleExpiry(until, generation);
     } catch (_) {
       // The FutureBuilder handles failed reads as an unavailable status.
     }
