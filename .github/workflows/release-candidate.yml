@@ -4,6 +4,11 @@ on:
     paths:
       - 'tools/**'
       - 'tests/test_release_candidate.py'
+      - 'web/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/release-candidate.yml'
   workflow_dispatch:
 permissions:
@@ -17,3 +22,38 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -p test_release_candidate.py -v
+
+  compiled-qa-release:
+    # This checks actual compiled files, NOT a synthetic fixture or hosted service.
+    # Never deploy or call production: no Pages permission, production key or JWT.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Prepare Flutter web without altering marketing source
+        run: |
+          flutter create --platforms=web --project-name fleetpilot .
+          flutter pub get
+          cp web/app/index.html web/index.html
+      - name: Build QA portal, with no hosted writes or deployment
+        run: >-
+          flutter build web --release --no-web-resources-cdn
+          --base-href "/app/"
+          --dart-define=FLOTARYX_ECOSYSTEM_QA=true
+          --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
+      - name: Assemble the exact GitHub Pages layout without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/app
+          cp -a web/. site/
+          git show HEAD:web/index.html > site/index.html
+          sed -i 's|<base href="\$FLUTTER_BASE_HREF">|<base href="/">|' site/index.html
+          cp -a build/web/. site/app/
+      - name: Validate real bundled landing, portal, PWA, legal and private-key safety
+        run: python3 tools/verify_release_candidate.py site
