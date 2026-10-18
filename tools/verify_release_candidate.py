@@ -127,6 +127,20 @@ def validate(site: Path) -> list[str]:
         if not legal_page.is_file() or legal_page.stat().st_size == 0:
             issues.append(f"Missing/empty linked legal page: {target}")
 
+    # Validate shipping of all 24 legal pages, not legal sufficiency.
+    legal_languages = ("en", "pl", "de", "sk", "cs", "hu", "ro",
+                       "es", "fr", "it", "uk", "pt")
+    for language in legal_languages:
+        for document in ("terms", "privacy"):
+            rel = f"legal/{language}/{document}/index.html"
+            legal_path = site / rel
+            if not legal_path.is_file() or legal_path.stat().st_size == 0:
+                issues.append(f"Missing/empty localized legal page: {rel}")
+                continue
+            content = legal_path.read_text(encoding="utf-8")
+            if "<title>" not in content or "support@flotaryx.com" not in content:
+                issues.append(f"Localized legal page lacks title/contact: {rel}")
+
     for item in site.rglob("*"):
         if not item.is_file():
             continue
