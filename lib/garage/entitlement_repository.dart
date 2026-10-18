@@ -1,0 +1,124 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../core/app_config.dart';
+
+enum GarageEntitlementSource { trial, paid }
+
+enum GaragePaymentState { failed, paid }
+
+class GarageEntitlement {
+  const GarageEntitlement({required this.active, this.source,
+    this.accessEndsAt, this.lastPaymentState});
+
+  final bool active;
+  final GarageEntitlementSource? source;
+  final DateTime? accessEndsAt;
+  final GaragePaymentState? lastPaymentState;
+
+  static GarageEntitlement parse(Object? value) {
+    if (value is! Map) throw const FormatException('Invalid entitlement');
+    const expected = {'active', 'source', 'access_ends_at', 'last_payment_state'};
+    if (value.keys.any((key) => key is! String) ||
+        value.keys.cast<String>().toSet().difference(expected).isNotEmpty ||
+        expected.difference(value.keys.cast<String>().toSet()).isNotEmpty ||
+        value['active'] is! bool) {
+      throw const FormatException('Invalid entitlement');
+    }
+    final source = switch (value['source']) {
+      null => null,
+      'trial' => GarageEntitlementSource.trial,
+      'paid' => GarageEntitlementSource.paid,
+      _ => throw const FormatException('Invalid entitlement'),
+    };
+    final payment = switch (value['last_payment_state']) {
+      null => null,
+      'failed' => GaragePaymentState.failed,
+      'paid' => GaragePaymentState.paid,
+      _ => throw const FormatException('Invalid entitlement'),
+    };
+    DateTime? accessEndsAt;
+    if (value['access_ends_at'] != null) {
+      if (value['access_ends_at'] is! String) {
+        throw const FormatException('Invalid entitlement');
+      }
+      accessEndsAt = DateTime.tryParse(value['access_ends_at'] as String)?.toUtc();
+      if (accessEndsAt == null) {
+        throw const FormatException('Invalid entitlement');
+      }
+    }
+    final active = value['active'] as bool;
+    if (active != (source != null && accessEndsAt != null)) {
+      throw const FormatException('Invalid entitlement');
+    }
+    return GarageEntitlement(active: active, source: source,
+      accessEndsAt: accessEndsAt, lastPaymentState: payment);
+  }
+}
+
+enum GarageEntitlementReadState { disabled, verified, unavailable }
+
+class GarageEntitlementRead {
+  const GarageEntitlementRead._(this.state, this.entitlement);
+  const GarageEntitlementRead.disabled()
+      : this._(GarageEntitlementReadState.disabled, null);
+  const GarageEntitlementRead.unavailable()
+      : this._(GarageEntitlementReadState.unavailable, null);
+  const GarageEntitlementRead.verified(GarageEntitlement value)
+      : this._(GarageEntitlementReadState.verified, value);
+
+  final GarageEntitlementReadState state;
+  final GarageEntitlement? entitlement;
+  bool get allowsPaidFeatures => state == GarageEntitlementReadState.verified &&
+      entitlement?.active == true;
+}
+
+typedef GarageEntitlementInvoke = Future<Object?> Function(String workspaceId);
+
+/// Reads the member-scoped server decision. It never reads Stripe state and
+/// treats configuration, transport, account-change and response errors alike:
+/// paid features are not allowed.
+class GarageEntitlementRepository {
+  const GarageEntitlementRepository({required this.enabled,
+    required this.supabaseUrl, required this.currentUserId,
+    required this.invoke});
+
+  factory GarageEntitlementRepository.forClient(SupabaseClient client) =>
+      GarageEntitlementRepository(
+        enabled: AppConfig.garageSandboxEntitlementEnabled,
+        supabaseUrl: AppConfig.supabaseUrl,
+        currentUserId: () => client.auth.currentUser?.id,
+        invoke: (workspaceId) async => (await client.functions.invoke(
+          'flotaryx-garage-test-entitlement',
+          body: {'workspace_id': workspaceId},
+        )).data,
+      );
+
+  final bool enabled;
+  final String supabaseUrl;
+  final String? Function() currentUserId;
+  final GarageEntitlementInvoke invoke;
+
+  static final _uuid = RegExp(
+      r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$');
+
+  Future<GarageEntitlementRead> load(String workspaceId) async {
+    if (!enabled) return const GarageEntitlementRead.disabled();
+    if (!AppConfig.isEcosystemQaBackend(supabaseUrl) ||
+        !_uuid.hasMatch(workspaceId)) {
+      return const GarageEntitlementRead.unavailable();
+    }
+    final actor = currentUserId();
+    if (actor == null || !_uuid.hasMatch(actor)) {
+      return const GarageEntitlementRead.unavailable();
+    }
+    try {
+      final raw = await invoke(workspaceId).timeout(const Duration(seconds: 12));
+      if (currentUserId() != actor) {
+        return const GarageEntitlementRead.unavailable();
+      }
+      return GarageEntitlementRead.verified(GarageEntitlement.parse(raw));
+    } catch (_) {
+      return const GarageEntitlementRead.unavailable();
+    }
+  }
+}
