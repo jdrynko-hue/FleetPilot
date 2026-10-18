@@ -4,6 +4,7 @@ on:
     paths:
       - 'tools/**'
       - 'tests/test_release_candidate.py'
+      - 'tests/test_release_integrity.py'
       - 'web/**'
       - 'lib/**'
       - 'pubspec.yaml'
@@ -21,7 +22,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s tests -p test_release_candidate.py -v
+      - name: Run static and integrity negative tests
+        run: |
+          python -m unittest discover -s tests -p 'test_release_candidate.py' -v
+          python -m unittest discover -s tests -p 'test_release_integrity.py' -v
 
   compiled-qa-release:
     # This checks actual compiled files, NOT a synthetic fixture or hosted service.
@@ -57,6 +61,10 @@ jobs:
           cp -a build/web/. site/app/
       - name: Validate real bundled landing, portal, PWA, legal and private-key safety
         run: python3 tools/verify_release_candidate.py site
+      - name: Record and check file hashes and QA-only commit provenance
+        run: |
+          python3 tools/release_integrity.py write site --commit "$GITHUB_SHA"
+          python3 tools/release_integrity.py check site --commit "$GITHUB_SHA"
       - name: Preserve verified unpublished QA release candidate
         uses: actions/upload-artifact@v4
         with:
