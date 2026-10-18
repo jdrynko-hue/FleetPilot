@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_module_hub.dart';
@@ -82,6 +84,99 @@ void main() {
     expect(find.text('Access could not be verified'), findsOneWidget);
     expect(find.textContaining('confirmed until'), findsNothing);
   });
+  testWidgets('switching workshops discards stale entitlement before reload',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    final first = Completer<GarageEntitlementRead>();
+    final second = Completer<GarageEntitlementRead>();
+    var firstCalls = 0;
+    var secondCalls = 0;
+    Widget page(String workspaceId, GarageEntitlementLoader loader) =>
+        MaterialApp(home: GarageBillingScreen(
+          workshopName: 'Same workshop name', workspaceId: workspaceId,
+          isOwner: true, loadEntitlement: loader));
+
+    await tester.pumpWidget(page('workspace-A', () {
+      firstCalls++;
+      return first.future;
+    }));
+    first.complete(GarageEntitlementRead.verified(GarageEntitlement(
+      active: true, source: GarageEntitlementSource.trial,
+      accessEndsAt: DateTime.utc(2026, 10, 25, 8))));
+    await tester.pumpAndSettle();
+    expect(find.text('Trial access confirmed until 2026-10-25 08:00 UTC'),
+      findsOneWidget);
+    expect(firstCalls, 1);
+
+    await tester.pumpWidget(page('workspace-B', () {
+      secondCalls++;
+      return second.future;
+    }));
+    await tester.pump();
+    expect(secondCalls, 1);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    second.complete(const GarageEntitlementRead.unavailable());
+    await tester.pumpAndSettle();
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new owner loader invalidates old confirmed trial for same workshop',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    const workshopId = 'workspace-A';
+    final pending = Completer<GarageEntitlementRead>();
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: workshopId, isOwner: true,
+      loadEntitlement: () async => GarageEntitlementRead.verified(
+        GarageEntitlement(active: true, source: GarageEntitlementSource.trial,
+          accessEndsAt: DateTime.utc(2026, 10, 25, 8))))));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Trial access confirmed'), findsOneWidget);
+
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: workshopId, isOwner: true,
+      loadEntitlement: () => pending.future)));
+    await tester.pump();
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    pending.complete(const GarageEntitlementRead.unavailable());
+    await tester.pumpAndSettle();
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('losing ownership hides prior billing status without a new read',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var calls = 0;
+    GarageEntitlementLoader loader = () async {
+      calls++;
+      return GarageEntitlementRead.verified(GarageEntitlement(
+        active: true, source: GarageEntitlementSource.paid,
+        accessEndsAt: DateTime.utc(2026, 11, 1)));
+    };
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: true, loadEntitlement: loader)));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Paid access confirmed'), findsOneWidget);
+    expect(calls, 1);
+
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: false, loadEntitlement: loader)));
+    await tester.pumpAndSettle();
+    expect(find.text(GarageBillingScreen.text(1)), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(find.text('Workshop'), findsNothing);
+    expect(calls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   test('access status has all supported translations', () {
     for (final language in supportedLanguages) {
       final status = GarageBillingScreen.statusTranslations[language];
