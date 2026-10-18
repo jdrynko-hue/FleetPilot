@@ -116,3 +116,13 @@ then re-reads current Stripe state and uses only private service RPCs. Exact QA
 URL, explicit opt-in, test-only Stripe key, webhook secret and service key are
 all required before SDK construction. It is not deployed or registered in
 Stripe, and no hosted secrets or QA data have been changed.
+
+`garage-sandbox-lifecycle-runtime.test.ts` shares one stateful trapped transport
+across the real Stripe and Supabase SDK adapters. It verifies that an
+unconfirmed Checkout grants nothing, a signed current trial grants bounded
+access, cancellation immediately removes it, and late subscription delivery or
+an HTTP retry cannot restore it or repeat the DELETE. A separate paid path
+checks failed-to-paid reconciliation, a delayed failure observing an already
+paid invoice, and access loss after subscription deletion. This is an offline
+source integration test, not evidence of a deployed schema, configured secrets
+or a real Stripe Sandbox end-to-end run.
