@@ -83,8 +83,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
     if (widget.workspaceId != oldWidget.workspaceId ||
         widget.workshopName != oldWidget.workshopName ||
         widget.isOwner != oldWidget.isOwner ||
-        (widget.loadEntitlement == null) !=
-            (oldWidget.loadEntitlement == null)) {
+        widget.loadEntitlement != oldWidget.loadEntitlement) {
       _readForCurrentWorkshop();
     }
   }
