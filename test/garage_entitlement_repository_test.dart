@@ -86,6 +86,47 @@ void main() {
     }
   });
 
+  test('cached positive entitlement fails closed at its expiration', () async {
+    final now = DateTime.utc(2030, 1, 1, 12);
+    final end = now.add(const Duration(seconds: 10));
+    final read = GarageEntitlementRead.verified(GarageEntitlement(
+      active: true, source: GarageEntitlementSource.trial,
+      accessEndsAt: end));
+    expect(read.allowsPaidFeaturesAt(now), isTrue);
+    expect(read.allowsPaidFeaturesAt(end.subtract(const Duration(microseconds: 1))),
+      isTrue);
+    expect(read.allowsPaidFeaturesAt(end), isFalse);
+    expect(read.allowsPaidFeaturesAt(end.add(const Duration(seconds: 1))),
+      isFalse);
+    expect(read.allowsPaidFeaturesAt(now.toLocal()), isTrue);
+  });
+
+  test('stale server-positive response never authorizes expired access', () async {
+    final expiredAt = DateTime.utc(2020, 1, 1);
+    final stale = await repository(invoke: (_) async => <String, Object?>{
+      'active': true, 'source': 'paid',
+      'access_ends_at': expiredAt.toIso8601String(),
+      'last_payment_state': 'paid',
+    }).load(workspace);
+    expect(stale.state, GarageEntitlementReadState.verified);
+    expect(stale.entitlement?.active, isTrue);
+    expect(stale.allowsPaidFeatures, isFalse);
+    expect(stale.allowsPaidFeaturesAt(DateTime.utc(2020, 1, 2)), isFalse);
+  });
+
+  test('inactive and unavailable results always deny access at any instant', () {
+    final instant = DateTime.utc(2030, 1, 1);
+    expect(const GarageEntitlementRead.disabled().allowsPaidFeaturesAt(instant),
+      isFalse);
+    expect(const GarageEntitlementRead.unavailable().allowsPaidFeaturesAt(instant),
+      isFalse);
+    expect(GarageEntitlementRead.verified(const GarageEntitlement(
+      active: false)).allowsPaidFeaturesAt(instant), isFalse);
+    expect(GarageEntitlementRead.verified(GarageEntitlement(
+      active: true, source: GarageEntitlementSource.trial,
+      accessEndsAt: DateTime.utc(2031))).allowsPaidFeaturesAt(instant), isTrue);
+  });
+
   test('inactive authoritative response remains a verified denial', () async {
     final read = await repository(invoke: (_) async => <String, Object?>{
       'active': false,
