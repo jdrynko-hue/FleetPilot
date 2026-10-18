@@ -11,7 +11,7 @@ const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const enabled = Deno.env.get('FLOTARYX_GARAGE_SANDBOX_CHECKOUT') === 'true';
 
-if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) || !anonKey || !serviceKey) {
+if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) || !anonKey || !serviceKey || anonKey === serviceKey) {
   Deno.serve(() => new Response(JSON.stringify({ error: 'Garage Sandbox billing unavailable' }), {
     status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': 'https://flotaryx.com', 'Vary': 'Origin' },
