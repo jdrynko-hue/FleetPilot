@@ -12,6 +12,18 @@ class AppConfig {
   static bool get ecosystemQaEnabled =>
       _ecosystemRequested && isEcosystemQaBackend(supabaseUrl);
 
+  // This read path is independent from the general Garage QA navigation flag.
+  // It stays off until the private ledger and entitlement Edge Function have
+  // both been reviewed and installed in the isolated QA project.
+  static const _garageSandboxEntitlementRequested =
+      bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_ENTITLEMENT');
+  static bool garageSandboxEntitlementEnabledFor(String url,
+          {required bool requested}) =>
+      requested && isEcosystemQaBackend(url);
+  static bool get garageSandboxEntitlementEnabled =>
+      garageSandboxEntitlementEnabledFor(supabaseUrl,
+          requested: _garageSandboxEntitlementRequested);
+
   // Production is a separate explicit build opt-in after backend installation.
   // Neither flag can connect the ecosystem to an arbitrary backend.
   static const _productionRequested =

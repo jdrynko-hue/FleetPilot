@@ -2,6 +2,7 @@ import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_module_hub.dart';
 import 'package:fleetpilot/garage/billing_screen.dart';
+import 'package:fleetpilot/garage/entitlement_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -57,6 +58,38 @@ void main() {
     AppLocale.language.value = 'pl'; await tester.pump();
     expect(find.text('Subskrypcja i płatności'), findsOneWidget);
     expect(find.text('Subscription and payments'), findsNothing);
+  });
+  testWidgets('verified trial is labeled from the server decision', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', isOwner: true,
+      loadEntitlement: () async => GarageEntitlementRead.verified(
+        GarageEntitlement(active: true,
+          source: GarageEntitlementSource.trial,
+          accessEndsAt: DateTime.utc(2026, 10, 25, 8))),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Sandbox access'), findsOneWidget);
+    expect(find.text('Trial access confirmed until 2026-10-25 08:00 UTC'),
+      findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
+  });
+  testWidgets('unavailable read never appears active', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', isOwner: true,
+      loadEntitlement: () async => const GarageEntitlementRead.unavailable(),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+  });
+  test('access status has all supported translations', () {
+    for (final language in supportedLanguages) {
+      final status = GarageBillingScreen.statusTranslations[language];
+      expect(status, isNotNull, reason: language);
+      expect(status, hasLength(5), reason: language);
+      expect(status![1], contains('{date}'), reason: language);
+      expect(status[2], contains('{date}'), reason: language);
+    }
   });
   for (final owner in [true, false]) {
     testWidgets('More exposes billing only to owner=$owner without API reads', (tester) async {

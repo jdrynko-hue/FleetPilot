@@ -107,6 +107,15 @@ the platform's default JWT verification requirement, and serves the reviewed
 runtime. CI imports and exercises `Deno.serve` with trapped SDK transport. The
 function is not deployed and its environment opt-in is not configured.
 
+The Flutter client now has a separate, default-off entitlement reader behind
+`FLOTARYX_GARAGE_SANDBOX_ENTITLEMENT`. It can run only against the exact QA
+project, sends only `workspace_id` through the signed-in Supabase Functions
+client and accepts only the four-field entitlement response. Invalid data,
+transport failure, sign-out or an account change all deny paid features. When
+enabled, the owner billing page can display that authoritative trial/paid
+decision; it still exposes no Checkout control and does not yet gate the rest
+of the Garage workspace. The production build cannot enable this Sandbox path.
+
 `flotaryx-garage-test-webhook/index.ts` is one source-only endpoint for trial
 confirmation and the paid invoice/subscription lifecycle. Its function-specific
 configuration disables Supabase JWT verification because Stripe cannot supply a
