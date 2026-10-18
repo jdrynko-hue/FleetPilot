@@ -212,6 +212,61 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('resuming a suspended phone immediately rejects expired trial',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1, 12);
+    final expires = instant.add(const Duration(hours: 8));
+    var reads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A', isOwner: true,
+      now: () => instant,
+      loadEntitlement: () async {
+        reads++;
+        return GarageEntitlementRead.verified(GarageEntitlement(
+          active: true, source: GarageEntitlementSource.trial,
+          accessEndsAt: expires));
+      })));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Trial access confirmed until'), findsOneWidget);
+
+    // Advance the injected wall clock without pumping the delayed Timer:
+    // real mobile browsers may suspend timers for hours while hidden.
+    instant = expires.add(const Duration(minutes: 1));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.text('No current trial or paid access'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(reads, 1, reason: 'Resume must not hit a payment API');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('resuming before expiry keeps paid display with no new read',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1, 12);
+    final expires = instant.add(const Duration(days: 365));
+    var reads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A', isOwner: true,
+      now: () => instant,
+      loadEntitlement: () async {
+        reads++;
+        return GarageEntitlementRead.verified(GarageEntitlement(
+          active: true, source: GarageEntitlementSource.paid,
+          accessEndsAt: expires));
+      })));
+    await tester.pumpAndSettle();
+    instant = instant.add(const Duration(days: 2));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.textContaining('Paid access confirmed until'), findsOneWidget);
+    expect(reads, 1);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('unavailable read never appears active', (tester) async {
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', isOwner: true,
