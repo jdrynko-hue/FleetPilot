@@ -79,3 +79,11 @@ approved Garage catalog and verified customer provisioning, a served Auth
 cancellation endpoint, reviewed paid lifecycle rollout, UI wiring and full
 Stripe Sandbox lifecycle tests. Recovery/dunning policy, business-level
 eligibility and privacy retention still need definition. No Live activation.
+
+`test_entitlement_access.sql` adds a narrow service-only lookup for a current
+workshop member. It rechecks membership, resolves the private claim by workspace
+and evaluates it at the database clock. The HTTP proposal accepts only
+`workspace_id`; verified Auth supplies the actor. Its minimal response has no
+owner, attempt, customer, subscription or invoice identifier. Ambiguous claims
+fail closed. The adapter and SQL remain unserved disposable-QA proposals and do
+not yet enforce access in the application.
