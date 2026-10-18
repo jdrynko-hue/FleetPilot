@@ -4,9 +4,11 @@ on:
     paths:
       - 'server/garage-billing/test_trial_ledger.sql'
       - 'server/garage-billing/test_paid_lifecycle.sql'
+      - 'server/garage-billing/test_entitlement_access.sql'
       - 'server/garage-billing/test_billing_catalog.sql'
       - 'tests/garage_trial_ledger.py'
       - 'tests/garage_paid_lifecycle.py'
+      - 'tests/garage_entitlement_access.py'
       - 'tests/garage_billing_catalog.py'
       - '.github/workflows/garage-trial-ledger.yml'
   workflow_dispatch:
@@ -53,6 +55,10 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_paid_lifecycle.sql
           python3 tests/garage_paid_lifecycle.py
+      - name: Verify member-scoped entitlement without billing identifiers
+        run: |
+          psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_entitlement_access.sql
+          python3 tests/garage_entitlement_access.py
       - name: Install empty proposed Sandbox catalog
         run: psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_billing_catalog.sql
       - name: Verify owner-only catalog and server-derived billing markets
