@@ -142,6 +142,24 @@ class GarageBookingRepository {
     }
   }
 
+  // A private read started under one session must never render after another
+  // account/login takes over the same client (even with the same user ID).
+  // Compare the token only in memory. No token is logged or sent elsewhere.
+  Future<T> _privateRead<T>(Future<T> Function() request) async {
+    _requireSignIn();
+    final actor = client.auth.currentUser!.id;
+    final sessionKey = client.auth.currentSession?.accessToken;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      throw StateError('Authenticated booking session required');
+    }
+    final result = await request();
+    if (client.auth.currentUser?.id != actor ||
+        client.auth.currentSession?.accessToken != sessionKey) {
+      throw StateError('Booking session changed during read');
+    }
+    return result;
+  }
+
   static GarageBookingStatus _status(Object? raw) => switch (raw) {
     'requested' => GarageBookingStatus.requested,
     'confirmed' => GarageBookingStatus.confirmed,
@@ -296,12 +314,10 @@ class GarageBookingRepository {
   }
 
   Future<GarageBookingProfile?> profile(String workspaceId) async {
-    _requireSignIn();
-    final userId = client.auth.currentUser!.id;
-    final raw = await client.rpc('garage_booking_profile',
-      params: {'p_workspace': _id(workspaceId)});
-    if (client.auth.currentUser?.id != userId) throw StateError('Account changed');
-    return parseProfile(raw, workspaceId);
+    final id = _id(workspaceId);
+    final raw = await _privateRead(() => client.rpc(
+      'garage_booking_profile', params: {'p_workspace': id}));
+    return parseProfile(raw, id);
   }
 
   Future<bool> configure({
@@ -375,14 +391,15 @@ class GarageBookingRepository {
   }
 
   Future<List<GarageBookingSummary>> myRequests() async {
-    _requireSignIn();
-    return parseMyRequests(await client.rpc('garage_booking_my_requests'));
+    final rows = await _privateRead(() => client.rpc('garage_booking_my_requests'));
+    return parseMyRequests(rows);
   }
 
   Future<List<GarageBookingInboxItem>> workshopInbox(String workspaceId) async {
-    _requireSignIn();
-    return parseInbox(await client.rpc('garage_booking_shop_inbox',
-      params: {'p_workspace': _id(workspaceId)}));
+    final id = _id(workspaceId);
+    final rows = await _privateRead(() => client.rpc(
+      'garage_booking_shop_inbox', params: {'p_workspace': id}));
+    return parseInbox(rows);
   }
 
   Future<GarageBookingStatus> respond(String bookingId, {required bool confirm}) async {
