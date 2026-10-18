@@ -1,6 +1,6 @@
 import {
   createGarageSandboxBillingWebhookRuntime,
-} from "../flotaryx-garage-test-checkout/billing_webhook_runtime.ts";
+} from "./billing_webhook_runtime.ts";
 
 // Source-only QA endpoint. Stripe cannot send a Supabase JWT, so the matching
 // config.toml entry disables platform JWT verification for this function only.
