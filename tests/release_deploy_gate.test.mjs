@@ -28,3 +28,14 @@ test('deployment cannot run without the gated build', () => {
   assert.match(deployBlock,/actions\/deploy-pages@v4/);
   assert.match(buildBlock,/FLOTARYX_ECOSYSTEM_PRODUCTION=true/);
 });
+
+test('compiled production artifact must pass release validator before upload', () => {
+  const validator = 'python3 tools/verify_release_candidate.py site';
+  const upload = 'actions/upload-pages-artifact@v3';
+  const checked = buildBlock.indexOf(validator);
+  const uploaded = buildBlock.indexOf(upload);
+  assert.ok(checked >= 0, 'release artifact validator is required');
+  assert.ok(uploaded > checked, 'validator must run before the Pages artifact upload');
+  assert.match(buildBlock,/git show HEAD:web\/index\.html/);
+  assert.match(buildBlock,/cp -a build\/web\/. site\/app\//);
+});
