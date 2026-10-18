@@ -109,7 +109,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
         final message = switch (read.state) {
           GarageEntitlementReadState.disabled => GarageBillingScreen.text(10),
           GarageEntitlementReadState.unavailable => GarageBillingScreen.text(10),
-          GarageEntitlementReadState.verified when entitlement?.active != true =>
+          GarageEntitlementReadState.verified when !read.allowsPaidFeatures =>
             GarageBillingScreen.text(9),
           GarageEntitlementReadState.verified
               when entitlement?.source == GarageEntitlementSource.trial =>
