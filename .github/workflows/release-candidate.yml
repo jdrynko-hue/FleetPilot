@@ -57,3 +57,11 @@ jobs:
           cp -a build/web/. site/app/
       - name: Validate real bundled landing, portal, PWA, legal and private-key safety
         run: python3 tools/verify_release_candidate.py site
+      - name: Preserve verified unpublished QA release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-release-candidate-site
+          path: site/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 6
