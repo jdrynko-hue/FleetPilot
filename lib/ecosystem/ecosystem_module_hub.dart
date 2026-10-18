@@ -60,6 +60,7 @@ class EcosystemModuleHub extends StatelessWidget {
         if (destination.canConfigure)
           GarageBillingScreen.text(0): () => GarageBillingScreen(
             workshopName: destination.name!, isOwner: destination.canConfigure,
+            workspaceId: destination.workspaceId!,
             loadEntitlement: AppConfig.garageSandboxEntitlementEnabled
               ? () => GarageEntitlementRepository.forClient(client)
                 .load(destination.workspaceId!)
