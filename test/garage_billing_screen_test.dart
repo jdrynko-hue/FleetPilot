@@ -124,6 +124,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('late old-workshop response never restores access',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    final oldWorkspace = Completer<GarageEntitlementRead>();
+    final newWorkspace = Completer<GarageEntitlementRead>();
+    Widget screen(String id, GarageEntitlementLoader loader) =>
+        MaterialApp(home: GarageBillingScreen(
+          workshopName: 'Same public name', workspaceId: id, isOwner: true,
+          loadEntitlement: loader));
+
+    await tester.pumpWidget(screen('workspace-A', () => oldWorkspace.future));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    await tester.pumpWidget(screen('workspace-B', () => newWorkspace.future));
+    newWorkspace.complete(const GarageEntitlementRead.unavailable());
+    await tester.pumpAndSettle();
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+
+    // A slow positive reply for the old workshop must be ignored by the
+    // FutureBuilder already bound to workspace B.
+    oldWorkspace.complete(GarageEntitlementRead.verified(GarageEntitlement(
+      active: true, source: GarageEntitlementSource.paid,
+      accessEndsAt: DateTime.utc(2026, 11, 1))));
+    await tester.pumpAndSettle();
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('new owner loader invalidates old confirmed trial for same workshop',
       (tester) async {
     AppLocale.language.value = 'en';
