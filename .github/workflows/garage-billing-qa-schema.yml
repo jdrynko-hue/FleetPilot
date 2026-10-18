@@ -1,0 +1,107 @@
+name: Garage Billing QA schema checks
+on:
+  pull_request:
+    paths:
+      - 'supabase/qa-migrations/qa_garage_billing_sandbox_20261018.sql'
+      - '.github/workflows/garage-billing-qa-schema.yml'
+      - 'tests/garage_rls_isolation.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: garage-qa-disposable-only
+          POSTGRES_DB: garage_trial_qa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d garage_trial_qa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: garage_trial_qa
+      PGPASSWORD: garage-qa-disposable-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Create disposable Garage base roles and workshop fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE service_role NOLOGIN BYPASSRLS; GRANT USAGE ON SCHEMA public TO service_role;'
+          psql -v ON_ERROR_STOP=1 -f tests/garage_rls_isolation.sql
+      - name: Install the exact reviewed QA-only migration in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/qa-migrations/qa_garage_billing_sandbox_20261018.sql
+      - name: Assert empty ledgers, RLS and least-privilege RPC grants
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $check$
+          DECLARE
+            relations integer;
+            public_rpcs integer;
+            private_helpers integer;
+            unsafe_tables integer;
+            unsafe_rpcs integer;
+            occupied integer;
+            table_name text;
+          BEGIN
+            SELECT count(*) INTO relations FROM pg_catalog.pg_class c
+              JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+              WHERE n.nspname='garage_private' AND c.relkind='r'
+                AND c.relname IN ('test_trial_claims','test_billing_catalog',
+                  'test_billing_customers','test_billing_events','test_billing_invoices');
+            IF relations <> 5 THEN RAISE EXCEPTION 'Expected 5 private billing tables, found %', relations; END IF;
+
+            SELECT count(*) INTO unsafe_tables FROM pg_catalog.pg_class c
+              JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+              WHERE n.nspname='garage_private' AND c.relkind='r'
+                AND c.relname IN ('test_trial_claims','test_billing_catalog',
+                  'test_billing_customers','test_billing_events','test_billing_invoices')
+                AND (NOT c.relrowsecurity
+                  OR pg_catalog.has_table_privilege('anon',c.oid,'SELECT')
+                  OR pg_catalog.has_table_privilege('authenticated',c.oid,'SELECT')
+                  OR pg_catalog.has_table_privilege('service_role',c.oid,'SELECT'));
+            IF unsafe_tables <> 0 THEN RAISE EXCEPTION 'Private tables lack RLS or allow SELECT'; END IF;
+
+            SELECT count(*) INTO public_rpcs FROM pg_catalog.pg_proc p
+              JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+              WHERE n.nspname='public' AND p.proname LIKE 'garage_%test_%';
+            SELECT count(*) INTO private_helpers FROM pg_catalog.pg_proc p
+              JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+              WHERE n.nspname='garage_private'
+                AND p.proname IN ('record_test_billing_event','test_entitlement_at');
+            IF public_rpcs <> 13 OR private_helpers <> 2 THEN
+              RAISE EXCEPTION 'Billing RPC count differs: %, %', public_rpcs, private_helpers;
+            END IF;
+
+            SELECT count(*) INTO unsafe_rpcs FROM pg_catalog.pg_proc p
+              JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+              WHERE n.nspname='public' AND p.proname LIKE 'garage_%test_%'
+                AND (NOT p.prosecdef
+                  OR pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE')
+                  OR pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE')
+                  OR NOT pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE'));
+            IF unsafe_rpcs <> 0 THEN RAISE EXCEPTION 'Billing RPC authorization failure'; END IF;
+
+            FOR table_name IN SELECT unnest(ARRAY['test_trial_claims','test_billing_catalog',
+              'test_billing_customers','test_billing_events','test_billing_invoices'])
+            LOOP
+              EXECUTE format('SELECT count(*) FROM garage_private.%I',table_name) INTO occupied;
+              IF occupied <> 0 THEN RAISE EXCEPTION 'QA billing table unexpectedly seeded: %',table_name; END IF;
+            END LOOP;
+          END;
+          $check$;
+          SQL
