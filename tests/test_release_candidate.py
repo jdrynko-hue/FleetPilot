@@ -1,4 +1,5 @@
 import tempfile
+import json
 import unittest
 from pathlib import Path
 import sys
@@ -13,6 +14,19 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.site = Path(self.temp.name)
         (self.site / "app").mkdir()
+        (self.site / "app/icons").mkdir()
+        for size in (192, 512):
+            (self.site / f"app/icons/Icon-{size}.png").write_bytes(b"synthetic test icon")
+        (self.site / "app/manifest.json").write_text(json.dumps({
+            "id": "/app/", "start_url": "/app/", "scope": "/app/",
+            "icons": [
+                {"src": f"icons/Icon-{size}.png", "sizes": f"{size}x{size}"}
+                for size in (192, 512)
+            ],
+        }))
+        for name in ("privacy", "terms"):
+            (self.site / name).mkdir()
+            (self.site / name / "index.html").write_text("<html>QA legal placeholder</html>")
         (self.site / "CNAME").write_text("flotaryx.com\n")
         (self.site / "index.html").write_text(
             '<!doctype html><html><head><base href="/"></head><body>'
@@ -24,7 +38,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         )
         (self.site / "app/index.html").write_text(
             '<!doctype html><html><head><base href="/app/"></head>'
-            '<body><script src="flutter_bootstrap.js"></script></body></html>'
+            '<body><link rel="manifest" href="manifest.json">'
+            '<script src="flutter_bootstrap.js"></script></body></html>'
         )
         (self.site / "app/flutter_bootstrap.js").write_text("bootstrap();")
         (self.site / "app/main.dart.js").write_text("main();")
@@ -54,6 +69,26 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_live_key_in_marketing_fails_closed(self):
         (self.site / "marketing.js").write_text("const privateValue='sk_live_123456789abc';")
         self.assertTrue(any("credential" in issue for issue in validate(self.site)))
+
+
+    def test_missing_real_legal_page_fails_closed(self):
+        (self.site / "terms/index.html").unlink()
+        self.assertTrue(any("linked legal page" in issue for issue in validate(self.site)))
+
+    def test_unsafe_pwa_scope_fails_closed(self):
+        path = self.site / "app/manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["scope"] = "/"
+        path.write_text(json.dumps(manifest))
+        self.assertTrue(any("PWA scope" in issue for issue in validate(self.site)))
+
+    def test_missing_pwa_icon_fails_closed(self):
+        (self.site / "app/icons/Icon-192.png").unlink()
+        self.assertTrue(any("Missing PWA icon" in issue for issue in validate(self.site)))
+
+    def test_dotenv_bundling_fails_closed(self):
+        (self.site / ".env.production").write_text("EXAMPLE=placeholder")
+        self.assertTrue(any("Private-looking file" in issue for issue in validate(self.site)))
 
     def test_missing_compiled_asset_fails_closed(self):
         (self.site / "app/main.dart.js").unlink()
