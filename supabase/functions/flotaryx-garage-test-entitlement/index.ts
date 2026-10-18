@@ -1,10 +1,10 @@
 import {
   createGarageSandboxEntitlementRuntime,
-} from "../flotaryx-garage-test-checkout/entitlement_adapter.ts";
+} from "./entitlement_adapter.ts";
 
-// Source-only QA endpoint. Default Supabase JWT verification must remain on;
-// the handler additionally calls Auth getUser and the database rechecks current
-// workshop membership. This file is intentionally not deployed by this PR.
+// QA-only, default-off entitlement endpoint. JWT verification stays enabled.
+// Auth getUser and the database independently recheck current membership.
+// Without the explicit QA opt-in it returns 503; no paid access is granted.
 const handler = createGarageSandboxEntitlementRuntime({
   enabled: Deno.env.get("FLOTARYX_GARAGE_SANDBOX_ENTITLEMENT") === "true",
   supabaseUrl: Deno.env.get("SUPABASE_URL") ?? "",
