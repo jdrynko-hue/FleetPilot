@@ -126,3 +126,8 @@ checks failed-to-paid reconciliation, a delayed failure observing an already
 paid invoice, and access loss after subscription deletion. This is an offline
 source integration test, not evidence of a deployed schema, configured secrets
 or a real Stripe Sandbox end-to-end run.
+
+The disposable PostgreSQL lifecycle suite also races paid and failed deliveries
+for the same invoice. It requires the final state to remain paid in either
+arrival order, confirms a prior subscription end still caps access, and proves
+that a failure after event receipt rolls the receipt back for a safe retry.
