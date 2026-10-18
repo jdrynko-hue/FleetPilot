@@ -75,6 +75,23 @@ void main() {
       findsOneWidget);
     expect(find.byType(FilledButton), findsNothing);
   });
+  testWidgets('expired authoritative access is not displayed as confirmed',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', isOwner: true,
+      loadEntitlement: () async => GarageEntitlementRead.verified(
+        GarageEntitlement(active: true,
+          source: GarageEntitlementSource.paid,
+          accessEndsAt: DateTime.utc(2020, 1, 1))),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('No current trial or paid access'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('unavailable read never appears active', (tester) async {
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', isOwner: true,
