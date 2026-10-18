@@ -12,6 +12,7 @@ Deno.test("real Supabase SDK keeps Auth and service entitlement credentials sepa
     apikey: string | null;
     body: string;
   }[] = [];
+  const requestCount = () => observed.length;
   let transportEnabled = false;
   globalThis.fetch = async (input, init) => {
     if (!transportEnabled) {
@@ -111,7 +112,7 @@ Deno.test("real Supabase SDK keeps Auth and service entitlement credentials sepa
         throw new Error("Invalid runtime configuration was enabled");
       }
     }
-    if (observed.length !== 0) {
+    if (requestCount() !== 0) {
       throw new Error("Blocked runtime used SDK transport");
     }
 
@@ -145,7 +146,7 @@ Deno.test("real Supabase SDK keeps Auth and service entitlement credentials sepa
       throw new Error("Runtime exposed an invalid entitlement response");
     }
     if (
-      observed.length !== 2 || observed[0].path !== "/auth/v1/user" ||
+      requestCount() !== 2 || observed[0].path !== "/auth/v1/user" ||
       observed[1].path !==
         "/rest/v1/rpc/garage_resolve_test_workspace_entitlement"
     ) {
