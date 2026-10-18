@@ -140,6 +140,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ++_readGeneration;
     _expiryTimer?.cancel();
     super.dispose();
