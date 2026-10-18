@@ -10,6 +10,9 @@ on:
       - 'tests/garage_paid_lifecycle.py'
       - 'tests/garage_entitlement_access.py'
       - 'tests/garage_billing_catalog.py'
+      - 'lib/garage/**'
+      - 'lib/ecosystem/**'
+      - 'docs/qa-integration-candidate-20261018.md'
       - '.github/workflows/garage-trial-ledger.yml'
   workflow_dispatch:
 permissions:
