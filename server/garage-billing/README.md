@@ -93,3 +93,9 @@ after the exact QA URL and explicit opt-in pass. Auth verifies the caller token
 through the publishable client; the separate service client performs only the
 member-checked RPC. Simulated-transport tests assert both Authorization and
 API-key boundaries. There is still no `Deno.serve`, deployment or public route.
+
+`flotaryx-garage-test-entitlement/index.ts` is the separate source-only Edge
+entrypoint. It uses its own explicit opt-in and Supabase-only pinned lock, keeps
+the platform's default JWT verification requirement, and serves the reviewed
+runtime. CI imports and exercises `Deno.serve` with trapped SDK transport. The
+function is not deployed and its environment opt-in is not configured.
