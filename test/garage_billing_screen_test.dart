@@ -74,6 +74,8 @@ void main() {
     expect(find.text('Trial access confirmed until 2026-10-25 08:00 UTC'),
       findsOneWidget);
     expect(find.byType(FilledButton), findsNothing);
+    // Dispose the page so its future expiry timer cannot outlive the test.
+    await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('expired authoritative access is not displayed as confirmed',
       (tester) async {
@@ -89,6 +91,55 @@ void main() {
     expect(find.text('No current trial or paid access'), findsOneWidget);
     expect(find.textContaining('confirmed until'), findsNothing);
     expect(find.byType(FilledButton), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('open billing page automatically stops showing an expired trial',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1, 12);
+    final expires = instant.add(const Duration(seconds: 2));
+    var loads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: true, now: () => instant,
+      loadEntitlement: () async {
+        loads++;
+        return GarageEntitlementRead.verified(GarageEntitlement(
+          active: true, source: GarageEntitlementSource.trial,
+          accessEndsAt: expires));
+      })));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Trial access confirmed until'), findsOneWidget);
+    expect(loads, 1);
+
+    instant = expires;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(find.text('No current trial or paid access'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(loads, 1, reason: 'The expiry refresh must not issue new requests');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('leaving billing screen cancels an upcoming expiry refresh',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1, 12);
+    final expires = instant.add(const Duration(seconds: 2));
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: true, now: () => instant,
+      loadEntitlement: () async => GarageEntitlementRead.verified(
+        GarageEntitlement(active: true,
+          source: GarageEntitlementSource.paid, accessEndsAt: expires)))));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Paid access confirmed until'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    instant = expires;
+    await tester.pump(const Duration(seconds: 2));
     expect(tester.takeException(), isNull);
   });
 
