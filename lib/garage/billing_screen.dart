@@ -10,10 +10,12 @@ typedef GarageEntitlementLoader = Future<GarageEntitlementRead> Function();
 /// from the member-checked server entitlement; purchase controls stay disabled.
 class GarageBillingScreen extends StatefulWidget {
   const GarageBillingScreen({required this.workshopName,
-    required this.isOwner, this.loadEntitlement, super.key});
+    required this.isOwner, this.workspaceId, this.loadEntitlement, super.key});
 
   final String workshopName;
   final bool isOwner;
+  // Keep owner-only server decisions scoped to the workshop being displayed.
+  final String? workspaceId;
   final GarageEntitlementLoader? loadEntitlement;
 
   static const translations = <String, List<String>>{
@@ -64,8 +66,26 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.isOwner && widget.loadEntitlement != null) {
-      _entitlement = widget.loadEntitlement!();
+    _readForCurrentWorkshop();
+  }
+
+  // Flutter may reuse this State when the user changes the active workshop.
+  // Never retain a verified entitlement from the previous workspace or owner.
+  void _readForCurrentWorkshop() {
+    _entitlement = widget.isOwner && widget.loadEntitlement != null
+        ? widget.loadEntitlement!()
+        : null;
+  }
+
+  @override
+  void didUpdateWidget(covariant GarageBillingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.workspaceId != oldWidget.workspaceId ||
+        widget.workshopName != oldWidget.workshopName ||
+        widget.isOwner != oldWidget.isOwner ||
+        (widget.loadEntitlement == null) !=
+            (oldWidget.loadEntitlement == null)) {
+      _readForCurrentWorkshop();
     }
   }
 
