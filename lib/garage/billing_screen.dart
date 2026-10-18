@@ -65,7 +65,7 @@ class GarageBillingScreen extends StatefulWidget {
   State<GarageBillingScreen> createState() => _GarageBillingScreenState();
 }
 
-class _GarageBillingScreenState extends State<GarageBillingScreen> {
+class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsBindingObserver {
   Future<GarageEntitlementRead>? _entitlement;
   Timer? _expiryTimer;
   int _readGeneration = 0;
