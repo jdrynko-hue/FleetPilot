@@ -54,8 +54,15 @@ and immediately before the DELETE, and derives one stable idempotency key from
 the existing attempt. If Stripe's response is lost, the coordinator retrieves
 the subscription and records success only when the authoritative object is
 already canceled. A late created/updated webhook cannot restore canceled state.
-The SQL and runtime remain isolated proposals: there is no served cancellation
-endpoint and no hosted schema change.
+`flotaryx-garage-test-trial-cancel/index.ts` is a separate source-only Edge
+entrypoint. It accepts only `workspace_id`, verifies the bearer token through
+Auth, rejects anonymous callers, and passes only that verified actor to the
+owner-checking coordinator. Its response omits Stripe/customer/attempt IDs and
+maps reconciliation or transport details to opaque errors. Exact QA URL,
+explicit opt-in, distinct publishable/service credentials and a test-only
+Stripe key are required before any SDK client exists. Default platform JWT
+verification remains enabled. The SQL and runtime remain isolated proposals:
+the endpoint is not deployed and there is no hosted schema change.
 
 `paid_webhook.ts` adds a separate, still-unserved Sandbox reconciliation path
 for `invoice.paid`, `invoice.payment_failed` and deleted subscriptions. A
@@ -75,8 +82,8 @@ service RPC always uses the database clock. No `active` subscription status,
 success redirect, zero-value initial invoice or failed invoice grants access.
 
 Remaining before an actual Sandbox purchase: reviewed hosted QA rollout,
-approved Garage catalog and verified customer provisioning, a served Auth
-cancellation endpoint, reviewed paid lifecycle rollout, UI wiring and full
+approved Garage catalog and verified customer provisioning, deployment and UI
+wiring of the reviewed Auth cancellation endpoint, paid lifecycle rollout and full
 Stripe Sandbox lifecycle tests. Recovery/dunning policy, business-level
 eligibility and privacy retention still need definition. No Live activation.
 
