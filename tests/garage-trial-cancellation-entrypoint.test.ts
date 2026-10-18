@@ -122,7 +122,9 @@ Deno.test("trial cancellation Edge entrypoint is QA-only and completes the guard
           `flotaryx:garage:sandbox:cancel:${attempt}`,
         "Cancellation lost its durable idempotency key",
       );
-      const form = new URLSearchParams(await request.clone().text());
+      const form = new URLSearchParams(
+        (await request.clone().text()) || url.search,
+      );
       assert(
         form.get("invoice_now") === "false" && form.get("prorate") === "false",
         "Cancellation could invoice or prorate",
