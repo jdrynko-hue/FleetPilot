@@ -523,7 +523,7 @@ Deno.test(
       assert(
         (await callAccess()).source === "paid" &&
           state.failedWrites === 1 &&
-          state.paidWrites === 2,
+          Number(state.paidWrites) === 2,
         "Delayed failure downgraded paid access",
       );
 
