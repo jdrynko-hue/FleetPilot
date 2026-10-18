@@ -27,6 +27,15 @@ class ReleaseArtifactTests(unittest.TestCase):
         for name in ("privacy", "terms"):
             (self.site / name).mkdir()
             (self.site / name / "index.html").write_text("<html>QA legal placeholder</html>")
+        legal_languages = ("en", "pl", "de", "sk", "cs", "hu",
+                           "ro", "es", "fr", "it", "uk", "pt")
+        for language in legal_languages:
+            for document in ("terms", "privacy"):
+                directory = self.site / "legal" / language / document
+                directory.mkdir(parents=True)
+                (directory / "index.html").write_text(
+                    "<html><head><title>Test legal document</title></head>"
+                    "<body>support@flotaryx.com</body></html>")
         (self.site / "CNAME").write_text("flotaryx.com\n")
         (self.site / "index.html").write_text(
             '<!doctype html><html><head><base href="/"></head><body>'
@@ -89,6 +98,27 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_dotenv_bundling_fails_closed(self):
         (self.site / ".env.production").write_text("EXAMPLE=placeholder")
         self.assertTrue(any("Private-looking file" in issue for issue in validate(self.site)))
+
+    def test_missing_localized_terms_fails_closed(self):
+        (self.site / "legal/fr/terms/index.html").unlink()
+        self.assertTrue(any("legal/fr/terms/index.html" in i for i in validate(self.site)))
+
+    def test_missing_localized_privacy_fails_closed(self):
+        (self.site / "legal/pl/privacy/index.html").unlink()
+        self.assertTrue(any("legal/pl/privacy/index.html" in i for i in validate(self.site)))
+
+    def test_localized_document_missing_support_fails_closed(self):
+        page = self.site / "legal/en/terms/index.html"
+        page.write_text("<html><title>Legal text</title></html>")
+        self.assertTrue(any("lacks title/contact" in i for i in validate(self.site)))
+
+    def test_localized_document_missing_title_fails_closed(self):
+        page = self.site / "legal/de/privacy/index.html"
+        page.write_text("<html>support@flotaryx.com</html>")
+        self.assertTrue(any("lacks title/contact" in i for i in validate(self.site)))
+
+    def test_all_localized_documents_are_present(self):
+        self.assertEqual(validate(self.site), [])
 
     def test_missing_compiled_asset_fails_closed(self):
         (self.site / "app/main.dart.js").unlink()
