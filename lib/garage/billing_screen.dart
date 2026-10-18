@@ -109,7 +109,21 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _readForCurrentWorkshop();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    // Timers may pause in background tabs or suspended mobile applications.
+    // Recheck cached expiry on return without calling Stripe or Supabase.
+    _expiryTimer?.cancel();
+    final current = _entitlement;
+    if (current != null) {
+      unawaited(_refreshAtExpiry(current, _readGeneration));
+      setState(() {});
+    }
   }
 
   // Flutter may reuse this State when the user changes the active workshop.
