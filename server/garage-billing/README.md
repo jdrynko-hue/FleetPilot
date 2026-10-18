@@ -87,3 +87,9 @@ and evaluates it at the database clock. The HTTP proposal accepts only
 owner, attempt, customer, subscription or invoice identifier. Ambiguous claims
 fail closed. The adapter and SQL remain unserved disposable-QA proposals and do
 not yet enforce access in the application.
+
+The entitlement runtime adapter composes two pinned Supabase SDK clients only
+after the exact QA URL and explicit opt-in pass. Auth verifies the caller token
+through the publishable client; the separate service client performs only the
+member-checked RPC. Simulated-transport tests assert both Authorization and
+API-key boundaries. There is still no `Deno.serve`, deployment or public route.
