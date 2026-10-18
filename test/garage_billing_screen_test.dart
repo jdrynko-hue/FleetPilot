@@ -123,6 +123,75 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('long-duration subscription uses bounded expiry checkpoints',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1);
+    final expires = instant.add(const Duration(days: 370));
+    var reads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: true, now: () => instant,
+      loadEntitlement: () async {
+        reads++;
+        return GarageEntitlementRead.verified(GarageEntitlement(
+          active: true, source: GarageEntitlementSource.paid,
+          accessEndsAt: expires));
+      })));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Paid access confirmed until'), findsOneWidget);
+    expect(reads, 1);
+
+    // Large native/browser Timer values can overflow platform limits. The
+    // bounded daily checkpoint must safely verify the actual clock.
+    instant = instant.add(const Duration(days: 1));
+    await tester.pump(const Duration(days: 1));
+    await tester.pump();
+    expect(find.textContaining('Paid access confirmed until'), findsOneWidget);
+    expect(reads, 1);
+
+    instant = expires;
+    await tester.pump(const Duration(days: 1));
+    await tester.pump();
+    expect(find.text('No current trial or paid access'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(reads, 1, reason: 'Expiry checks never call paid endpoints again');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('changing workshop cancels long-duration subscription timer',
+      (tester) async {
+    AppLocale.language.value = 'en';
+    var instant = DateTime.utc(2030, 1, 1);
+    var oldReads = 0;
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-A',
+      isOwner: true, now: () => instant,
+      loadEntitlement: () async {
+        oldReads++;
+        return GarageEntitlementRead.verified(GarageEntitlement(
+          active: true, source: GarageEntitlementSource.paid,
+          accessEndsAt: instant.add(const Duration(days: 365))));
+      })));
+    await tester.pumpAndSettle();
+    expect(oldReads, 1);
+    expect(find.textContaining('Paid access confirmed until'), findsOneWidget);
+
+    await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
+      workshopName: 'Workshop', workspaceId: 'workspace-B',
+      isOwner: true, now: () => instant,
+      loadEntitlement: () async => const GarageEntitlementRead.unavailable())));
+    await tester.pumpAndSettle();
+    instant = instant.add(const Duration(days: 366));
+    await tester.pump(const Duration(days: 1));
+    expect(find.text('Access could not be verified'), findsOneWidget);
+    expect(find.textContaining('confirmed until'), findsNothing);
+    expect(oldReads, 1);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('leaving billing screen cancels an upcoming expiry refresh',
       (tester) async {
     AppLocale.language.value = 'en';
