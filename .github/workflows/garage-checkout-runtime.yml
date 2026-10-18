@@ -5,11 +5,13 @@ on:
       - 'server/garage-billing/**'
       - 'supabase/functions/flotaryx-garage-test-checkout/**'
       - 'supabase/functions/flotaryx-garage-test-entitlement/**'
+      - 'supabase/functions/flotaryx-garage-test-trial-cancel/**'
       - 'supabase/functions/flotaryx-garage-test-webhook/**'
       - 'supabase/config.toml'
       - 'tests/garage-checkout-runtime.test.ts'
       - 'tests/garage-webhook-signatures.test.ts'
       - 'tests/garage-trial-cancellation-runtime.test.ts'
+      - 'tests/garage-trial-cancellation-entrypoint.test.ts'
       - 'tests/garage-entitlement-runtime.test.ts'
       - 'tests/garage-entitlement-entrypoint.test.ts'
       - 'tests/garage-webhook-entrypoint.test.ts'
@@ -32,17 +34,21 @@ jobs:
           lock=supabase/functions/flotaryx-garage-test-checkout/deno.lock
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/index.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/trial_cancellation_adapter.ts
+          deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/trial_cancellation_http_adapter.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/paid_webhook_adapter.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/billing_webhook_runtime.ts
           deno check --frozen-lockfile --config "$config" --lock "$lock" supabase/functions/flotaryx-garage-test-checkout/entitlement_adapter.ts
           entitlement_config=supabase/functions/flotaryx-garage-test-entitlement/deno.json
           entitlement_lock=supabase/functions/flotaryx-garage-test-entitlement/deno.lock
           deno check --frozen-lockfile --config "$entitlement_config" --lock "$entitlement_lock" supabase/functions/flotaryx-garage-test-entitlement/index.ts
+          cancellation_config=supabase/functions/flotaryx-garage-test-trial-cancel/deno.json
+          cancellation_lock=supabase/functions/flotaryx-garage-test-trial-cancel/deno.lock
+          deno check --frozen-lockfile --config "$cancellation_config" --lock "$cancellation_lock" supabase/functions/flotaryx-garage-test-trial-cancel/index.ts
           webhook_config=supabase/functions/flotaryx-garage-test-webhook/deno.json
           webhook_lock=supabase/functions/flotaryx-garage-test-webhook/deno.lock
           deno check --frozen-lockfile --config "$webhook_config" --lock "$webhook_lock" supabase/functions/flotaryx-garage-test-webhook/index.ts
       - name: Test disabled guards and actual SDKs with simulated transport only
-        run: deno test --allow-read=supabase,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-checkout-runtime.test.ts tests/garage-webhook-signatures.test.ts tests/garage-trial-cancellation-runtime.test.ts tests/garage-entitlement-runtime.test.ts tests/garage-entitlement-entrypoint.test.ts tests/garage-webhook-entrypoint.test.ts
+        run: deno test --allow-read=supabase,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-checkout-runtime.test.ts tests/garage-webhook-signatures.test.ts tests/garage-trial-cancellation-runtime.test.ts tests/garage-trial-cancellation-entrypoint.test.ts tests/garage-entitlement-runtime.test.ts tests/garage-entitlement-entrypoint.test.ts tests/garage-webhook-entrypoint.test.ts
       - name: Preserve resolved dependency lock for review
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,6 +56,7 @@ jobs:
           name: garage-billing-deno-locks
           path: |
             supabase/functions/flotaryx-garage-test-checkout/deno.lock
+            supabase/functions/flotaryx-garage-test-trial-cancel/deno.lock
             supabase/functions/flotaryx-garage-test-webhook/deno.lock
           if-no-files-found: error
           retention-days: 3
