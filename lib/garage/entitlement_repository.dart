@@ -68,8 +68,16 @@ class GarageEntitlementRead {
 
   final GarageEntitlementReadState state;
   final GarageEntitlement? entitlement;
-  bool get allowsPaidFeatures => state == GarageEntitlementReadState.verified &&
-      entitlement?.active == true;
+  // An authoritative grant is valid only inside the server-confirmed period.
+  // A cached positive response must not keep access open after expiry.
+  bool allowsPaidFeaturesAt(DateTime instant) {
+    final accessEnd = entitlement?.accessEndsAt;
+    return state == GarageEntitlementReadState.verified &&
+        entitlement?.active == true &&
+        accessEnd != null && accessEnd.isAfter(instant.toUtc());
+  }
+
+  bool get allowsPaidFeatures => allowsPaidFeaturesAt(DateTime.now().toUtc());
 }
 
 typedef GarageEntitlementInvoke = Future<Object?> Function(String workspaceId);
