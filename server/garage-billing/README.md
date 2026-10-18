@@ -99,3 +99,13 @@ entrypoint. It uses its own explicit opt-in and Supabase-only pinned lock, keeps
 the platform's default JWT verification requirement, and serves the reviewed
 runtime. CI imports and exercises `Deno.serve` with trapped SDK transport. The
 function is not deployed and its environment opt-in is not configured.
+
+`flotaryx-garage-test-webhook/index.ts` is one source-only endpoint for trial
+confirmation and the paid invoice/subscription lifecycle. Its function-specific
+configuration disables Supabase JWT verification because Stripe cannot supply a
+Supabase token. The runtime instead verifies Stripe's signature against the
+bounded original body with 300-second tolerance before choosing a coordinator,
+then re-reads current Stripe state and uses only private service RPCs. Exact QA
+URL, explicit opt-in, test-only Stripe key, webhook secret and service key are
+all required before SDK construction. It is not deployed or registered in
+Stripe, and no hosted secrets or QA data have been changed.

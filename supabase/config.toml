@@ -1,0 +1,2 @@
+[functions.flotaryx-garage-test-webhook]
+verify_jwt = false
