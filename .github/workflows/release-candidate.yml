@@ -5,6 +5,7 @@ on:
       - 'tools/**'
       - 'tests/test_release_candidate.py'
       - 'tests/test_release_integrity.py'
+      - 'tests/test_garage_stripe_test_inventory.py'
       - 'web/**'
       - 'lib/**'
       - 'pubspec.yaml'
@@ -26,6 +27,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_release_candidate.py' -v
           python -m unittest discover -s tests -p 'test_release_integrity.py' -v
+          python -m unittest discover -s tests -p 'test_garage_stripe_test_inventory.py' -v
 
   compiled-qa-release:
     # This checks actual compiled files, NOT a synthetic fixture or hosted service.
