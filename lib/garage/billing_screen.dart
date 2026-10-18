@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
@@ -10,13 +12,16 @@ typedef GarageEntitlementLoader = Future<GarageEntitlementRead> Function();
 /// from the member-checked server entitlement; purchase controls stay disabled.
 class GarageBillingScreen extends StatefulWidget {
   const GarageBillingScreen({required this.workshopName,
-    required this.isOwner, this.workspaceId, this.loadEntitlement, super.key});
+    required this.isOwner, this.workspaceId, this.loadEntitlement,
+    this.now, super.key});
 
   final String workshopName;
   final bool isOwner;
   // Keep owner-only server decisions scoped to the workshop being displayed.
   final String? workspaceId;
   final GarageEntitlementLoader? loadEntitlement;
+  // Injectable clock keeps expiry boundary tests deterministic.
+  final DateTime Function()? now;
 
   static const translations = <String, List<String>>{
     'en': ['Subscription and payments', 'Only the workshop owner can manage billing.', 'Payments are not available yet', 'Garage subscriptions are being prepared. You cannot purchase a plan or enter payment details here yet.', 'Fixed subscription, no booking commission', 'Creating a workshop does not start a paid subscription. Fleet subscriptions are separate from Garage.'],
@@ -62,6 +67,32 @@ class GarageBillingScreen extends StatefulWidget {
 
 class _GarageBillingScreenState extends State<GarageBillingScreen> {
   Future<GarageEntitlementRead>? _entitlement;
+  Timer? _expiryTimer;
+  int _readGeneration = 0;
+
+  DateTime _now() => (widget.now?.call() ?? DateTime.now()).toUtc();
+
+  // Refresh this widget when the server-confirmed expiry is reached, even if
+  // the owner leaves this page open. Never re-query or activate billing.
+  Future<void> _refreshAtExpiry(
+      Future<GarageEntitlementRead> pending, int generation) async {
+    try {
+      final read = await pending;
+      if (!mounted || generation != _readGeneration) return;
+      final until = read.entitlement?.accessEndsAt;
+      if (until == null || !read.allowsPaidFeaturesAt(_now())) return;
+      final remaining = until.difference(_now());
+      if (remaining <= Duration.zero) {
+        setState(() {});
+        return;
+      }
+      _expiryTimer = Timer(remaining, () {
+        if (mounted && generation == _readGeneration) setState(() {});
+      });
+    } catch (_) {
+      // The FutureBuilder handles failed reads as an unavailable status.
+    }
+  }
 
   @override
   void initState() {
@@ -72,9 +103,20 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
   // Flutter may reuse this State when the user changes the active workshop.
   // Never retain a verified entitlement from the previous workspace or owner.
   void _readForCurrentWorkshop() {
+    _expiryTimer?.cancel();
+    final generation = ++_readGeneration;
     _entitlement = widget.isOwner && widget.loadEntitlement != null
         ? widget.loadEntitlement!()
         : null;
+    final pending = _entitlement;
+    if (pending != null) unawaited(_refreshAtExpiry(pending, generation));
+  }
+
+  @override
+  void dispose() {
+    ++_readGeneration;
+    _expiryTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -109,7 +151,8 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> {
         final message = switch (read.state) {
           GarageEntitlementReadState.disabled => GarageBillingScreen.text(10),
           GarageEntitlementReadState.unavailable => GarageBillingScreen.text(10),
-          GarageEntitlementReadState.verified when !read.allowsPaidFeatures =>
+          GarageEntitlementReadState.verified
+              when !read.allowsPaidFeaturesAt(_now()) =>
             GarageBillingScreen.text(9),
           GarageEntitlementReadState.verified
               when entitlement?.source == GarageEntitlementSource.trial =>
