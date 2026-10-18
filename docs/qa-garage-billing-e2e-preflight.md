@@ -10,6 +10,16 @@
 - Signed webhook is **not** hosted on QA. The relevant Draft source requires exact QA URL, Stripe test-only secret key, separate webhook signing secret, original-byte HMAC verification with 300-second tolerance, and default-off opt-in.
 - Prior isolated PostgreSQL and trapped Stripe SDK tests are **not** proof of actual hosted Stripe API calls or payment E2E.
 
+## Read-only Stripe test-account inventory (18 October 2026)
+
+A **read-only** inspection of the connected, explicitly named **Flotaryx sandbox** Stripe account (test mode; no mutation) confirmed:
+- **3 active products**: Flotaryx Starter, Pro and Business, matching the existing **Fleet** plan family. There were **18 active prices** across GBP, EUR and PLN and monthly/annual intervals; these alone do not establish Garage pricing.
+- **No Garage-named product was found**. The Garage subscription price catalog is not ready for an actual Checkout test.
+- **One enabled Stripe test-mode webhook endpoint** was present, but its host targets the **production Supabase project**, not the isolated QA project. The subscribed event set did **not** contain the paid invoice success/failure events required for full Garage reconciliation.
+- This endpoint may belong to a historical **Fleet** integration; do not delete, retarget or otherwise alter it without separately reviewing its ownership and legitimate use.
+
+**Hard NO-GO for hosted Garage payment E2E** until a deliberately isolated test-mode webhook is approved for QA, a Garage-specific price catalog is approved, and the signed webhook and required events are independently verified. No Stripe keys, customer details, full webhook URL, or test object IDs are recorded here.
+
 ## Preconditions — all require separate explicit authorization
 
 1. Confirm a disposable QA-only workshop identity and membership; do not create any real user account as part of automated work without permission.
