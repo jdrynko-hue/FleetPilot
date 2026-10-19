@@ -5,6 +5,7 @@ import '../core/app_config.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
 import '../data/models.dart';
+import '../issues/issue_form_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'smart_maintenance.dart';
 import 'smart_maintenance_repository.dart';
@@ -333,6 +334,43 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
     } finally { miles.dispose(); }
   }
 
+  Future<void> _prepareGarageRequest(MaintenancePlan plan) async {
+    if (!AppConfig.ecosystemQaEnabled || _busy) return;
+    final title = _pl ? 'Serwis: ${_name(plan.kind)}'
+        : 'Maintenance: ${_name(plan.kind)}';
+    final note = plan.notes?.trim() ?? '';
+    final description = _pl
+        ? 'Prośba o wycenę zaplanowanego serwisu. '
+          'Sprawdź zakres prac i termin przed wysłaniem do warsztatu.'
+        : 'Request a quote for scheduled maintenance. '
+          'Check the scope and date before sending to a workshop.';
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => IssueFormScreen(
+        company: widget.company,
+        initialVehicleId: widget.vehicle.id,
+        initialTitle: title,
+        initialDescription: '$description${note.isEmpty ? '' : ' • $note'}',
+      )),
+    );
+    if (!mounted || created != true) return;
+    final proceed = await showDialog<bool>(context: context, builder: (ctx) =>
+      AlertDialog(
+        title: Text(_t('Zgłoszenie zapisane', 'Request prepared')),
+        content: Text(_t(
+          'Przejść do połączonych warsztatów? Wysłanie zgłoszenia '
+          'wymaga osobnego wyboru odbiorcy i zatwierdzenia.',
+          'Open connected garages? Sending the request requires choosing '
+          'the workshop and confirming the information shared.')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: Text(_t('Później', 'Later'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+            child: Text(_t('Otwórz Garage', 'Open Garage'))),
+        ],
+      ));
+    if (proceed == true && mounted) _garages();
+  }
+
   void _garages() {
     if (!AppConfig.ecosystemQaEnabled) return;
     Navigator.of(context).push<void>(MaterialPageRoute(
@@ -411,6 +449,13 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
                         FilledButton.tonal(onPressed: _busy ? null :
                           () => _complete(plan),
                           child: Text(_t('Wykonano', 'Complete'))),
+                        if (AppConfig.ecosystemQaEnabled)
+                          OutlinedButton.icon(
+                            onPressed: _busy ? null :
+                              () => _prepareGarageRequest(plan),
+                            icon: const Icon(Icons.handyman_outlined),
+                            label: Text(_t('Zapytaj warsztat', 'Ask garage')),
+                          ),
                       ]),
                     ],
                   ),
