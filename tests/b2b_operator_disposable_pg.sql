@@ -133,7 +133,7 @@ BEGIN
  THEN RAISE EXCEPTION 'Operator count wrong'; END IF;
  IF (SELECT count(*) FROM public.flotaryx_operator_list_reviews('pending'))<>1
  THEN RAISE EXCEPTION 'Operator cannot review pending records'; END IF;
- SELECT updated_at,review_updated_at INTO profile_ts,review_ts
+ SELECT profile_updated_at,review_updated_at INTO profile_ts,review_ts
  FROM public.flotaryx_operator_list_reviews('pending') LIMIT 1;
  IF NOT public.flotaryx_operator_review(
   '00000000-0000-4000-8000-000000000101','verified','Registry checked',
