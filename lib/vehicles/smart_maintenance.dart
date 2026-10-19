@@ -80,6 +80,7 @@ class MaintenancePlan {
     required this.lastServiceMiles,
     required this.lastServiceDate,
     required this.active,
+    this.cycle = 1,
     this.intervalDistance,
     this.intervalMonths,
     this.nextDueMiles,
@@ -95,6 +96,7 @@ class MaintenancePlan {
   final int lastServiceMiles;
   final DateTime lastServiceDate;
   final bool active;
+  final int cycle;
   final int? intervalDistance;
   final int? intervalMonths;
   final int? nextDueMiles;
@@ -111,6 +113,7 @@ class MaintenancePlan {
         lastServiceMiles: (json['last_service_miles'] as num).toInt(),
         lastServiceDate: DateTime.parse(json['last_service_date'].toString()),
         active: json['active'] == true,
+        cycle: (json['cycle'] as num?)?.toInt() ?? 1,
         intervalDistance: (json['interval_distance'] as num?)?.toInt(),
         intervalMonths: (json['interval_months'] as num?)?.toInt(),
         nextDueMiles: (json['next_due_miles'] as num?)?.toInt(),
@@ -139,8 +142,11 @@ class MaintenancePlan {
 }
 
 class MaintenanceAlert {
-  const MaintenanceAlert({required this.kind, required this.stage,
-    required this.source, required this.createdAt, this.dueMiles, this.dueDate});
+  const MaintenanceAlert({required this.planId, required this.cycle,
+    required this.kind, required this.stage, required this.source,
+    required this.createdAt, this.dueMiles, this.dueDate});
+  final String planId;
+  final int cycle;
   final MaintenanceKind kind;
   final String stage;
   final String source;
@@ -150,6 +156,8 @@ class MaintenanceAlert {
 
   factory MaintenanceAlert.fromJson(Map<String, dynamic> row) =>
       MaintenanceAlert(
+        planId: row['plan_id'].toString(),
+        cycle: (row['cycle'] as num).toInt(),
         kind: parseMaintenanceKind(row['kind'].toString()),
         stage: row['stage'].toString(),
         source: row['source'].toString(),
