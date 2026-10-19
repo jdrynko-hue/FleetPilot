@@ -89,6 +89,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a null permission recheck prevents opening the console',
+      (tester) async {
+    var checks = 0;
+    var opened = 0;
+    await openAlert(
+      tester,
+      loader: () async {
+        checks++;
+        return checks == 1 ? 2 : null;
+      },
+      openConsole: (_) async { opened++; },
+    );
+    expect(find.byKey(const Key('business_review_alert')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('business_review_alert')));
+    await tester.pumpAndSettle();
+    expect(checks, 2);
+    expect(opened, 0);
+    expect(find.byKey(const Key('business_review_alert')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a failed first load must not reveal the operator action',
       (tester) async {
     await openAlert(
