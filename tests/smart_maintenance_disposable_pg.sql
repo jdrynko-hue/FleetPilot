@@ -2,6 +2,7 @@
 \set ON_ERROR_STOP on
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN BYPASSRLS;
 CREATE SCHEMA auth;
 CREATE TABLE auth.users(id uuid PRIMARY KEY);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE SET search_path=''
@@ -150,6 +151,31 @@ BEGIN
 END $check$;
 COMMIT;
 
+-- Service-only scheduled reminder generator must reject ordinary users.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+DO $check$
+DECLARE denied boolean:=false;
+BEGIN
+ BEGIN
+  PERFORM public.fleet_maintenance_refresh_alerts();
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Manager called privileged scheduler'; END IF;
+END $check$;
+COMMIT;
+
+-- Service role runs a deterministic, deduplicated mileage reminder.
+BEGIN;
+SET LOCAL ROLE service_role;
+DO $check$
+BEGIN
+ IF public.fleet_maintenance_refresh_alerts()<>0 THEN
+  RAISE EXCEPTION 'Not-yet-due oil change must have zero reminders';
+ END IF;
+END $check$;
+COMMIT;
+
 -- The owner logs two increasing readings then completes an oil change.
 BEGIN;
 SET LOCAL ROLE authenticated;
@@ -171,6 +197,18 @@ BEGIN
    WHERE next_due_miles=27714 AND last_service_miles=21500)
  OR (SELECT count(*) FROM public.fleet_maintenance_odometer_readings)<>2 THEN
   RAISE EXCEPTION 'Completion history or next service computation failed';
+ END IF;
+END $check$;
+COMMIT;
+
+-- Once the updated odometer crosses the configured threshold,
+-- a service-only invocation records the reminder at most once.
+BEGIN;
+SET LOCAL ROLE service_role;
+DO $check$
+BEGIN
+ IF public.fleet_maintenance_refresh_alerts()<>0 THEN
+  RAISE EXCEPTION 'Completed maintenance must reset the upcoming reminder';
  END IF;
 END $check$;
 COMMIT;
