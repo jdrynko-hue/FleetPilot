@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/localization.dart';
+import 'operator_session_guard.dart';
 
 class BusinessReviewConsoleScreen extends StatefulWidget {
   const BusinessReviewConsoleScreen({super.key});
@@ -31,10 +32,12 @@ class _BusinessReviewConsoleScreenState
   }
 
   Future<List<Map<String, dynamic>>> _fetch() async {
-    final data = await Supabase.instance.client.rpc(
+    final client = Supabase.instance.client;
+    final filter = _filter;
+    final data = await OperatorSessionGuard(client).run(() => client.rpc(
       'flotaryx_operator_list_reviews',
-      params: {'p_status': _filter},
-    );
+      params: {'p_status': filter},
+    ));
     return (data as List)
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
@@ -217,7 +220,8 @@ class _BusinessReviewConsoleScreenState
       if (answer == null || !mounted) return;
       setState(() => _working = true);
       try {
-        await Supabase.instance.client.rpc(
+        final client = Supabase.instance.client;
+        await OperatorSessionGuard(client).run(() => client.rpc(
           'flotaryx_operator_review',
           params: {
             'p_company_id': row['company_id'],
@@ -228,7 +232,7 @@ class _BusinessReviewConsoleScreenState
             'p_expected_profile_updated_at': row['profile_updated_at'],
             'p_expected_review_updated_at': row['review_updated_at'],
           },
-        );
+        ));
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_t('Decyzja zapisana.', 'Decision saved.'))),
