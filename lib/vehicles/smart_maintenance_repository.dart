@@ -34,6 +34,18 @@ class SmartMaintenanceRepository {
           rows.map((row) => MaintenancePlan.fromJson(row)));
       });
 
+  Future<List<MaintenanceAlert>> alerts(
+      String companyId, String vehicleId) => _sessionBound(() async {
+        final rows = await client.from('fleet_maintenance_alerts')
+          .select('kind,stage,source,created_at,due_miles,due_date')
+          .eq('company_id', companyId)
+          .eq('vehicle_id', vehicleId)
+          .order('created_at', ascending: false)
+          .limit(30);
+        return List<MaintenanceAlert>.unmodifiable(
+          rows.map((row) => MaintenanceAlert.fromJson(row)));
+      });
+
   Future<List<MaintenanceHistory>> history(
       String companyId, String vehicleId) => _sessionBound(() async {
         final rows = await client.from('fleet_maintenance_history')
