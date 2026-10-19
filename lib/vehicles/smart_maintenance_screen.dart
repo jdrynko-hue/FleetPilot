@@ -35,6 +35,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
   late final SmartMaintenanceRepository _repository;
   late Future<_SmartMaintenanceData> _future;
   late int _miles;
+  late MaintenanceUnit _displayUnit;
   bool _busy = false;
 
   bool get _pl => AppLocale.language.value == 'pl';
@@ -75,6 +76,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
     super.initState();
     _repository = SmartMaintenanceRepository(Supabase.instance.client);
     _miles = widget.vehicle.mileage;
+    _displayUnit = _unit;
     _refresh();
   }
 
@@ -118,7 +120,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
   Future<void> _configure([MaintenancePlan? original]) async {
     if (_busy) return;
     var kind = original?.kind ?? MaintenanceKind.oil;
-    var unit = original?.unit ?? _unit;
+    var unit = original?.unit ?? _displayUnit;
     var lastDate = original?.lastServiceDate ?? DateTime.now();
     final distance = TextEditingController(
       text: original?.intervalDistance?.toString() ??
@@ -325,14 +327,15 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
 
   Future<void> _odometer() async {
     if (_busy) return;
-    final miles = TextEditingController(text: fromMiles(_miles, _unit).toString());
+    final miles = TextEditingController(
+      text: fromMiles(_miles, _displayUnit).toString());
     try {
       final yes = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(_t('Zapis przebiegu', 'Record odometer')),
           content: TextField(controller: miles, keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: _unit.name)),
+            decoration: InputDecoration(labelText: _displayUnit.name)),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false),
               child: Text(_t('Anuluj', 'Cancel'))),
@@ -344,7 +347,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
       if (yes != true || !mounted) return;
       final displayed = int.tryParse(miles.text.trim());
       final value = displayed == null ? null :
-        _inputMiles(displayed, _unit, _miles);
+        _inputMiles(displayed, _displayUnit, _miles);
       if (value == null || value < _miles) { _error(); return; }
       setState(() => _busy = true);
       try {
@@ -429,8 +432,27 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Text(widget.vehicle.registration + ' • ' +
-                formatMileage(fromMiles(_miles, _unit)) + ' ' + _unit.name,
+                formatMileage(fromMiles(_miles, _displayUnit)) +
+                ' ' + _displayUnit.name,
                 style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Row(children: [
+                Text(_t('Jednostka licznika', 'Odometer unit')),
+                const SizedBox(width: 12),
+                DropdownButton<MaintenanceUnit>(
+                  key: const Key('smart_maintenance_display_unit'),
+                  value: _displayUnit,
+                  items: const [
+                    DropdownMenuItem(value: MaintenanceUnit.mi,
+                      child: Text('mi')),
+                    DropdownMenuItem(value: MaintenanceUnit.km,
+                      child: Text('km')),
+                  ],
+                  onChanged: _busy ? null : (unit) {
+                    if (unit != null) setState(() => _displayUnit = unit);
+                  },
+                ),
+              ]),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 FilledButton.icon(
@@ -516,8 +538,8 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
                   leading: const Icon(Icons.check_circle_outline),
                   title: Text(_name(event.kind)),
                   subtitle: Text(formatDate(event.completedDate) + ' • ' +
-                    formatMileage(fromMiles(event.completedMiles, _unit)) +
-                    ' ' + _unit.name + ' • ' + event.note),
+                    formatMileage(fromMiles(event.completedMiles, _displayUnit)) +
+                    ' ' + _displayUnit.name + ' • ' + event.note),
                 ),
               if (AppConfig.ecosystemQaEnabled)
                 Card(child: ListTile(
