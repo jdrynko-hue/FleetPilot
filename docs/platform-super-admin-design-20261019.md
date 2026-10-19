@@ -39,6 +39,6 @@
 
 ## Current evidence limitations
 
-This document is a proposed architecture, **not** evidence that existing platform admin code is absent or present. GitHub code search did not return matches in the earlier search, and several guessed paths returned 404; neither establishes a complete inventory. No admin account or privileged role has been created.
+Repository tree inspection of current `main` confirms existing business verification administration: `lib/company/business_review_console_screen.dart`, `lib/company/business_review_alert.dart`, and `lib/company/business_verification_screen.dart`. The alert queries `flotaryx_verification_operators` and `flotaryx_operator_pending_review_count`; the console calls `flotaryx_operator_list_reviews` and `flotaryx_operator_review`. These are **existing B2B operator workflows**, not proof of a platform-wide Super Admin role. Server-side RPC permissions, SQL definitions and actual operator memberships have not yet been audited. Reuse these components rather than duplicating verification review. No admin account or privileged role has been created.
 
 **Launch state: NOT APPROVED.**
