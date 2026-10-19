@@ -217,6 +217,29 @@ $fn$;
 REVOKE ALL ON FUNCTION fleet_maintenance_private.interval_miles(integer,text)
  FROM PUBLIC,anon,authenticated;
 
+-- Date arithmetic mirrors the Flutter calendar rule: January 31 + one
+-- month becomes February 28/29, not March 2/3.
+CREATE FUNCTION fleet_maintenance_private.add_months_clamped(
+ p_date date,p_months integer) RETURNS date
+LANGUAGE plpgsql IMMUTABLE SET search_path=''
+AS $fn$
+DECLARE target date; last_day integer;
+BEGIN
+ IF p_date IS NULL OR p_months IS NULL OR p_months<1 OR p_months>240 THEN
+  RAISE EXCEPTION 'Invalid maintenance calendar interval'
+   USING ERRCODE='22023';
+ END IF;
+ target := (
+   pg_catalog.date_trunc('month',p_date::timestamp) +
+   pg_catalog.make_interval(months=>p_months)
+ )::date;
+ last_day:=EXTRACT(day FROM
+  (target + INTERVAL '1 month' - INTERVAL '1 day'))::integer;
+ RETURN target + (LEAST(EXTRACT(day FROM p_date)::integer,last_day)-1);
+END $fn$;
+REVOKE ALL ON FUNCTION fleet_maintenance_private.add_months_clamped(date,integer)
+ FROM PUBLIC,anon,authenticated;
+
 CREATE FUNCTION public.fleet_maintenance_set_plan(
  p_company uuid,p_vehicle uuid,p_kind text,p_unit text,
  p_distance integer,p_months integer,p_last_miles bigint,
@@ -240,7 +263,7 @@ BEGIN
  due_miles:=CASE WHEN p_distance IS NULL THEN NULL
    ELSE p_last_miles+fleet_maintenance_private.interval_miles(p_distance,p_unit) END;
  due_date:=CASE WHEN p_months IS NULL THEN NULL
-   ELSE (p_last_date+make_interval(months=>p_months))::date END;
+   ELSE fleet_maintenance_private.add_months_clamped(p_last_date,p_months) END;
  INSERT INTO public.fleet_maintenance_plans(
   company_id,vehicle_id,kind,distance_unit,interval_distance,interval_months,
   last_service_miles,last_service_date,next_due_miles,next_due_date,notes)
@@ -332,7 +355,7 @@ BEGIN
    ELSE p_completed_miles+fleet_maintenance_private.interval_miles(
     plan.interval_distance,plan.distance_unit) END,
   next_due_date=CASE WHEN plan.interval_months IS NULL THEN NULL
-   ELSE (p_completed_date+make_interval(months=>plan.interval_months))::date END,
+   ELSE fleet_maintenance_private.add_months_clamped(p_completed_date,plan.interval_months) END,
   cycle=plan.cycle+1,updated_at=clock_timestamp()
  WHERE id=plan.id AND company_id=p_company;
  RETURN event_id;
