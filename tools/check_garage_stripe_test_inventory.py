@@ -88,12 +88,12 @@ def verify_inventory(inventory: dict) -> list[str]:
         if not isinstance(events, list):
             issues.append("QA webhook has no explicit event allowlist")
             continue
-        if "*" in events or set(events) != REQUIRED_EVENTS:\n            issues.append("QA webhook event allowlist must exactly match Garage reconciliation events")\n            continue\n        remaining = REQUIRED_EVENTS.difference(events)
+        remaining = REQUIRED_EVENTS.difference(events)
         if remaining:
             issues.append("QA webhook missing reconciliation events: " +
                           ", ".join(sorted(remaining)))
             continue
-        valid_webhooks += 1
+        if "*" in events or set(events) != REQUIRED_EVENTS:\n            issues.append("QA webhook event allowlist contains extra or wildcard events")\n            continue\n        valid_webhooks += 1
     if valid_webhooks != 1:
         issues.append("Expected exactly one eligible enabled, signed Garage QA webhook")
     return issues
