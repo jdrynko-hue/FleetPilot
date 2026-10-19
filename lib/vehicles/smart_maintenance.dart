@@ -138,6 +138,28 @@ class MaintenancePlan {
   }
 }
 
+class MaintenanceAlert {
+  const MaintenanceAlert({required this.kind, required this.stage,
+    required this.source, required this.createdAt, this.dueMiles, this.dueDate});
+  final MaintenanceKind kind;
+  final String stage;
+  final String source;
+  final DateTime createdAt;
+  final int? dueMiles;
+  final DateTime? dueDate;
+
+  factory MaintenanceAlert.fromJson(Map<String, dynamic> row) =>
+      MaintenanceAlert(
+        kind: parseMaintenanceKind(row['kind'].toString()),
+        stage: row['stage'].toString(),
+        source: row['source'].toString(),
+        createdAt: DateTime.parse(row['created_at'].toString()),
+        dueMiles: (row['due_miles'] as num?)?.toInt(),
+        dueDate: row['due_date'] == null ? null
+            : DateTime.parse(row['due_date'].toString()),
+      );
+}
+
 class MaintenanceHistory {
   const MaintenanceHistory({required this.kind, required this.completedDate,
     required this.completedMiles, required this.note});
