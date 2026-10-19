@@ -131,21 +131,36 @@ CREATE TABLE flotaryx_admin_qa.operator_decision_audit (
 REVOKE ALL ON flotaryx_admin_qa.operator_decision_audit
   FROM PUBLIC,anon,authenticated;
 
-CREATE FUNCTION flotaryx_admin_qa.profile_review_pending()
+CREATE FUNCTION flotaryx_admin_qa.profile_touch()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $fn$
 BEGIN
   NEW.updated_at=clock_timestamp();
+  RETURN NEW;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION flotaryx_admin_qa.profile_touch()
+  FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER b2b_profile_touch BEFORE UPDATE
+  ON public.flotaryx_business_profiles
+  FOR EACH ROW EXECUTE FUNCTION flotaryx_admin_qa.profile_touch();
+
+-- AFTER insert avoids referencing a profile before its foreign-key row exists.
+-- Any profile edit requires operator review again.
+CREATE FUNCTION flotaryx_admin_qa.profile_review_pending()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $fn$
+BEGIN
   INSERT INTO public.flotaryx_business_reviews(company_id,status,review_note,review_updated_at)
   VALUES(NEW.company_id,'pending',NULL,clock_timestamp())
   ON CONFLICT(company_id) DO UPDATE
     SET status='pending', review_note=NULL, review_updated_at=clock_timestamp();
-  RETURN NEW;
+  RETURN NULL;
 END;
 $fn$;
 REVOKE ALL ON FUNCTION flotaryx_admin_qa.profile_review_pending()
   FROM PUBLIC,anon,authenticated;
-CREATE TRIGGER b2b_profile_review_pending BEFORE INSERT OR UPDATE
+CREATE TRIGGER b2b_profile_review_pending AFTER INSERT OR UPDATE
   ON public.flotaryx_business_profiles
   FOR EACH ROW EXECUTE FUNCTION flotaryx_admin_qa.profile_review_pending();
 
