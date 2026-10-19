@@ -228,12 +228,27 @@ SELECT public.fleet_maintenance_complete(
  (SELECT id FROM public.fleet_maintenance_plans LIMIT 1),
  21500,current_date,'Oil and filter changed');
 DO $check$
+DECLARE rejected boolean:=false;
 BEGIN
  IF (SELECT count(*) FROM public.fleet_maintenance_history)<>1
  OR NOT EXISTS (SELECT 1 FROM public.fleet_maintenance_plans
    WHERE next_due_miles=27714 AND last_service_miles=21500)
  OR (SELECT count(*) FROM public.fleet_maintenance_odometer_readings)<>2 THEN
   RAISE EXCEPTION 'Completion history or next service computation failed';
+ END IF;
+ -- Simulate a duplicate form submit after the original server commit.
+ BEGIN
+  PERFORM public.fleet_maintenance_complete(
+   '00000000-0000-4000-8000-000000000101',
+   (SELECT id FROM public.fleet_maintenance_plans LIMIT 1),
+   21500,current_date,'Oil and filter changed');
+ EXCEPTION WHEN invalid_parameter_value THEN rejected:=true; END;
+ IF NOT rejected THEN
+  RAISE EXCEPTION 'Duplicate completion started a new service cycle';
+ END IF;
+ IF (SELECT count(*) FROM public.fleet_maintenance_history)<>1
+ OR (SELECT cycle FROM public.fleet_maintenance_plans LIMIT 1)<>2 THEN
+  RAISE EXCEPTION 'Duplicate completion mutated service history';
  END IF;
 END $check$;
 COMMIT;
