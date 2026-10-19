@@ -109,7 +109,8 @@ class StripeGarageTestPreflight(unittest.TestCase):
         self.assertTrue(any("wildcard" in e for e in verify_inventory(data)))
 
     def test_malformed_webhook_port_and_events_fail_closed(self):
-        for url in (QA_URL + ":bad", QA_URL.replace("https://", "https://[::1")):
+        for url in (QA_URL.replace(".supabase.co/", ".supabase.co:bad/"),
+                    QA_URL.replace("https://", "https://[::1")):
             data = valid_inventory()
             data["webhook_endpoints"][0]["url"] = url
             self.assertTrue(verify_inventory(data))
