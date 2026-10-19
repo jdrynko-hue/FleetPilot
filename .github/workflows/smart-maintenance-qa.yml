@@ -1,0 +1,40 @@
+name: Smart Maintenance isolated PostgreSQL
+on:
+  pull_request:
+    paths:
+      - 'supabase/qa_maintenance_staging/**'
+      - 'tests/smart_maintenance_disposable_pg.sql'
+      - '.github/workflows/smart-maintenance-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  maintenance-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-maintenance-only
+          POSTGRES_DB: maintenance_fixture
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d maintenance_fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: maintenance_fixture
+      PGPASSWORD: disposable-maintenance-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql if absent
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Verify Smart Maintenance tenant isolation and history
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/smart_maintenance_disposable_pg.sql
