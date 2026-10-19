@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_config.dart';
 import '../core/formatters.dart';
 import '../core/localization.dart';
 import '../core/widgets.dart';
@@ -10,6 +11,7 @@ import '../documents/vehicle_documents_screen.dart';
 import '../issues/issue_form_screen.dart';
 import '../repairs/repair_form_screen.dart';
 import 'vehicle_form_screen.dart';
+import 'smart_maintenance_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   const VehicleDetailScreen({
@@ -294,6 +296,25 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                     );
                   },
                 ),
+
+                if (widget.canManage && AppConfig.smartMaintenanceQaEnabled) ...[
+                  const SizedBox(height: 12),
+                  Card(child: ListTile(
+                    key: const Key('smart_maintenance_entry'),
+                    leading: const Icon(Icons.build_circle_outlined),
+                    title: const Text('Smart Maintenance'),
+                    subtitle: Text(AppLocale.language.value == 'pl'
+                        ? 'Harmonogram oleju, hamulców, filtrów i innych serwisów'
+                        : 'Oil, brakes, filters and other maintenance schedules'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(builder: (_) => SmartMaintenanceScreen(
+                          company: widget.company, vehicle: vehicle)));
+                      if (mounted) await _refresh();
+                    },
+                  )),
+                ],
 
                 const SizedBox(height: 28),
 
