@@ -265,4 +265,29 @@ void main() {
     expect(requests, 1, reason: 'Do not submit a duplicate booking automatically');
   });
 
+  test('Booking mutations require an authenticated session before RPC', () async {
+    var rpcCalls = 0;
+    final transport = MockClient((request) async {
+      rpcCalls++;
+      return http.Response('true', 200, request: request,
+        headers: {'content-type': 'application/json'});
+    });
+    final client = SupabaseClient('https://fixture.invalid', 'fixture-pub',
+      httpClient: transport,
+      authOptions: const AuthClientOptions(autoRefreshToken: false));
+    addTearDown(() async { await client.dispose(); transport.close(); });
+    final repository = GarageBookingRepository(client);
+    const bookingId = '00000000-0000-4000-8000-000000000201';
+    await expectLater(repository.configure(
+      workspaceId: workshopId, city: 'Luton', timeZone: 'Europe/London',
+      services: ['brakes'], durationMinutes: 60, listed: false,
+    ), throwsStateError);
+    await expectLater(repository.respond(bookingId, confirm: true),
+      throwsStateError);
+    await expectLater(repository.cancel(bookingId), throwsStateError);
+    await expectLater(repository.confirmCancellation(bookingId),
+      throwsStateError);
+    expect(rpcCalls, 0);
+  });
+
 }
