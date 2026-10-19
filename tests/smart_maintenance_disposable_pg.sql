@@ -202,13 +202,20 @@ SET LOCAL ROLE service_role;
 DO $check$
 BEGIN
  IF public.fleet_maintenance_refresh_alerts()<>1
-  OR (SELECT count(*) FROM public.fleet_maintenance_alerts
-      WHERE source='mileage' AND stage='upcoming_500')<>1
   OR public.fleet_maintenance_refresh_alerts()<>0 THEN
   RAISE EXCEPTION 'Oil reminder was omitted or duplicated';
  END IF;
 END $check$;
 COMMIT;
+-- Direct reminder table reads are intentionally not granted to service_role.
+-- Verify the resulting ledger with the disposable fixture owner only.
+DO $check$
+BEGIN
+ IF (SELECT count(*) FROM public.fleet_maintenance_alerts
+      WHERE source='mileage' AND stage='upcoming_500')<>1 THEN
+  RAISE EXCEPTION 'Expected 500-km alert was not stored';
+ END IF;
+END $check$;
 
 BEGIN;
 SET LOCAL ROLE authenticated;
