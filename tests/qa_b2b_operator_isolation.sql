@@ -145,6 +145,10 @@ DO $tests$
 DECLARE p_ts timestamptz; r_ts timestamptz;
        denied boolean := false;
 BEGIN
+ IF EXISTS (SELECT 1 FROM public.flotaryx_business_profiles)
+   OR EXISTS (SELECT 1 FROM public.flotaryx_business_reviews) THEN
+   RAISE EXCEPTION 'Operator bypassed tenant RLS using direct tables';
+ END IF;
  IF public.flotaryx_operator_pending_review_count()<>1 THEN
    RAISE EXCEPTION 'Operator pending count incorrect';
  END IF;
@@ -152,6 +156,13 @@ BEGIN
    THEN RAISE EXCEPTION 'Operator review queue incorrect'; END IF;
  SELECT profile_updated_at, review_updated_at INTO p_ts,r_ts
  FROM public.flotaryx_operator_list_reviews('pending') LIMIT 1;
+ BEGIN
+   PERFORM public.flotaryx_operator_review(
+     '00000000-0000-4000-8000-000000000101','verified',
+     'Attempt without evidence method','','',p_ts,r_ts);
+ EXCEPTION WHEN invalid_parameter_value THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Operator approved without evidence'; END IF;
+ denied:=false;
  IF NOT public.flotaryx_operator_review(
    '00000000-0000-4000-8000-000000000101','verified',
    'Verified against fixture business registry','business_registry',
