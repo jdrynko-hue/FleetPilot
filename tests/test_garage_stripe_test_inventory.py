@@ -18,7 +18,9 @@ def valid_inventory():
                       "active": True}],
         "prices": [
             {"product": "prod_fixture", "active": True, "currency": currency,
-             "interval": interval, "unit_amount": 2500}
+             "interval": interval, "unit_amount": 2500, "type": "recurring",
+             "recurring": {"interval": interval, "interval_count": 1},
+             "livemode": False}
             for currency in ("gbp", "eur", "pln")
             for interval in ("month", "year")
         ],
@@ -94,6 +96,27 @@ class StripeGarageTestPreflight(unittest.TestCase):
             data = valid_inventory()
             data["webhook_endpoints"][0]["url"] = url
             self.assertTrue(verify_inventory(data))
+
+    def test_reject_one_time_and_multi_interval_price(self):
+        for mutation in ({"type": "one_time"}, {"recurring": {"interval": "month", "interval_count": 3}}, {"livemode": True}):
+            data = valid_inventory()
+            data["prices"][0].update(mutation)
+            self.assertTrue(any("gbp/month" in e for e in verify_inventory(data)))
+
+    def test_reject_extra_webhook_events(self):
+        data = valid_inventory()
+        data["webhook_endpoints"][0]["enabled_events"].append("*")
+        self.assertTrue(any("wildcard" in e for e in verify_inventory(data)))
+
+    def test_malformed_webhook_port_and_events_fail_closed(self):
+        for url in (QA_URL.replace(".supabase.co/", ".supabase.co:bad/"),
+                    QA_URL.replace("https://", "https://[::1")):
+            data = valid_inventory()
+            data["webhook_endpoints"][0]["url"] = url
+            self.assertTrue(verify_inventory(data))
+        data = valid_inventory()
+        data["webhook_endpoints"][0]["enabled_events"].append(None)
+        self.assertTrue(any("invalid entries" in e for e in verify_inventory(data)))
 
     def test_schema_invalid_fails(self):
         self.assertTrue(verify_inventory({"livemode": False}))
