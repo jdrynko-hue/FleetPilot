@@ -34,6 +34,17 @@ class AppConfig {
   static bool get ecosystemEnabled => ecosystemEnabledFor(supabaseUrl,
       qa: _ecosystemRequested, production: _productionRequested);
 
+  // Smart Maintenance remains QA-only until its server-side RLS and RPCs
+  // have been reviewed and enabled. No production URL can turn it on.
+  static const _smartMaintenanceRequested =
+      bool.fromEnvironment('FLOTARYX_SMART_MAINTENANCE_QA');
+  static bool smartMaintenanceQaEnabledFor(String url,
+          {required bool requested}) =>
+      requested && isEcosystemQaBackend(url);
+  static bool get smartMaintenanceQaEnabled =>
+      smartMaintenanceQaEnabledFor(supabaseUrl,
+          requested: _smartMaintenanceRequested);
+
   static bool get isConfigured =>
       supabaseUrl.trim().isNotEmpty && supabasePublishableKey.trim().isNotEmpty;
 }
