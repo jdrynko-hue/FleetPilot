@@ -68,6 +68,7 @@ void main() {
   testWidgets('revoked permissions hide a previously visible operator action',
       (tester) async {
     var calls = 0;
+    var opened = 0;
     await openAlert(
       tester,
       loader: () async {
@@ -75,7 +76,7 @@ void main() {
         if (calls == 1) return 4;
         throw StateError('Operator access revoked');
       },
-      openConsole: (_) async {},
+      openConsole: (_) async { opened++; },
     );
 
     expect(find.byKey(const Key('business_review_alert')), findsOneWidget);
@@ -83,6 +84,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(calls, 2);
+    expect(opened, 0, reason: 'Revoked operator must not enter the console');
+    expect(find.byKey(const Key('business_review_alert')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a null permission recheck prevents opening the console',
+      (tester) async {
+    var checks = 0;
+    var opened = 0;
+    await openAlert(
+      tester,
+      loader: () async {
+        checks++;
+        return checks == 1 ? 2 : null;
+      },
+      openConsole: (_) async { opened++; },
+    );
+    expect(find.byKey(const Key('business_review_alert')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('business_review_alert')));
+    await tester.pumpAndSettle();
+    expect(checks, 2);
+    expect(opened, 0);
     expect(find.byKey(const Key('business_review_alert')), findsNothing);
     expect(tester.takeException(), isNull);
   });

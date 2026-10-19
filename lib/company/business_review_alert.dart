@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/localization.dart';
 import 'business_review_console_screen.dart';
+import 'operator_session_guard.dart';
 
 typedef PendingReviewLoader = Future<int?> Function();
 typedef ReviewConsoleOpener = Future<void> Function(BuildContext context);
@@ -51,8 +52,8 @@ class _BusinessReviewAlertState extends State<BusinessReviewAlert> {
 
   Future<int?> _loadFromSupabase() async {
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id;
-    if (userId == null) return null;
+    return OperatorSessionGuard(client).run(() async {
+      final userId = client.auth.currentUser!.id;
 
     // RLS grants access to this row only when the user is an operator.
     final operators = await client
@@ -69,7 +70,8 @@ class _BusinessReviewAlertState extends State<BusinessReviewAlert> {
     if (pending is! int || pending < 0) {
       throw const FormatException('Invalid pending review count');
     }
-    return pending;
+      return pending;
+    });
   }
 
   Future<void> _refresh() async {
@@ -89,6 +91,26 @@ class _BusinessReviewAlertState extends State<BusinessReviewAlert> {
   }
 
   Future<void> _open() async {
+    // The badge may have been visible for several minutes. Recheck current
+    // operator access before navigating; a stale badge is never authority.
+    if (_loading || _pending == null) return;
+    _loading = true;
+    try {
+      final pending =
+          await (widget.loadPendingReviews?.call() ?? _loadFromSupabase());
+      if (!mounted) return;
+      if (pending == null) {
+        setState(() => _pending = null);
+        return;
+      }
+      setState(() => _pending = pending);
+    } catch (_) {
+      if (mounted) setState(() => _pending = null);
+      return;
+    } finally {
+      _loading = false;
+    }
+    if (!mounted) return;
     if (widget.openConsole != null) {
       await widget.openConsole!(context);
     } else {
