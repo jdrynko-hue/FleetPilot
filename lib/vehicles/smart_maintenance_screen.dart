@@ -43,6 +43,12 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
       widget.company.currency.toUpperCase() == 'GBP'
           ? MaintenanceUnit.mi : MaintenanceUnit.km;
 
+  // Preserve the original integer-mile odometer when its rounded km
+  // representation is unchanged. Never lose a mile through display rounding.
+  int _inputMiles(int displayed, MaintenanceUnit unit, int originalMiles) =>
+      displayed == fromMiles(originalMiles, unit)
+          ? originalMiles : toMiles(displayed, unit);
+
   String _name(MaintenanceKind kind) => switch (kind) {
     MaintenanceKind.oil => _t('Olej i filtr oleju', 'Oil and oil filter'),
     MaintenanceKind.brakes => _t('Kontrola hamulców', 'Brake inspection'),
@@ -112,7 +118,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
     final months = TextEditingController(
       text: original?.intervalMonths?.toString() ?? '12');
     final last = TextEditingController(
-      text: (original?.lastServiceMiles ?? _miles).toString());
+      text: fromMiles(original?.lastServiceMiles ?? _miles, unit).toString());
     final note = TextEditingController(text: original?.notes ?? '');
     try {
       final yes = await showDialog<bool>(
@@ -152,9 +158,14 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
                     redraw(() {
                       final oldDistance = int.tryParse(distance.text);
                       if (oldDistance != null && oldDistance >= 0) {
-                        distance.text = (next == MaintenanceUnit.km
-                            ? fromMiles(toMiles(oldDistance, unit), next)
-                            : toMiles(oldDistance, unit)).toString();
+                        distance.text =
+                            fromMiles(toMiles(oldDistance, unit), next).toString();
+                      }
+                      final lastValue = int.tryParse(last.text);
+                      if (lastValue != null && lastValue >= 0) {
+                        last.text = fromMiles(
+                          _inputMiles(lastValue, unit,
+                            original?.lastServiceMiles ?? _miles), next).toString();
                       }
                       unit = next;
                     });
@@ -173,8 +184,8 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
                 TextField(controller: last,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(labelText:
-                    _t('Ostatni serwis — przebieg w milach',
-                       'Last service odometer (miles)'))),
+                    _t('Ostatni serwis — przebieg',
+                       'Last service odometer') + ' (' + unit.name + ')')),
                 ListTile(
                   title: Text(_t('Data ostatniego serwisu', 'Last service date')),
                   subtitle: Text(formatDate(lastDate)),
@@ -209,7 +220,9 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
       if (yes != true || !mounted) return;
       final n = distance.text.trim().isEmpty ? null : int.tryParse(distance.text);
       final m = months.text.trim().isEmpty ? null : int.tryParse(months.text);
-      final lastMiles = int.tryParse(last.text);
+      final lastDistance = int.tryParse(last.text.trim());
+      final lastMiles = lastDistance == null ? null :
+          _inputMiles(lastDistance, unit, original?.lastServiceMiles ?? _miles);
       if ((distance.text.trim().isNotEmpty && n == null) ||
           (months.text.trim().isNotEmpty && m == null) ||
           (n == null && m == null) ||
@@ -241,7 +254,8 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
 
   Future<void> _complete(MaintenancePlan plan) async {
     if (_busy) return;
-    final miles = TextEditingController(text: _miles.toString());
+    final miles = TextEditingController(
+      text: fromMiles(_miles, plan.unit).toString());
     final notes = TextEditingController();
     var date = DateTime.now();
     try {
@@ -254,7 +268,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
               Text(_name(plan.kind)),
               TextField(controller: miles, keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: _t(
-                  'Przebieg w milach', 'Odometer in miles'))),
+                  'Przebieg przy serwisie', 'Service odometer'))),
               ListTile(
                 title: Text(_t('Data wykonania', 'Completion date')),
                 subtitle: Text(formatDate(date)),
@@ -283,7 +297,9 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
         )),
       );
       if (yes != true || !mounted) return;
-      final value = int.tryParse(miles.text.trim());
+      final displayed = int.tryParse(miles.text.trim());
+      final value = displayed == null ? null :
+        _inputMiles(displayed, plan.unit, _miles);
       if (value == null || value < plan.lastServiceMiles || value > _miles ||
           date.isBefore(plan.lastServiceDate)) { _error(); return; }
       setState(() => _busy = true);
@@ -301,14 +317,14 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
 
   Future<void> _odometer() async {
     if (_busy) return;
-    final miles = TextEditingController(text: _miles.toString());
+    final miles = TextEditingController(text: fromMiles(_miles, _unit).toString());
     try {
       final yes = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(_t('Zapis przebiegu', 'Record odometer')),
           content: TextField(controller: miles, keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: _t('Mile', 'Miles'))),
+            decoration: InputDecoration(labelText: _unit.name)),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false),
               child: Text(_t('Anuluj', 'Cancel'))),
@@ -318,7 +334,9 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
         ),
       );
       if (yes != true || !mounted) return;
-      final value = int.tryParse(miles.text.trim());
+      final displayed = int.tryParse(miles.text.trim());
+      final value = displayed == null ? null :
+        _inputMiles(displayed, _unit, _miles);
       if (value == null || value < _miles) { _error(); return; }
       setState(() => _busy = true);
       try {
@@ -403,7 +421,7 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Text(widget.vehicle.registration + ' • ' +
-                formatMileage(_miles) + ' mi',
+                formatMileage(fromMiles(_miles, _unit)) + ' ' + _unit.name,
                 style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
@@ -490,7 +508,8 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
                   leading: const Icon(Icons.check_circle_outline),
                   title: Text(_name(event.kind)),
                   subtitle: Text(formatDate(event.completedDate) + ' • ' +
-                    formatMileage(event.completedMiles) + ' mi • ' + event.note),
+                    formatMileage(fromMiles(event.completedMiles, _unit)) +
+                    ' ' + _unit.name + ' • ' + event.note),
                 ),
               if (AppConfig.ecosystemQaEnabled)
                 Card(child: ListTile(
