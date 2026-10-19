@@ -28,6 +28,10 @@
 - Separate admin route and navigation, hidden from ordinary roles **and** blocked server-side regardless of UI visibility.
 - GDPR/UK GDPR purpose limitation, least-privilege access, retention and data subject request workflow.
 
+## Existing installer risk for review
+
+The current main contains `.github/workflows/flotaryx-business-review-console-installer.yml`. It has a manual dispatch and a push-on-main trigger limited to its own workflow file, with `contents: write` and `actions: write` permissions. The installer embeds a compressed console source and can commit generated Flutter files after tests. This is **not** an appropriate mechanism for routine Super Admin changes: audit and review should use ordinary source PRs, least-privilege workflow permissions, and no self-modifying deployment path. Do not trigger or edit this installer as part of the design-only review. Its historical execution state has not been verified.
+
 ## Safe implementation order
 
 1. Inventory actual admin/B2B code, SQL grants and routes across current main and Draft integration before editing.
