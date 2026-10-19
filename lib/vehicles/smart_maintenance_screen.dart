@@ -22,10 +22,12 @@ class SmartMaintenanceScreen extends StatefulWidget {
 }
 
 class _SmartMaintenanceData {
-  const _SmartMaintenanceData(this.plans, this.history, this.readings);
+  const _SmartMaintenanceData(this.plans, this.history, this.readings,
+      this.alerts);
   final List<MaintenancePlan> plans;
   final List<MaintenanceHistory> history;
   final List<MaintenanceOdometerReading> readings;
+  final List<MaintenanceAlert> alerts;
 }
 
 class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
@@ -78,11 +80,13 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
       _repository.plans(company, vehicle),
       _repository.history(company, vehicle),
       _repository.readings(company, vehicle),
+      _repository.alerts(company, vehicle),
     ]);
     return _SmartMaintenanceData(
       results[0] as List<MaintenancePlan>,
       results[1] as List<MaintenanceHistory>,
       results[2] as List<MaintenanceOdometerReading>,
+      results[3] as List<MaintenanceAlert>,
     );
   }
 
@@ -414,6 +418,25 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
               if (data.plans.isEmpty)
                 Text(_t('Dodaj harmonogram oleju lub innej czynności.',
                   'Add an oil or other maintenance schedule.')),
+              const SizedBox(height: 20),
+              Text(_t('Powiadomienia serwisowe', 'Maintenance reminders'),
+                style: Theme.of(context).textTheme.titleMedium),
+              for (final alert in data.alerts)
+                ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: Text(_name(alert.kind)),
+                  subtitle: Text(
+                    alert.stage.replaceAll('_', ' ') +
+                    (alert.dueMiles == null ? '' :
+                      ' • ' + formatMileage(alert.dueMiles) + ' mi') +
+                    (alert.dueDate == null ? '' :
+                      ' • ' + formatDate(alert.dueDate))),
+                ),
+              if (data.alerts.isEmpty)
+                Text(_t('Brak zapisanych przypomnień. Wysyłanie automatyczne '
+                  'wymaga osobnego uruchomienia harmonogramu QA.',
+                  'No saved reminders. Automatic delivery requires '
+                  'separate approval of the QA scheduler.')),
               const SizedBox(height: 20),
               Text(_t('Historia serwisu', 'Service history'),
                 style: Theme.of(context).textTheme.titleMedium),
