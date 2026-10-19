@@ -338,14 +338,14 @@ class GarageBookingRepository {
         !const {30,60,90,120}.contains(durationMinutes)) {
       throw ArgumentError('Invalid workshop booking configuration');
     }
-    final raw = await client.rpc('garage_booking_configure', params: {
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_configure', params: {
       'p_workspace': workspaceId,
       'p_city': city.trim(),
       'p_time_zone': timeZone,
       'p_services': services,
       'p_duration': durationMinutes,
       'p_listed': listed,
-    });
+    }));
     if (raw != true) throw const FormatException('Workshop opt-in not confirmed');
     return true;
   }
@@ -405,8 +405,8 @@ class GarageBookingRepository {
 
   Future<GarageBookingStatus> respond(String bookingId, {required bool confirm}) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_respond',
-      params: {'p_booking': _id(bookingId), 'p_confirm': confirm});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_respond',
+      params: {'p_booking': _id(bookingId), 'p_confirm': confirm}));
     final parsed = _status(raw);
     if (parsed != (confirm ? GarageBookingStatus.confirmed : GarageBookingStatus.declined)) {
       throw const FormatException('Unexpected booking confirmation result');
@@ -416,8 +416,8 @@ class GarageBookingRepository {
 
   Future<GarageBookingStatus> cancel(String bookingId) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_cancel',
-      params: {'p_booking': _id(bookingId)});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_cancel',
+      params: {'p_booking': _id(bookingId)}));
     final parsed = _status(raw);
     if (!const {GarageBookingStatus.withdrawn,
                  GarageBookingStatus.cancellationRequested,
@@ -429,8 +429,8 @@ class GarageBookingRepository {
 
   Future<void> confirmCancellation(String bookingId) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_confirm_cancellation',
-      params: {'p_booking': _id(bookingId)});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_confirm_cancellation',
+      params: {'p_booking': _id(bookingId)}));
     if (raw != 'cancelled') {
       throw const FormatException('Workshop cancellation not confirmed');
     }
