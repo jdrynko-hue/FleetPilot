@@ -37,7 +37,7 @@ class SmartMaintenanceRepository {
   Future<List<MaintenanceAlert>> alerts(
       String companyId, String vehicleId) => _sessionBound(() async {
         final rows = await client.from('fleet_maintenance_alerts')
-          .select('kind,stage,source,created_at,due_miles,due_date')
+          .select('plan_id,cycle,kind,stage,source,created_at,due_miles,due_date')
           .eq('company_id', companyId)
           .eq('vehicle_id', vehicleId)
           .order('created_at', ascending: false)
