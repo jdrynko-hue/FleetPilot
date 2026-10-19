@@ -89,11 +89,19 @@ class _SmartMaintenanceScreenState extends State<SmartMaintenanceScreen> {
       _repository.readings(company, vehicle),
       _repository.alerts(company, vehicle),
     ]);
+    final plans = results[0] as List<MaintenancePlan>;
+    final currentCycles = <String, int>{
+      for (final plan in plans.where((plan) => plan.active))
+        plan.id: plan.cycle,
+    };
+    final alerts = (results[3] as List<MaintenanceAlert>)
+        .where((event) => currentCycles[event.planId] == event.cycle)
+        .toList(growable: false);
     return _SmartMaintenanceData(
-      results[0] as List<MaintenancePlan>,
+      plans,
       results[1] as List<MaintenanceHistory>,
       results[2] as List<MaintenanceOdometerReading>,
-      results[3] as List<MaintenanceAlert>,
+      alerts,
     );
   }
 
