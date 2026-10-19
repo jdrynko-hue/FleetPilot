@@ -343,6 +343,14 @@ BEGIN
   OR p_completed_date>current_date OR length(coalesce(p_note,''))>1000 THEN
   RAISE EXCEPTION 'Invalid service completion' USING ERRCODE='22023';
  END IF;
+ -- A repeated request after an uncertain network response must NOT create
+ -- another cycle and reset the service interval a second time. Reconcile
+ -- history rather than resubmitting an identical completion automatically.
+ IF p_completed_miles=plan.last_service_miles
+   AND p_completed_date=plan.last_service_date THEN
+  RAISE EXCEPTION 'Service already recorded at this date and odometer; refresh history'
+   USING ERRCODE='22023';
+ END IF;
  INSERT INTO public.fleet_maintenance_history(
   plan_id,company_id,vehicle_id,kind,completed_miles,completed_date,note,
   actor_id,cycle)
