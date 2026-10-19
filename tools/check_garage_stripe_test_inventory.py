@@ -57,9 +57,13 @@ def verify_inventory(inventory: dict) -> list[str]:
         currency = price.get("currency")
         interval = price.get("interval")
         amount = price.get("unit_amount")
-        if currency in CURRENCIES and interval in INTERVALS and (
-            (type(amount) is int and amount > 0) or price.get("billing_scheme") == "tiered"
-        ):
+        if (currency in CURRENCIES and interval in INTERVALS
+            and price.get("type") == "recurring"
+            and isinstance(price.get("recurring"), dict)
+            and price["recurring"].get("interval") == interval
+            and price["recurring"].get("interval_count") == 1
+            and price.get("livemode") is False
+            and type(amount) is int and amount > 0):
             offered.add((currency, interval))
     missing = sorted((currency, interval) for currency in CURRENCIES
                      for interval in INTERVALS if (currency, interval) not in offered)
@@ -75,8 +79,14 @@ def verify_inventory(inventory: dict) -> list[str]:
         if not isinstance(url, str):
             issues.append("Enabled webhook endpoint without a URL")
             continue
-        parsed = urlsplit(url)
-        if parsed.scheme != "https" or parsed.username or parsed.password or parsed.query:
+        try:
+            parsed = urlsplit(url)
+            valid_url = (parsed.scheme == "https" and not parsed.username
+                         and not parsed.password and not parsed.query
+                         and not parsed.fragment and parsed.port in (None, 443))
+        except ValueError:
+            valid_url = False
+        if not valid_url:
             issues.append("Enabled webhook URL must be credential-free HTTPS")
             continue
         host = parsed.hostname
@@ -88,10 +98,16 @@ def verify_inventory(inventory: dict) -> list[str]:
         if not isinstance(events, list):
             issues.append("QA webhook has no explicit event allowlist")
             continue
+        if not all(isinstance(event, str) for event in events):
+            issues.append("QA webhook event allowlist contains invalid entries")
+            continue
         remaining = REQUIRED_EVENTS.difference(events)
         if remaining:
             issues.append("QA webhook missing reconciliation events: " +
                           ", ".join(sorted(remaining)))
+            continue
+        if "*" in events or set(events) != REQUIRED_EVENTS:
+            issues.append("QA webhook event allowlist contains extra or wildcard events")
             continue
         valid_webhooks += 1
     if valid_webhooks != 1:

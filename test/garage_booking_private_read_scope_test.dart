@@ -265,4 +265,101 @@ void main() {
     expect(requests, 1, reason: 'Do not submit a duplicate booking automatically');
   });
 
+  test('Booking mutations require an authenticated session before RPC', () async {
+    var rpcCalls = 0;
+    final transport = MockClient((request) async {
+      rpcCalls++;
+      return http.Response('true', 200, request: request,
+        headers: {'content-type': 'application/json'});
+    });
+    final client = SupabaseClient('https://fixture.invalid', 'fixture-pub',
+      httpClient: transport,
+      authOptions: const AuthClientOptions(autoRefreshToken: false));
+    addTearDown(() async { await client.dispose(); transport.close(); });
+    final repository = GarageBookingRepository(client);
+    const bookingId = '00000000-0000-4000-8000-000000000201';
+    await expectLater(repository.configure(
+      workspaceId: workshopId, city: 'Luton', timeZone: 'Europe/London',
+      services: ['brakes'], durationMinutes: 60, listed: false,
+    ), throwsStateError);
+    await expectLater(repository.respond(bookingId, confirm: true),
+      throwsStateError);
+    await expectLater(repository.cancel(bookingId), throwsStateError);
+    await expectLater(repository.confirmCancellation(bookingId),
+      throwsStateError);
+    expect(rpcCalls, 0);
+  });
+
+  for (final mutation in [
+    'garage_booking_configure',
+    'garage_booking_respond',
+    'garage_booking_cancel',
+    'garage_booking_confirm_cancellation',
+  ]) {
+    test('$mutation rejects a late result after same-user re-login', () async {
+      var logins = 0;
+      var rpcCalls = 0;
+      final entered = Completer<void>();
+      final pendingResponse = Completer<http.Response>();
+      http.Request? originalRequest;
+      final transport = MockClient((request) async {
+        if (request.url.path == '/auth/v1/token') {
+          logins++;
+          final expiry = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600;
+          return http.Response(jsonEncode({
+            'access_token': fakeJwt(logins),
+            'refresh_token': 'fixture-refresh',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'expires_at': expiry,
+            'user': {
+              'id': userId, 'aud': 'authenticated',
+              'role': 'authenticated', 'email': 'fixture@example.test',
+              'created_at': '2026-10-18T00:00:00Z',
+              'app_metadata': {}, 'user_metadata': {},
+            },
+          }), 200, request: request,
+            headers: {'content-type': 'application/json'});
+        }
+        expect(request.url.path, '/rest/v1/rpc/$mutation');
+        rpcCalls++;
+        originalRequest = request;
+        if (!entered.isCompleted) entered.complete();
+        return pendingResponse.future;
+      });
+      final client = SupabaseClient('https://fixture.invalid', 'fixture-pub',
+        httpClient: transport,
+        authOptions: const AuthClientOptions(autoRefreshToken: false));
+      addTearDown(() async { await client.dispose(); transport.close(); });
+      await client.auth.signInWithPassword(
+        email: 'fixture@example.test', password: 'fixture-only');
+      final repository = GarageBookingRepository(client);
+      const bookingId = '00000000-0000-4000-8000-000000000201';
+      final Future<dynamic> pending = switch (mutation) {
+        'garage_booking_configure' => repository.configure(
+          workspaceId: workshopId, city: 'Luton',
+          timeZone: 'Europe/London', services: ['brakes'],
+          durationMinutes: 60, listed: false),
+        'garage_booking_respond' => repository.respond(bookingId, confirm: true),
+        'garage_booking_cancel' => repository.cancel(bookingId),
+        _ => repository.confirmCancellation(bookingId),
+      };
+      final denied = expectLater(pending, throwsStateError);
+      await entered.future;
+      await client.auth.signInWithPassword(
+        email: 'fixture@example.test', password: 'fixture-only');
+      final response = mutation == 'garage_booking_configure'
+          ? 'true'
+          : jsonEncode(mutation == 'garage_booking_respond'
+              ? 'confirmed' : mutation == 'garage_booking_cancel'
+              ? 'withdrawn' : 'cancelled');
+      pendingResponse.complete(http.Response(response, 200,
+        request: originalRequest,
+        headers: {'content-type': 'application/json'}));
+      await denied;
+      expect(logins, 2);
+      expect(rpcCalls, 1, reason: 'Never auto-retry uncertain mutations');
+    });
+  }
+
 }
