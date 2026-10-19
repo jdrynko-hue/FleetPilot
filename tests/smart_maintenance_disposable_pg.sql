@@ -194,6 +194,25 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 SELECT public.fleet_maintenance_record_miles(
  '00000000-0000-4000-8000-000000000101',
  '00000000-0000-4000-8000-000000000201',21000,current_date-1);
+COMMIT;
+
+-- 214 miles to due: one 500-km proximity alert, then zero duplicates.
+BEGIN;
+SET LOCAL ROLE service_role;
+DO $check$
+BEGIN
+ IF public.fleet_maintenance_refresh_alerts()<>1
+  OR (SELECT count(*) FROM public.fleet_maintenance_alerts
+      WHERE source='mileage' AND stage='upcoming_500')<>1
+  OR public.fleet_maintenance_refresh_alerts()<>0 THEN
+  RAISE EXCEPTION 'Oil reminder was omitted or duplicated';
+ END IF;
+END $check$;
+COMMIT;
+
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
 SELECT public.fleet_maintenance_record_miles(
  '00000000-0000-4000-8000-000000000101',
  '00000000-0000-4000-8000-000000000201',21500,current_date);
@@ -212,8 +231,7 @@ BEGIN
 END $check$;
 COMMIT;
 
--- Once the updated odometer crosses the configured threshold,
--- a service-only invocation records the reminder at most once.
+-- After completion, the next cycle is far away and creates no stale alert.
 BEGIN;
 SET LOCAL ROLE service_role;
 DO $check$
