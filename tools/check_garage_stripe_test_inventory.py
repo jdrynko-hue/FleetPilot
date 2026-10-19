@@ -76,7 +76,7 @@ def verify_inventory(inventory: dict) -> list[str]:
             issues.append("Enabled webhook endpoint without a URL")
             continue
         parsed = urlsplit(url)
-        if parsed.scheme != "https" or parsed.username or parsed.password or parsed.query:
+        if (parsed.scheme != "https" or parsed.username or parsed.password\n            or parsed.query or parsed.fragment or parsed.port not in (None, 443)):
             issues.append("Enabled webhook URL must be credential-free HTTPS")
             continue
         host = parsed.hostname
@@ -88,7 +88,7 @@ def verify_inventory(inventory: dict) -> list[str]:
         if not isinstance(events, list):
             issues.append("QA webhook has no explicit event allowlist")
             continue
-        remaining = REQUIRED_EVENTS.difference(events)
+        if "*" in events or set(events) != REQUIRED_EVENTS:\n            issues.append("QA webhook event allowlist must exactly match Garage reconciliation events")\n            continue\n        remaining = REQUIRED_EVENTS.difference(events)
         if remaining:
             issues.append("QA webhook missing reconciliation events: " +
                           ", ".join(sorted(remaining)))
