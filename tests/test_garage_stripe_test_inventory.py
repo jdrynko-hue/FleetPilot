@@ -18,7 +18,7 @@ def valid_inventory():
                       "active": True}],
         "prices": [
             {"product": "prod_fixture", "active": True, "currency": currency,
-             "interval": interval, "unit_amount": 2500}
+             "interval": interval, "unit_amount": 2500, "type": "recurring",\n             "recurring": {"interval": interval, "interval_count": 1},\n             "livemode": False}
             for currency in ("gbp", "eur", "pln")
             for interval in ("month", "year")
         ],
@@ -95,7 +95,7 @@ class StripeGarageTestPreflight(unittest.TestCase):
             data["webhook_endpoints"][0]["url"] = url
             self.assertTrue(verify_inventory(data))
 
-    def test_schema_invalid_fails(self):
+    def test_reject_one_time_and_multi_interval_price(self):\n        for mutation in ({"type": "one_time"}, {"recurring": {"interval": "month", "interval_count": 3}}, {"livemode": True}):\n            data = valid_inventory()\n            data["prices"][0].update(mutation)\n            self.assertTrue(any("gbp/month" in e for e in verify_inventory(data)))\n\n    def test_reject_extra_webhook_events(self):\n        data = valid_inventory()\n        data["webhook_endpoints"][0]["enabled_events"].append("*")\n        self.assertTrue(any("wildcard" in e for e in verify_inventory(data)))\n\n    def test_schema_invalid_fails(self):
         self.assertTrue(verify_inventory({"livemode": False}))
         self.assertTrue(verify_inventory([]))
 
