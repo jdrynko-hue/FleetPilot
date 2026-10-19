@@ -57,9 +57,13 @@ def verify_inventory(inventory: dict) -> list[str]:
         currency = price.get("currency")
         interval = price.get("interval")
         amount = price.get("unit_amount")
-        if currency in CURRENCIES and interval in INTERVALS and (
-            (type(amount) is int and amount > 0) or price.get("billing_scheme") == "tiered"
-        ):
+        if (currency in CURRENCIES and interval in INTERVALS
+            and price.get("type") == "recurring"
+            and isinstance(price.get("recurring"), dict)
+            and price["recurring"].get("interval") == interval
+            and price["recurring"].get("interval_count") == 1
+            and price.get("livemode") is False
+            and type(amount) is int and amount > 0):
             offered.add((currency, interval))
     missing = sorted((currency, interval) for currency in CURRENCIES
                      for interval in INTERVALS if (currency, interval) not in offered)
