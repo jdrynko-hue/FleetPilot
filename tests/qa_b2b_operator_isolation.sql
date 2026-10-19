@@ -14,7 +14,8 @@ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $fn$
 $fn$;
 GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
 CREATE TABLE public.companies(
- id uuid PRIMARY KEY, name text NOT NULL, is_active boolean NOT NULL DEFAULT true
+ id uuid PRIMARY KEY, name text NOT NULL, country text NOT NULL,
+ is_active boolean NOT NULL DEFAULT true
 );
 CREATE TABLE public.company_members(
  company_id uuid NOT NULL REFERENCES public.companies(id),
@@ -23,9 +24,9 @@ CREATE TABLE public.company_members(
 );
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_members ENABLE ROW LEVEL SECURITY;
-INSERT INTO public.companies(id,name) VALUES
- ('00000000-0000-4000-8000-000000000101','Fleet A'),
- ('00000000-0000-4000-8000-000000000102','Fleet B');
+INSERT INTO public.companies(id,name,country) VALUES
+ ('00000000-0000-4000-8000-000000000101','Fleet A','GB'),
+ ('00000000-0000-4000-8000-000000000102','Fleet B','GB');
 INSERT INTO public.company_members(company_id,user_id,role) VALUES
  ('00000000-0000-4000-8000-000000000101',
   '00000000-0000-4000-8000-000000000001','owner'),
@@ -77,6 +78,26 @@ BEGIN
    PERFORM public.flotaryx_operator_pending_review_count();
  EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
  IF NOT denied THEN RAISE EXCEPTION 'Fleet owner became operator'; END IF;
+END;
+$tests$;
+COMMIT;
+
+-- Owners cannot spoof the legal billing country through the client.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',
+                  '00000000-0000-4000-8000-000000000001',true);
+DO $tests$
+DECLARE denied boolean:=false;
+BEGIN
+ BEGIN
+   INSERT INTO public.flotaryx_business_profiles (
+    company_id,legal_name,business_country,billing_address_line1,billing_city,
+    billing_postcode,business_use_attested)
+   VALUES ('00000000-0000-4000-8000-000000000101',
+           'Wrong Country Ltd','PL','1 Test Lane','Luton','LU1 0AA',true);
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Mismatched country accepted'; END IF;
 END;
 $tests$;
 COMMIT;
