@@ -150,6 +150,8 @@ CREATE TABLE flotaryx_admin_qa.operator_decision_audit (
   evidence_reference text,
   decided_at timestamptz NOT NULL DEFAULT now()
 );
+-- Defense in depth even though this schema is not exposed via the Data API.
+ALTER TABLE flotaryx_admin_qa.operator_decision_audit ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON flotaryx_admin_qa.operator_decision_audit
   FROM PUBLIC,anon,authenticated;
 
