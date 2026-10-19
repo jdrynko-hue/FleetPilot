@@ -5,10 +5,15 @@
 
 DO $test$
 BEGIN
- IF (SELECT count(*) FROM pg_class WHERE relname IN
-  ('flotaryx_verification_operators','flotaryx_business_profiles',
-   'flotaryx_business_reviews') AND relrowsecurity) <> 3 THEN
-   RAISE EXCEPTION 'B2B exposed tables require RLS';
+ IF (SELECT count(*) FROM pg_class c
+     JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE ((n.nspname='public' AND c.relname IN (
+       'flotaryx_verification_operators','flotaryx_business_profiles',
+       'flotaryx_business_reviews'))
+       OR (n.nspname='flotaryx_admin_qa'
+           AND c.relname='operator_decision_audit'))
+       AND c.relrowsecurity) <> 4 THEN
+   RAISE EXCEPTION 'B2B and audit tables require RLS';
  END IF;
  IF has_table_privilege('authenticated','public.flotaryx_business_reviews','UPDATE')
  OR has_table_privilege('authenticated','public.flotaryx_verification_operators','INSERT')
