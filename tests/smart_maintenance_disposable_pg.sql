@@ -78,6 +78,17 @@ BEGIN
   'EXECUTE') THEN RAISE EXCEPTION 'Maintenance grants are too permissive'; END IF;
 END $checks$;
 
+-- Leap years and end-of-month dates must match the Flutter calculation.
+DO $check$
+BEGIN
+ IF fleet_maintenance_private.add_months_clamped('2027-01-31',1)
+      IS DISTINCT FROM '2027-02-28'::date
+ OR fleet_maintenance_private.add_months_clamped('2028-01-31',1)
+      IS DISTINCT FROM '2028-02-29'::date THEN
+  RAISE EXCEPTION 'End-of-month calendar service arithmetic drifted';
+ END IF;
+END $check$;
+
 -- Fleet A owner can set oil interval in kilometres, stored internally in mi.
 BEGIN;
 SET LOCAL ROLE authenticated;
