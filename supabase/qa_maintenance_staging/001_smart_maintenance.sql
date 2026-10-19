@@ -207,17 +207,24 @@ CREATE FUNCTION public.fleet_maintenance_complete(
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $fn$
 DECLARE plan public.fleet_maintenance_plans%ROWTYPE;
- vehicle_miles bigint; event_id uuid;
+ vehicle_miles bigint; event_id uuid; scoped_vehicle uuid;
 BEGIN
  -- Check authorization before locking or returning private plan details.
  IF (SELECT auth.uid()) IS NULL OR NOT
   public.has_company_role(p_company,ARRAY['owner','admin','manager']) THEN
   RAISE EXCEPTION 'Fleet manager required' USING ERRCODE='42501';
  END IF;
+ -- Consistent lock order across set_plan/record_miles/complete:
+ -- vehicle first, then maintenance plan, avoiding cross-RPC deadlocks.
+ SELECT vehicle_id INTO scoped_vehicle FROM public.fleet_maintenance_plans
+  WHERE id=p_plan AND company_id=p_company AND active=true;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Maintenance plan unavailable' USING ERRCODE='42501'; END IF;
+ vehicle_miles:=fleet_maintenance_private.assert_manager(p_company,scoped_vehicle);
  SELECT * INTO plan FROM public.fleet_maintenance_plans
   WHERE id=p_plan AND company_id=p_company AND active=true FOR UPDATE;
- IF NOT FOUND THEN RAISE EXCEPTION 'Maintenance plan unavailable' USING ERRCODE='42501'; END IF;
- vehicle_miles:=fleet_maintenance_private.assert_manager(p_company,plan.vehicle_id);
+ IF NOT FOUND OR plan.vehicle_id<>scoped_vehicle THEN
+  RAISE EXCEPTION 'Maintenance scope changed' USING ERRCODE='42501';
+ END IF;
  IF p_completed_miles IS NULL OR p_completed_miles<plan.last_service_miles
   OR p_completed_miles>vehicle_miles
   OR p_completed_date IS NULL OR p_completed_date<plan.last_service_date
