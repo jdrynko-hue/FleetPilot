@@ -96,6 +96,95 @@ CREATE POLICY fleet_maintenance_readings_read ON public.fleet_maintenance_odomet
  FOR SELECT TO authenticated
  USING(public.has_company_role(company_id,ARRAY['owner','admin','manager']));
 
+-- Durable in-app reminder stages. No emails, cron, push or Stripe delivery
+-- is enabled by this source-only migration.
+CREATE TABLE public.fleet_maintenance_alerts (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE RESTRICT,
+ vehicle_id uuid NOT NULL REFERENCES public.vehicles(id) ON DELETE RESTRICT,
+ plan_id uuid NOT NULL REFERENCES public.fleet_maintenance_plans(id) ON DELETE RESTRICT,
+ cycle integer NOT NULL CHECK(cycle>0),
+ source text NOT NULL CHECK(source IN ('mileage','calendar')),
+ stage text NOT NULL CHECK(stage IN ('upcoming_1000','upcoming_500','due','overdue',
+  'days_30','days_14','days_7','days_1')),
+ kind text NOT NULL,
+ due_miles bigint,
+ due_date date,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(plan_id,cycle,source,stage)
+);
+ALTER TABLE public.fleet_maintenance_alerts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.fleet_maintenance_alerts FROM PUBLIC,anon,authenticated;
+GRANT SELECT ON public.fleet_maintenance_alerts TO authenticated;
+CREATE POLICY fleet_maintenance_alerts_read ON public.fleet_maintenance_alerts
+ FOR SELECT TO authenticated USING
+  (public.has_company_role(company_id,ARRAY['owner','admin','manager']));
+CREATE INDEX fleet_maintenance_alerts_scope_idx
+ ON public.fleet_maintenance_alerts(company_id,vehicle_id,created_at DESC);
+
+-- A separately approved, service-role-only scheduler can call this RPC.
+-- No scheduled execution or external email is created here.
+CREATE FUNCTION public.fleet_maintenance_refresh_alerts()
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $fn$
+DECLARE row record; miles_left bigint; days_left integer;
+ mileage_stage text; calendar_stage text; generated integer:=0;
+BEGIN
+ FOR row IN
+   SELECT p.*,v.mileage AS current_miles
+   FROM public.fleet_maintenance_plans p
+   JOIN public.vehicles v ON v.id=p.vehicle_id
+      AND v.company_id=p.company_id
+   WHERE p.active AND v.is_active
+ LOOP
+  mileage_stage:=NULL;
+  calendar_stage:=NULL;
+  IF row.next_due_miles IS NOT NULL THEN
+    miles_left:=row.next_due_miles-row.current_miles;
+    mileage_stage:=CASE
+      WHEN miles_left < 0 THEN 'overdue'
+      WHEN miles_left=0 THEN 'due'
+      WHEN miles_left<=round(500::numeric/1.609344)::bigint THEN 'upcoming_500'
+      WHEN miles_left<=round(1000::numeric/1.609344)::bigint THEN 'upcoming_1000'
+      ELSE NULL END;
+  END IF;
+  IF row.next_due_date IS NOT NULL THEN
+    days_left:=row.next_due_date-current_date;
+    calendar_stage:=CASE
+      WHEN days_left<0 THEN 'overdue'
+      WHEN days_left=0 THEN 'due'
+      WHEN days_left<=1 THEN 'days_1'
+      WHEN days_left<=7 THEN 'days_7'
+      WHEN days_left<=14 THEN 'days_14'
+      WHEN days_left<=30 THEN 'days_30'
+      ELSE NULL END;
+  END IF;
+  IF mileage_stage IS NOT NULL THEN
+    INSERT INTO public.fleet_maintenance_alerts(
+      company_id,vehicle_id,plan_id,cycle,source,stage,kind,due_miles,due_date)
+    VALUES(row.company_id,row.vehicle_id,row.id,row.cycle,'mileage',
+      mileage_stage,row.kind,row.next_due_miles,row.next_due_date)
+    ON CONFLICT(plan_id,cycle,source,stage) DO NOTHING;
+    GET DIAGNOSTICS miles_left = ROW_COUNT;
+    generated:=generated+miles_left::integer;
+  END IF;
+  IF calendar_stage IS NOT NULL THEN
+    INSERT INTO public.fleet_maintenance_alerts(
+      company_id,vehicle_id,plan_id,cycle,source,stage,kind,due_miles,due_date)
+    VALUES(row.company_id,row.vehicle_id,row.id,row.cycle,'calendar',
+      calendar_stage,row.kind,row.next_due_miles,row.next_due_date)
+    ON CONFLICT(plan_id,cycle,source,stage) DO NOTHING;
+    GET DIAGNOSTICS days_left = ROW_COUNT;
+    generated:=generated+days_left;
+  END IF;
+ END LOOP;
+ RETURN generated;
+END $fn$;
+REVOKE ALL ON FUNCTION public.fleet_maintenance_refresh_alerts()
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.fleet_maintenance_refresh_alerts()
+ TO service_role;
+
 -- No table permits direct browser writes. All mutations use authenticated
 -- manager-only RPCs with server-locked vehicle/company scope.
 CREATE FUNCTION fleet_maintenance_private.assert_manager(
