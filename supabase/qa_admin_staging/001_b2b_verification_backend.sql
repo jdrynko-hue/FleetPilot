@@ -68,7 +68,15 @@ AS $fn$
     SELECT 1 FROM public.companies c
     WHERE c.id=p_company AND c.is_active
       AND upper(btrim(coalesce(c.country,'')))=p_country
-      AND c.country ~* '^[a-z]{2}
+      AND length(btrim(coalesce(c.country,'')))=2
+  );
+$fn$;
+REVOKE ALL ON FUNCTION flotaryx_admin_qa.company_country_matches(uuid,text)
+  FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION flotaryx_admin_qa.company_country_matches(uuid,text)
+  TO authenticated;
+
+CREATE TABLE public.flotaryx_business_profiles (
   company_id uuid PRIMARY KEY REFERENCES public.companies(id) ON DELETE RESTRICT,
   legal_name text NOT NULL CHECK (length(btrim(legal_name)) BETWEEN 2 AND 200),
   business_country text NOT NULL CHECK (business_country ~ '^[A-Z]{2}$'),
