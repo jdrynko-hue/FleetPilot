@@ -1,5 +1,17 @@
-# Garage Sandbox billing integration — not deployed
+# Garage Sandbox billing integration — QA only; billing inactive
 
+## Hosted QA status (verified 18 October 2026)
+
+- Isolated Supabase QA project: `fyestmquqvkdebxxbcky`; production is separate and unchanged.
+- QA migration `20261018152315_qa_garage_billing_sandbox_20261018` was applied. Five private RLS-enabled billing tables exist with **zero** trial, catalog, customer, invoice and event records at the last read-only check.
+- The following Edge Functions are deployed to QA, version 1, with JWT verification enabled: `flotaryx-garage-test-entitlement`, `flotaryx-garage-test-checkout` and `flotaryx-garage-test-trial-cancel`. Their feature flags are default-off. A deployed function is **not** an enabled purchase flow.
+- The signed Stripe webhook is **not** deployed. Hosted Stripe webhook registration, matching test signing secret, approved test price catalog and approved customer mapping are outstanding.
+- No genuine Stripe Sandbox E2E trial, charge, invoice, cancellation or webhook delivery has been verified. SDK CI uses simulated transport and isolated PostgreSQL tests.
+- Do **not** enable Checkout, cancellation, entitlement or webhook flags, create accounts/Stripe customers, configure paid services, merge to `main` or touch Stripe Live without separate authorization.
+
+**Historical design notes below** describe the source-only stage when written. Statements such as 'not deployed' for Checkout, cancellation and entitlement are outdated for QA; consult the live deployment inventory above. Those source comments do not establish production state.
+
+---
 This internal service combines PR #153's seven-day parameter policy with
 PR #154's private trial ledger. It is not a public API or a working purchase
 button. No real Stripe requests are made by the tests.
@@ -106,6 +118,15 @@ entrypoint. It uses its own explicit opt-in and Supabase-only pinned lock, keeps
 the platform's default JWT verification requirement, and serves the reviewed
 runtime. CI imports and exercises `Deno.serve` with trapped SDK transport. The
 function is not deployed and its environment opt-in is not configured.
+
+The Flutter client now has a separate, default-off entitlement reader behind
+`FLOTARYX_GARAGE_SANDBOX_ENTITLEMENT`. It can run only against the exact QA
+project, sends only `workspace_id` through the signed-in Supabase Functions
+client and accepts only the four-field entitlement response. Invalid data,
+transport failure, sign-out or an account change all deny paid features. When
+enabled, the owner billing page can display that authoritative trial/paid
+decision; it still exposes no Checkout control and does not yet gate the rest
+of the Garage workspace. The production build cannot enable this Sandbox path.
 
 `flotaryx-garage-test-webhook/index.ts` is one source-only endpoint for trial
 confirmation and the paid invoice/subscription lifecycle. Its function-specific

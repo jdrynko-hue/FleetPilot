@@ -142,6 +142,25 @@ class GarageBookingRepository {
     }
   }
 
+  // Private RPC results are scoped to the exact authenticated session.
+  // For mutations, a replaced session makes the outcome uncertain: callers
+  // must reconcile the original idempotency key, never blindly retry.
+  // Compare the token in memory only; never log or expose it.
+  Future<T> _sessionBoundRpc<T>(Future<T> Function() request) async {
+    _requireSignIn();
+    final actor = client.auth.currentUser!.id;
+    final sessionKey = client.auth.currentSession?.accessToken;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      throw StateError('Authenticated booking session required');
+    }
+    final result = await request();
+    if (client.auth.currentUser?.id != actor ||
+        client.auth.currentSession?.accessToken != sessionKey) {
+      throw StateError('Booking session changed during read');
+    }
+    return result;
+  }
+
   static GarageBookingStatus _status(Object? raw) => switch (raw) {
     'requested' => GarageBookingStatus.requested,
     'confirmed' => GarageBookingStatus.confirmed,
@@ -296,12 +315,10 @@ class GarageBookingRepository {
   }
 
   Future<GarageBookingProfile?> profile(String workspaceId) async {
-    _requireSignIn();
-    final userId = client.auth.currentUser!.id;
-    final raw = await client.rpc('garage_booking_profile',
-      params: {'p_workspace': _id(workspaceId)});
-    if (client.auth.currentUser?.id != userId) throw StateError('Account changed');
-    return parseProfile(raw, workspaceId);
+    final id = _id(workspaceId);
+    final raw = await _sessionBoundRpc(() => client.rpc(
+      'garage_booking_profile', params: {'p_workspace': id}));
+    return parseProfile(raw, id);
   }
 
   Future<bool> configure({
@@ -321,14 +338,14 @@ class GarageBookingRepository {
         !const {30,60,90,120}.contains(durationMinutes)) {
       throw ArgumentError('Invalid workshop booking configuration');
     }
-    final raw = await client.rpc('garage_booking_configure', params: {
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_configure', params: {
       'p_workspace': workspaceId,
       'p_city': city.trim(),
       'p_time_zone': timeZone,
       'p_services': services,
       'p_duration': durationMinutes,
       'p_listed': listed,
-    });
+    }));
     if (raw != true) throw const FormatException('Workshop opt-in not confirmed');
     return true;
   }
@@ -359,7 +376,7 @@ class GarageBookingRepository {
         desiredStart.isAfter(DateTime.now().add(const Duration(days:90)))) {
       throw ArgumentError('Invalid booking preference');
     }
-    final raw = await client.rpc(requestKey == null
+    final raw = await _sessionBoundRpc(() => client.rpc(requestKey == null
         ? 'garage_booking_request' : 'garage_booking_request_once', params: {
       if (requestKey != null) 'p_request_key': requestKey,
       'p_workspace': workspaceId,
@@ -370,25 +387,26 @@ class GarageBookingRepository {
       'p_service': service,
       'p_concern': concern.trim(),
       'p_start_at': desiredStart.toUtc().toIso8601String(),
-    });
+    }));
     return _uuidResult(raw);
   }
 
   Future<List<GarageBookingSummary>> myRequests() async {
-    _requireSignIn();
-    return parseMyRequests(await client.rpc('garage_booking_my_requests'));
+    final rows = await _sessionBoundRpc(() => client.rpc('garage_booking_my_requests'));
+    return parseMyRequests(rows);
   }
 
   Future<List<GarageBookingInboxItem>> workshopInbox(String workspaceId) async {
-    _requireSignIn();
-    return parseInbox(await client.rpc('garage_booking_shop_inbox',
-      params: {'p_workspace': _id(workspaceId)}));
+    final id = _id(workspaceId);
+    final rows = await _sessionBoundRpc(() => client.rpc(
+      'garage_booking_shop_inbox', params: {'p_workspace': id}));
+    return parseInbox(rows);
   }
 
   Future<GarageBookingStatus> respond(String bookingId, {required bool confirm}) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_respond',
-      params: {'p_booking': _id(bookingId), 'p_confirm': confirm});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_respond',
+      params: {'p_booking': _id(bookingId), 'p_confirm': confirm}));
     final parsed = _status(raw);
     if (parsed != (confirm ? GarageBookingStatus.confirmed : GarageBookingStatus.declined)) {
       throw const FormatException('Unexpected booking confirmation result');
@@ -398,8 +416,8 @@ class GarageBookingRepository {
 
   Future<GarageBookingStatus> cancel(String bookingId) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_cancel',
-      params: {'p_booking': _id(bookingId)});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_cancel',
+      params: {'p_booking': _id(bookingId)}));
     final parsed = _status(raw);
     if (!const {GarageBookingStatus.withdrawn,
                  GarageBookingStatus.cancellationRequested,
@@ -411,8 +429,8 @@ class GarageBookingRepository {
 
   Future<void> confirmCancellation(String bookingId) async {
     _requireSignIn();
-    final raw = await client.rpc('garage_booking_confirm_cancellation',
-      params: {'p_booking': _id(bookingId)});
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_confirm_cancellation',
+      params: {'p_booking': _id(bookingId)}));
     if (raw != 'cancelled') {
       throw const FormatException('Workshop cancellation not confirmed');
     }
