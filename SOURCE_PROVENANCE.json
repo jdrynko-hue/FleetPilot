@@ -1,0 +1,6 @@
+{
+  "candidate": "9229695eae8c920ce476d8bde651b2d8c80bd946",
+  "main_parent": "fd25fa292127d49d43b49e7feab1f6ed0b237fe8",
+  "proposed_branch": "qa/ordinary-postgrest-20261025",
+  "purpose": "Isolated synthetic HTTP/JWT acceptance; not hosted Auth E2E"
+}
