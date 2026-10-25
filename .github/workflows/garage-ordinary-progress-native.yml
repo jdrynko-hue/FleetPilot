@@ -1,0 +1,36 @@
+name: Isolated ordinary Garage PG17 acceptance only
+
+on:
+  push:
+    branches: [qa/native-ordinary-pg17-20261025]
+
+permissions:
+  contents: read
+
+jobs:
+  native-overlap:
+    # No paid/private-repository or self-hosted execution via this job.
+    if: github.repository == 'jdrynko-hue/FleetPilot' && github.event.repository.private == false && github.ref == 'refs/heads/qa/native-ordinary-pg17-20261025'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: postgres:17-bookworm
+    env:
+      GARAGE_NATIVE_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install test interpreter inside disposable container
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y --no-install-recommends python3
+      - name: Observe real row-lock overlap and preserved populated upgrade
+        shell: bash
+        run: bash tools/run_garage_progress_ci.sh
+
+# No hosted Supabase, secret/credential inputs, network database ports,
+# publication, branch creation, artifact upload or repository write operation.
+# Engine/source hashes are printed by the runner. This job is not PostgREST E2E.

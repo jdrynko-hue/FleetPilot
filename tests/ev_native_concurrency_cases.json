@@ -1,0 +1,29 @@
+[
+  {
+    "name": "duplicate-plan-creation",
+    "vehicle": "00000000-0000-4000-8000-000000000203",
+    "prepare_plan": false,
+    "first": "SELECT public.fleet_maintenance_set_plan('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000203','ev_battery_inspection','km',1000,1,19000,'2020-01-31','Local concurrency fixture');",
+    "second": "SELECT public.fleet_maintenance_set_plan('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000203','ev_battery_inspection','km',1000,1,19000,'2020-01-31','Local concurrency fixture');",
+    "second_error": null,
+    "expected": {"plans":1,"cycle":1,"history":0,"mileage":20000,"anchor":19000,"due":19621,"readings":0,"actor_ok":true,"report_ok":true}
+  },
+  {
+    "name": "duplicate-battery-completion",
+    "vehicle": "00000000-0000-4000-8000-000000000204",
+    "prepare_plan": true,
+    "first": "SELECT public.fleet_maintenance_complete('00000000-0000-4000-8000-000000000101',(SELECT id FROM public.fleet_maintenance_plans WHERE vehicle_id='00000000-0000-4000-8000-000000000204'),20000,current_date,'Local specialist workshop report');",
+    "second": "SELECT public.fleet_maintenance_complete('00000000-0000-4000-8000-000000000101',(SELECT id FROM public.fleet_maintenance_plans WHERE vehicle_id='00000000-0000-4000-8000-000000000204'),20000,current_date,'Local specialist workshop report');",
+    "second_error": "22023",
+    "expected": {"plans":1,"cycle":2,"history":1,"mileage":20000,"anchor":20000,"due":20621,"readings":0,"actor_ok":true,"report_ok":true}
+  },
+  {
+    "name": "odometer-before-battery-completion",
+    "vehicle": "00000000-0000-4000-8000-000000000205",
+    "prepare_plan": true,
+    "first": "SELECT public.fleet_maintenance_record_miles('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000205',21000,current_date);",
+    "second": "SELECT public.fleet_maintenance_complete('00000000-0000-4000-8000-000000000101',(SELECT id FROM public.fleet_maintenance_plans WHERE vehicle_id='00000000-0000-4000-8000-000000000205'),21000,current_date,'Local specialist workshop report');",
+    "second_error": null,
+    "expected": {"plans":1,"cycle":2,"history":1,"mileage":21000,"anchor":21000,"due":21621,"readings":1,"actor_ok":true,"report_ok":true}
+  }
+]

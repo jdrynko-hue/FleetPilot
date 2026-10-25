@@ -1,0 +1,6 @@
+{
+  "candidate_source": "a72d61f64eefcf24fd26d0f204195ddd4de4c54e",
+  "main_parent": "fd25fa292127d49d43b49e7feab1f6ed0b237fe8",
+  "proposed_branch": "qa/native-ordinary-pg17-20261025",
+  "purpose": "Review-only isolated native PG17 synthetic concurrency acceptance. No app, hosted connection or deploy config."
+}
