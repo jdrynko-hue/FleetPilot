@@ -6,6 +6,49 @@ below were made solely in the connected **Flotaryx sandbox** Stripe account
 `fyestmquqvkdebxxbcky`. Production `main`, the production Supabase
 project and Stripe Live were not modified.
 
+## Update: hosted positive and negative signature checks (26 October 2026)
+
+The QA signing secret and a **test-only** Stripe API key were entered into
+the encrypted Supabase QA Edge Function Secrets using its UI (not in GitHub).
+The `FLOTARYX_GARAGE_SANDBOX_WEBHOOK` value initially had an uppercase
+`True`, which correctly failed closed with HTTP 503. After correcting the
+exact value to lowercase `true`, the hosted checks on PR #192 succeeded:
+
+| Hosted QA check | Evidence | Result |
+| --- | --- | --- |
+| GET, unsupported method | HTTP 405 | PASS |
+| Empty POST, missing Stripe signature | HTTP 400 | PASS |
+| Synthetic POST, invalid Stripe signature | HTTP 400 | PASS |
+| Genuine signed Stripe Sandbox test-clock event | HTTP 200 | PASS |
+| Private Garage trial/invoice/event ledger after these checks | 0 / 0 / 0 | PASS |
+
+For the **single positive test**, the separate QA-only Stripe test-mode
+webhook was briefly enabled with one **temporary** additional event type
+`test_helpers.test_clock.created`. Creating one synthetic Stripe test clock
+generated that real Stripe event. The Supabase QA Edge Function logged
+`POST | 200` at 2026-10-26 13:58:34 UTC. The handler verifies the
+Stripe signature before acknowledging an event outside its billing
+reconciliation allowlist, so HTTP 200 supports that the configured
+`STRIPE_WEBHOOK_SECRET` verified this delivered event. This **does not**
+prove that a real Garage subscription, invoice or trial was accepted.
+
+**Safe state verified after the test:** the Stripe Garage test endpoint
+`we_1UUnBkFSePLPisoKOZXa6KDT` is **disabled** again, and its subscriptions
+have been restored to precisely the five billing lifecycle types (no
+test-clock event). Stripe Live, the pre-existing Fleet webhook, production
+Supabase and the public site were not modified. No customer, subscription or
+charge was created for the positive signature test. No secrets were logged
+or committed.
+
+**Next hosted E2E blockers:** separately enable guarded QA Checkout, Entitlement
+and Trial Cancellation flags only during an approved test; establish an
+authenticated **disposable** QA workshop-owner session through a supported
+Auth flow; then execute test-only Checkout and reconcile a *real* seven-day
+trial, cancellation and invoice outcomes against the isolated QA ledger.
+Afterward restore all flags to their disabled state and keep the Garage
+Stripe webhook disabled. Do not claim payment E2E PASS until matching Stripe
+objects and Supabase QA transactions have been verified.
+
 ## Verified configuration
 
 - One **Garage QA Pilot (TEST ONLY)** product, separate from the existing
