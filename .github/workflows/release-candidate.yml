@@ -72,6 +72,7 @@ jobs:
         with:
           name: qa-release-candidate-site
           path: site/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
           compression-level: 6
@@ -104,6 +105,7 @@ jobs:
         with:
           name: qa-garage-sandbox-preview-site
           path: garage-sandbox-site/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
           compression-level: 6
