@@ -16,6 +16,7 @@ type Price = {
 type Subscription = {
   id: string; livemode: boolean; status: string; customer: string;
   canceled_at: number | null; metadata: Record<string, string>;
+  trial_start?: number | null; trial_end?: number | null;
   items: { has_more: boolean; data: { quantity: number; price: Price }[] };
 };
 type InvoiceLine = {
@@ -24,7 +25,7 @@ type InvoiceLine = {
   pricing?: { price_details?: { price?: string } | null } | null;
 };
 type Invoice = {
-  id: string; livemode: boolean; status: string | null; paid: boolean;
+  id: string; livemode: boolean; status: string | null; paid?: boolean;
   customer: string; subscription?: string | null;
   parent?: { subscription_details?: { subscription?: string | null } | null } | null;
   currency: string; billing_reason: string | null;
@@ -101,6 +102,27 @@ function invoiceRecord(event: Event, invoice: Invoice, claim: Claim,
   };
 }
 
+// The initial free-trial invoice is a receipt, not a paid billing period.
+// Acknowledge only an exact, authoritative seven-day trial match; never write
+// the paid ledger or derive entitlement from this zero-value invoice.
+function initialTrialReceipt(event: Event, invoice: Invoice, sub: Subscription,
+  claim: Claim, subscription: string): boolean {
+  if (event.type !== 'invoice.paid' || invoice.id !== event.data.object.id ||
+      !invoiceId.test(invoice.id) || invoice.livemode !== false ||
+      invoice.status !== 'paid' || invoice.paid === false ||
+      invoice.billing_reason !== 'subscription_create' ||
+      invoice.customer !== claim.customer_id || invoice.currency !== claim.currency ||
+      subscriptionFromInvoice(invoice) !== subscription ||
+      invoice.amount_due !== 0 || invoice.amount_paid !== 0 || invoice.amount_remaining !== 0 ||
+      !Number.isSafeInteger(sub.trial_start) || !Number.isSafeInteger(sub.trial_end) ||
+      sub.trial_start! <= 0 || sub.trial_end! - sub.trial_start! !== 7 * 86400 ||
+      invoice.lines?.has_more !== false || !Array.isArray(invoice.lines.data) ||
+      invoice.lines.data.length !== 1) return false;
+  const line = invoice.lines.data[0];
+  return line.quantity === 1 && linePrice(line) === claim.price_id &&
+    line.period?.start === sub.trial_start && line.period?.end === sub.trial_end;
+}
+
 export function createGaragePaidWebhook(dependencies: {
   verify: (raw: Uint8Array, signature: string) => Promise<Event>;
   retrieveInvoice: (id: string) => Promise<unknown>;
@@ -174,6 +196,7 @@ export function createGaragePaidWebhook(dependencies: {
       if (typeof attempt !== 'string' || !uuid.test(attempt)) return reply(409);
       const claim = await dependencies.lookupClaim(attempt);
       if (!claim || !validSubscription(sub, claim)) return reply(409);
+      if (initialTrialReceipt(event, invoice, sub, claim, subscription)) return reply(200);
       const record = invoiceRecord(event, invoice, claim, subscription);
       if (!record) return reply(409);
 
