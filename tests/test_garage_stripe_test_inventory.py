@@ -12,18 +12,28 @@ PROD_URL = "https://wqhymmtiawfwjikdaujo.supabase.co/functions/v1/flotaryx-garag
 
 
 def valid_inventory():
+    # Synthetic Stripe prices and DB records; never real test/live customer data.
+    prices = [
+        {"id": f"price_fixture_{currency}_{interval}",
+         "product": "prod_fixture", "active": True, "livemode": False,
+         "currency": currency, "interval": interval, "unit_amount": 2500,
+         "type": "recurring",
+         "recurring": {"interval": interval, "interval_count": 1}}
+        for currency in ("gbp", "eur", "pln")
+        for interval in ("month", "year")
+    ]
+    catalog = [
+        {"plan_code": "garage_basic", "currency": p["currency"],
+         "billing_interval": p["interval"], "stripe_price_id": p["id"],
+         "amount_minor": p["unit_amount"], "active": True}
+        for p in prices
+    ]
     return {
         "livemode": False,
+        "qa_catalog": catalog,
         "products": [{"id": "prod_fixture", "name": "Flotaryx Garage",
                       "active": True}],
-        "prices": [
-            {"product": "prod_fixture", "active": True, "currency": currency,
-             "interval": interval, "unit_amount": 2500, "type": "recurring",
-             "recurring": {"interval": interval, "interval_count": 1},
-             "livemode": False}
-            for currency in ("gbp", "eur", "pln")
-            for interval in ("month", "year")
-        ],
+        "prices": prices,
         "webhook_endpoints": [{
             "enabled": True, "url": QA_URL,
             "enabled_events": sorted(REQUIRED_EVENTS),
@@ -117,6 +127,64 @@ class StripeGarageTestPreflight(unittest.TestCase):
         data = valid_inventory()
         data["webhook_endpoints"][0]["enabled_events"].append(None)
         self.assertTrue(any("invalid entries" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_absent_or_empty_blocks_checkout(self):
+        data = valid_inventory()
+        data.pop("qa_catalog")
+        self.assertTrue(any("Missing sanitized QA catalog" in e
+                            for e in verify_inventory(data)))
+        data["qa_catalog"] = []
+        self.assertTrue(any("Missing verified QA catalog prices" in e
+                            for e in verify_inventory(data)))
+
+    def test_qa_catalog_amount_mismatch_fails_closed(self):
+        data = valid_inventory()
+        data["qa_catalog"][0]["amount_minor"] = 2900
+        self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_price_id_cannot_point_to_fleet_price(self):
+        data = valid_inventory()
+        data["products"].append({"id": "prod_fleet", "name": "Flotaryx Fleet",
+                                  "active": True})
+        data["prices"].append({
+            **data["prices"][0], "id": "price_fleet",
+            "product": "prod_fleet"})
+        data["qa_catalog"][0]["stripe_price_id"] = "price_fleet"
+        self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_duplicate_mapping_rejected(self):
+        data = valid_inventory()
+        data["qa_catalog"].append(dict(data["qa_catalog"][0]))
+        self.assertTrue(any("Duplicate" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_invalid_amounts_and_price_types(self):
+        for invalid in (True, None, 0, -1, "2500"):
+            data = valid_inventory()
+            data["qa_catalog"][0]["amount_minor"] = invalid
+            self.assertTrue(any("Malformed active" in e
+                                for e in verify_inventory(data)))
+
+    def test_qa_catalog_rejects_test_price_livemode_true(self):
+        data = valid_inventory()
+        data["prices"][0]["livemode"] = True
+        self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_rejects_price_currency_interval_or_status_change(self):
+        for change in ({"currency": "usd"}, {"active": False},
+                       {"recurring": {"interval": "year", "interval_count": 1}}):
+            data = valid_inventory()
+            data["prices"][0].update(change)
+            self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+    def test_qa_catalog_rejects_malformed_and_duplicate_rows(self):
+        for value in ("not-a-row", None, 42):
+            data = valid_inventory()
+            data["qa_catalog"].append(value)
+            self.assertTrue(any("Malformed QA catalog row" in e
+                                for e in verify_inventory(data)))
+        data = valid_inventory()
+        data["qa_catalog"][1]["stripe_price_id"] = data["qa_catalog"][0]["stripe_price_id"]
+        self.assertTrue(any("Duplicate" in e for e in verify_inventory(data)))
 
     def test_schema_invalid_fails(self):
         self.assertTrue(verify_inventory({"livemode": False}))
