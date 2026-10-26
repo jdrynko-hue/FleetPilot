@@ -116,8 +116,8 @@ export async function startGarageSandboxCheckout(context: CheckoutContext, depen
     try {
       const result = await dependencies.stripe.checkout.sessions.create({ ...params,
         expires_at: prepared.expires_at, integration_identifier: `flotaryx_garage_${suffix}`,
-        success_url: 'https://flotaryx.com/app/?garage_checkout=success',
-        cancel_url: 'https://flotaryx.com/app/?garage_checkout=cancel',
+        success_url: 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=success',
+        cancel_url: 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=cancel',
         metadata, subscription_data: { ...params.subscription_data, metadata },
       }, { idempotencyKey: `flotaryx:garage:sandbox:${prepared.attempt_id}` });
       if (result.livemode !== false || !/^cs_test_[A-Za-z0-9]+$/.test(result.id)) {

@@ -48,7 +48,7 @@ function fixture() {
       } } };
   } };
   const request = (options = {}) => new Request('https://qa.example.test/checkout', {
-    method: 'POST', headers: { origin: 'https://flotaryx.com', authorization: 'Bearer fixture-token',
+    method: 'POST', headers: { origin: 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site', authorization: 'Bearer fixture-token',
       'content-type': 'application/json' }, body: JSON.stringify(input), ...options,
   });
   return { actor, workspace, configuration, input, user, catalog, price, customer, calls, errors, dependencies,
@@ -81,7 +81,7 @@ for (const [name, mutate] of [
     assert.deepEqual(f.calls, { auth: [], rpc: [], keys: [], create: [] });
   });
 }
-for (const field of ['actor_id', 'owner_user_id', 'price_id', 'customer_id', 'currency', 'trial_days', 'amount_minor']) {
+for (const field of ['actor_id', 'owner_user_id', 'price_id', 'customer_id', 'currency', 'trial_days', 'amount_minor', 'success_url', 'cancel_url', 'return_url', 'origin']) {
   test(`rejects browser-controlled ${field}`, async () => {
     const f = fixture(); f.input[field] = 'forged';
     assert.equal((await f.handler()(f.request())).status, 400);
@@ -145,4 +145,33 @@ test('configuration snapshot prevents key mutation during async Auth verificatio
   f.configuration.stripeKey = 'sk_live_fixture';
   assert.equal((await handler(f.request())).status, 200);
   assert.deepEqual(f.calls.keys, ['rk_test_fixture']);
+});
+
+// Browser-origin policy is deliberately narrower than the Auth trust boundary.
+// No-origin server calls still require the existing verified Auth and RPC checks.
+for (const origin of [
+  'https://flotaryx.com',
+  'https://www.flotaryx.com',
+  'null',
+  'http://flotaryx-qa-preview.fairdrake9.chatgpt.site',
+  'https://flotaryx-qa-preview.fairdrake9.chatgpt.site.evil.test',
+  'https://flotaryx-qa-preview.fairdrake9.chatgpt.site:444',
+]) test(`rejects disallowed browser preflight ${origin} without side effects`, async () => {
+  const f = fixture();
+  const response = await f.handler()(f.request({ method: 'OPTIONS', body: undefined, headers: { origin } }));
+  assert.equal(response.status, 403);
+  assert.equal(f.calls.auth.length, 0);
+  assert.equal(response.headers.get('access-control-allow-origin'),
+    'https://flotaryx-qa-preview.fairdrake9.chatgpt.site');
+});
+
+test('exact QA preview preflight permits browser Auth headers without upstream calls', async () => {
+  const f = fixture();
+  const origin = 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site';
+  const response = await f.handler()(f.request({ method: 'OPTIONS', body: undefined, headers: { origin } }));
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get('access-control-allow-origin'), origin);
+  assert.match(response.headers.get('access-control-allow-headers'), /authorization/);
+  assert.match(response.headers.get('access-control-allow-methods'), /POST/);
+  assert.equal(f.calls.auth.length, 0);
 });

@@ -349,7 +349,7 @@ Deno.test(
           headers: {
             authorization: `Bearer ${userToken}`,
             "content-type": "application/json",
-            origin: "https://flotaryx.com",
+            origin: "https://flotaryx-qa-preview.fairdrake9.chatgpt.site",
           },
           body: JSON.stringify({ workspace_id: workspace }),
         }),
@@ -393,7 +393,7 @@ Deno.test(
           headers: {
             authorization: `Bearer ${userToken}`,
             "content-type": "application/json",
-            origin: "https://flotaryx.com",
+            origin: "https://flotaryx-qa-preview.fairdrake9.chatgpt.site",
           },
           body: JSON.stringify({ workspace_id: workspace }),
         }),

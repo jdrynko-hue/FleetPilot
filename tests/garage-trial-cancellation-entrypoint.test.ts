@@ -212,7 +212,7 @@ Deno.test("trial cancellation Edge entrypoint is QA-only and completes the guard
           headers: {
             authorization: "Bearer fixture-user-token",
             "content-type": "application/json",
-            origin: "https://flotaryx.com",
+            origin: "https://flotaryx-qa-preview.fairdrake9.chatgpt.site",
           },
           body: JSON.stringify({ workspace_id: workspace }),
         }),

@@ -49,6 +49,8 @@ Deno.test('real SDK bootstrap stays QA-only and disabled without explicit config
       if (url.pathname === '/v1/checkout/sessions') {
         const form = new URLSearchParams(String(init?.body));
         if (form.get('subscription_data[trial_period_days]') !== '7' ||
+            form.get('success_url') !== 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=success' ||
+            form.get('cancel_url') !== 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=cancel' ||
             form.get('payment_method_collection') !== 'always' ||
             headers.get('idempotency-key') !== `flotaryx:garage:sandbox:${attempt}`) {
           throw new Error('SDK serialized unexpected trial terms');

@@ -11,7 +11,7 @@ type AuthClient = { auth: {
 type Catalog = { owner_user_id: string; workspace_id: string; plan_code: string;
   currency: string; billing_interval: string; price_id: string; amount_minor: number; customer_id: string };
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const origin = 'https://flotaryx.com';
+const origin = 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site';
 
 async function boundedJson(request: Request) {
   const reader = request.body?.getReader();

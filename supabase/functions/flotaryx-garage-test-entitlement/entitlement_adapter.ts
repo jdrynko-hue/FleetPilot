@@ -7,7 +7,7 @@ const qaUrl = "https://fyestmquqvkdebxxbcky.supabase.co";
 const headers = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store",
-  "Access-Control-Allow-Origin": "https://flotaryx.com",
+  "Access-Control-Allow-Origin": "https://flotaryx-qa-preview.fairdrake9.chatgpt.site",
   "Vary": "Origin",
 };
 
