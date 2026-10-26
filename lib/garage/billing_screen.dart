@@ -6,6 +6,7 @@ import '../core/localization.dart';
 import 'entitlement_repository.dart';
 import 'checkout_card.dart';
 import 'checkout_repository.dart';
+import 'checkout_text.dart';
 import 'trial_cancellation_repository.dart';
 import 'trial_cancellation_control.dart';
 
@@ -237,11 +238,22 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
               ],
               if (GarageSandboxCheckoutCard.available(widget.checkoutRepository,
                   widget.workspaceId, widget.isOwner))
-                GarageSandboxCheckoutCard(repository: widget.checkoutRepository!,
-                  workspaceId: widget.workspaceId!, isOwner: widget.isOwner,
-                  openCheckout: widget.openCheckout,
-                  onRefreshStatus: widget.loadEntitlement == null ? null : () {
-                    setState(_readForCurrentWorkshop);
+                FutureBuilder<GarageEntitlementRead>(future: _entitlement,
+                  builder: (context, snapshot) {
+                    final read = snapshot.data;
+                    final allowed = snapshot.connectionState == ConnectionState.done &&
+                      read?.state == GarageEntitlementReadState.verified &&
+                      read?.entitlement?.active == false && read?.trialAvailable == true;
+                    if (!allowed) return Align(alignment: Alignment.centerLeft,
+                      child: TextButton(onPressed: widget.loadEntitlement == null ? null : () {
+                        setState(_readForCurrentWorkshop);
+                      }, child: Text(GarageCheckoutText.get(9))));
+                    return GarageSandboxCheckoutCard(
+                      key: ValueKey('${widget.workspaceId}:$_readGeneration'),
+                      repository: widget.checkoutRepository!,
+                      workspaceId: widget.workspaceId!, isOwner: widget.isOwner,
+                      openCheckout: widget.openCheckout,
+                      onRefreshStatus: () => setState(_readForCurrentWorkshop));
                   })
               else Card(child: Padding(padding: const EdgeInsets.all(20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

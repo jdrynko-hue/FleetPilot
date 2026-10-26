@@ -68,7 +68,7 @@ class EcosystemModuleHub extends StatelessWidget {
             checkoutRepository: AppConfig.garageSandboxCheckoutUiEnabled
               ? GarageCheckoutRepository.forClient(client) : null,
             loadEntitlement: AppConfig.garageSandboxEntitlementEnabled
-              ? () => GarageEntitlementRepository.forClient(client)
+              ? () => GarageEntitlementRepository.forClient(client, billingStatus: true)
                 .load(destination.workspaceId!)
               : null),
         if (destination.canConfigure)

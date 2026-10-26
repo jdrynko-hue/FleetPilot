@@ -147,3 +147,26 @@ test('exact QA preview preflight permits browser Auth headers without upstream c
   assert.match(response.headers.get('access-control-allow-methods'), /POST/);
   assert.equal(f.calls.auth.length, 0);
 });
+
+for (const available of [true,false]) test(`billing status returns explicit trial availability ${available}`,async () => {
+  const f=fixture();f.status.active=false;f.status.source=null;f.status.access_ends_at=null;
+  const original=f.dependencies.serviceClient.rpc;
+  f.dependencies.serviceClient.rpc=async (name,args) => name==='garage_test_trial_available'
+    ? {data:available,error:null}:original(name,args);
+  const response=await f.handler()(f.request({workspace_id:f.workspace,billing_status:true}));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{entitlement:f.status,trial_available:available});
+});
+test('active subscription cannot offer a trial even if the hint is true',async () => {
+  const f=fixture();const original=f.dependencies.serviceClient.rpc;
+  f.dependencies.serviceClient.rpc=async (name,args) => name==='garage_test_trial_available'
+    ? {data:true,error:null}:original(name,args);
+  const response=await f.handler()(f.request({workspace_id:f.workspace,billing_status:true}));
+  assert.equal((await response.json()).trial_available,false);
+});
+for(const raw of [null,'true',{},false]) test(`eligibility failures never imply availability: ${JSON.stringify(raw)}`,async () => {
+  const f=fixture();const original=f.dependencies.serviceClient.rpc;
+  f.dependencies.serviceClient.rpc=async (name,args) => name==='garage_test_trial_available'
+    ? {data:raw,error:raw===false?{code:'42501'}:null}:original(name,args);
+  assert.equal((await f.handler()(f.request({workspace_id:f.workspace,billing_status:true}))).status,503);
+});

@@ -242,7 +242,7 @@ void main() {
       checkoutRepository: repo(), openCheckout: (_) async => true,
       loadEntitlement: () async {
         reads++;
-        return GarageEntitlementRead.verified(const GarageEntitlement(active: false));
+        return GarageEntitlementRead.verified(const GarageEntitlement(active: false), trialAvailable: true);
       })));
     await tester.pumpAndSettle();
     await prepareReady(tester);

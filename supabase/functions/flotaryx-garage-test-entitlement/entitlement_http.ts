@@ -75,7 +75,9 @@ export function createGarageSandboxEntitlementHandler(configuration: {
     try { input = await boundedJson(request); } catch { return reply(400, 'Invalid request'); }
     const raw = input as Record<string, unknown>;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) ||
-        Object.keys(raw).length !== 1 || typeof raw.workspace_id !== 'string' ||
+        (Object.keys(raw).sort().join(',') !== 'workspace_id' &&
+         !(Object.keys(raw).sort().join(',') === 'billing_status,workspace_id' && raw.billing_status === true)) ||
+        typeof raw.workspace_id !== 'string' ||
         !uuid.test(raw.workspace_id)) return reply(400, 'Invalid request');
     let actor: string;
     try {
@@ -96,6 +98,16 @@ export function createGarageSandboxEntitlementHandler(configuration: {
       }
       const status = entitlement(resolved.data);
       if (!status) return reply(503, 'Garage Sandbox access unavailable');
+      if (raw.billing_status === true) {
+        const eligibility = await dependencies.serviceClient.rpc(
+          'garage_test_trial_available', {p_actor: actor, p_workspace: raw.workspace_id});
+        if (eligibility.error || typeof eligibility.data !== 'boolean') {
+          return reply(503, 'Garage Sandbox access unavailable');
+        }
+        return new Response(JSON.stringify({entitlement: status,
+          trial_available: eligibility.data === true && status.active === false}),
+          {status: 200, headers});
+      }
       return new Response(JSON.stringify(status), { status: 200, headers });
     } catch { return reply(503, 'Garage Sandbox access unavailable'); }
   };
