@@ -41,6 +41,9 @@ export function buildGarageSandboxTrial(context: TrialContext) {
     customer: customer.id,
     client_reference_id: context.workspaceId,
     line_items: [{ price: price.id, quantity: 1 }],
+    // The server catalog selects the business-country currency. Never let
+    // browser location or Dashboard defaults replace it with another currency.
+    adaptive_pricing: { enabled: false },
     payment_method_collection: 'always' as const,
     subscription_data: { trial_period_days: 7, metadata: { ...metadata } },
     metadata,

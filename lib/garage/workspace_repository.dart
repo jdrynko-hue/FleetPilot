@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../auth/billing_markets.dart';
+import 'billing_markets.dart';
 
 /// Uses the existing tenant RLS and server-side owner membership trigger.
 /// Creation alone does not opt into public bookings or activate billing.
@@ -10,12 +10,12 @@ class GarageWorkspaceRepository {
 
   Future<void> create({required String name, required String country}) async {
     final user = client.auth.currentUser;
-    final currency = currencyForFleetCountry(country);
+    final currency = currencyForGarageCountry(country);
     if (user == null || user.emailConfirmedAt == null) {
       throw StateError('A verified account is required');
     }
     if (name.trim().length < 2 || name.trim().length > 160 || currency == null ||
-        !supportedFleetCountries.containsKey(country)) {
+        !supportedGarageCountries.containsKey(country)) {
       throw ArgumentError('Invalid workshop details');
     }
     final row = await client.from('garage_workspaces').insert({

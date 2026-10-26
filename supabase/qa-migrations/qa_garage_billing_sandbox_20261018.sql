@@ -391,7 +391,7 @@ BEGIN
   expected_currency := CASE WHEN workspace_country='GB' THEN 'gbp'
     WHEN workspace_country='PL' THEN 'pln'
     WHEN workspace_country=ANY(ARRAY['AT','BE','BG','HR','CY','EE','FI','FR','DE','GR',
-      'IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES']) THEN 'eur' ELSE NULL END;
+      'IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES','CZ','DK','HU','RO','SE']) THEN 'eur' ELSE NULL END;
   IF expected_currency IS NULL OR lower(workspace_currency) IS DISTINCT FROM expected_currency THEN
     RAISE EXCEPTION 'Garage Sandbox billing unavailable' USING ERRCODE='P0001';
   END IF;

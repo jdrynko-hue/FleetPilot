@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../auth/billing_markets.dart';
+import 'billing_markets.dart';
 import '../core/localization.dart';
 import 'garage_ui_text.dart';
 import 'workspace_repository.dart';
@@ -94,14 +94,14 @@ class _CreateWorkspaceState extends State<GarageCreateWorkspaceScreen> {
           DropdownButtonFormField<String>(key: const Key('garage_create_country'),
             initialValue: _country, isExpanded: true,
             decoration: InputDecoration(labelText: tr('country')),
-            items: supportedFleetCountries.keys.map((code) => DropdownMenuItem(
-              value: code, child: Text(fleetCountryName(code,
+            items: supportedGarageCountries.keys.map((code) => DropdownMenuItem(
+              value: code, child: Text(garageCountryName(code,
                 locale: AppLocale.language.value), overflow: TextOverflow.ellipsis))).toList(),
             onChanged: enabled ? (value) {
               if (value != null) setState(() => _country = value);
             } : null),
           const SizedBox(height: 12),
-          Text('${tr('currency')}: ${currencyForFleetCountry(_country)}',
+          Text('${tr('currency')}: ${currencyForGarageCountry(_country)}',
             key: const Key('garage_create_currency')),
           CheckboxListTile(key: const Key('garage_create_business'), value: _business,
             contentPadding: EdgeInsets.zero,
