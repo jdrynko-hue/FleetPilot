@@ -35,6 +35,18 @@ class AppConfig {
       garageSandboxCheckoutEnabledFor(supabaseUrl,
           requested: _garageSandboxCheckoutRequested);
 
+  static const _garageSandboxCheckoutUiRequested =
+      bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_CHECKOUT_UI');
+  static bool garageSandboxCheckoutUiEnabledFor(String url,
+      {required bool requested, required bool clientEnabled,
+       required bool entitlementEnabled}) =>
+      requested && clientEnabled && entitlementEnabled && isEcosystemQaBackend(url);
+  static bool get garageSandboxCheckoutUiEnabled =>
+      garageSandboxCheckoutUiEnabledFor(supabaseUrl,
+        requested: _garageSandboxCheckoutUiRequested,
+        clientEnabled: garageSandboxCheckoutEnabled,
+        entitlementEnabled: garageSandboxEntitlementEnabled);
+
   // Production is a separate explicit build opt-in after backend installation.
   // Neither flag can connect the ecosystem to an arbitrary backend.
   static const _productionRequested =
