@@ -17,8 +17,10 @@ def valid_inventory():
         {"id": f"price_fixture_{currency}_{interval}",
          "product": "prod_fixture", "active": True, "livemode": False,
          "currency": currency, "interval": interval, "unit_amount": 2500,
-         "type": "recurring",
-         "recurring": {"interval": interval, "interval_count": 1}}
+         "type": "recurring", "billing_scheme": "per_unit",
+         "metadata": {"product": "garage", "plan_code": "garage_basic"},
+         "recurring": {"interval": interval, "interval_count": 1,
+                       "usage_type": "licensed"}}
         for currency in ("gbp", "eur", "pln")
         for interval in ("month", "year")
     ]
@@ -185,6 +187,31 @@ class StripeGarageTestPreflight(unittest.TestCase):
         data = valid_inventory()
         data["qa_catalog"][1]["stripe_price_id"] = data["qa_catalog"][0]["stripe_price_id"]
         self.assertTrue(any("Duplicate" in e for e in verify_inventory(data)))
+
+    def test_qa_price_metadata_must_match_checkout_contract(self):
+        for bad_metadata in (
+            {}, {"product": "fleet", "plan_code": "garage_basic"},
+            {"product": "garage", "plan_code": "garage_other"},
+            {"product": "garage", "plan_code": None},
+        ):
+            data = valid_inventory()
+            data["prices"][0]["metadata"] = bad_metadata
+            self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+        data = valid_inventory()
+        del data["prices"][0]["metadata"]
+        self.assertTrue(any("differs" in e for e in verify_inventory(data)))
+
+    def test_qa_price_must_be_licensed_per_unit(self):
+        for patch in (
+            {"billing_scheme": "tiered"},
+            {"billing_scheme": None},
+            {"recurring": {"interval": "month", "interval_count": 1,
+                           "usage_type": "metered"}},
+        ):
+            data = valid_inventory()
+            data["prices"][0].update(patch)
+            self.assertTrue(any("differs" in e for e in verify_inventory(data)))
 
     def test_schema_invalid_fails(self):
         self.assertTrue(verify_inventory({"livemode": False}))
