@@ -20,6 +20,37 @@ A **read-only** inspection of the connected, explicitly named **Flotaryx sandbox
 
 **Hard NO-GO for hosted Garage payment E2E** until a deliberately isolated test-mode webhook is approved for QA, a Garage-specific price catalog is approved, and the signed webhook and required events are independently verified. No Stripe keys, customer details, full webhook URL, or test object IDs are recorded here.
 
+## Read-only recheck and catalog parity — 26 October 2026
+
+- Stripe Sandbox remained in **test mode**; only the three Fleet products
+  (Starter/Pro/Business) and 18 Fleet prices were found. There was no
+  Garage-specific product or enabled Garage webhook; the existing test webhook
+  still targets the production Fleet backend. It must **not** be redirected,
+  disabled or deleted as part of Garage QA.
+- Hosted Supabase QA billing catalog remains **empty**. No Garage trial claims,
+  customer mappings, paid invoice ledger entries or billing events were
+  recorded at the read-only recheck. This is a configuration blocker, not
+  permission to insert records.
+- `tools/check_garage_stripe_test_inventory.py` now requires a **sanitized**
+  `qa_catalog` array as well as the existing Stripe test inventory. Each
+  active entry must match one active Garage Stripe test price ID, positive
+  minor-unit amount, currency and recurring period. Missing entries, duplicate
+  mappings or test/Live ambiguity are rejected.
+- For a future **offline**, approved configuration check, prepare only a
+  sanitized JSON file containing `livemode: false`, `products`,
+  `prices`, `webhook_endpoints`, and `qa_catalog`. A QA row contains
+  `plan_code`, `currency`, `billing_interval`, `stripe_price_id`,
+  `amount_minor` and `active`; test price records include their
+  `id`, `product`, `active`, `livemode`, `type`, `currency`,
+  `unit_amount`, `interval` and `recurring` object.
+  Do **not** include keys, customer records, personal data, payment methods,
+  signing secrets, raw events or credentials. Execute:
+  `python3 tools/check_garage_stripe_test_inventory.py <sanitized-file.json>`.
+  The preflight makes **no network or database writes**.
+- The expected current result is **NO-GO**. Passing this static check after
+  future catalog and webhook setup will still **not** prove real hosted
+  Stripe Checkout, authenticated webhooks, invoice settlement or entitlement.
+
 ## Preconditions — all require separate explicit authorization
 
 1. Confirm a disposable QA-only workshop identity and membership; do not create any real user account as part of automated work without permission.
