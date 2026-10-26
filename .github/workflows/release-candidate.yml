@@ -72,6 +72,40 @@ jobs:
         with:
           name: qa-release-candidate-site
           path: site/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 6
+
+      # Separate opt-in artifact for the owner-only Sandbox UI. This job never
+      # enables server flags, activates catalog rows, or publishes a Site.
+      - name: Build isolated Garage Sandbox preview artifact
+        run: >-
+          flutter build web --release --no-web-resources-cdn
+          --base-href "/app/"
+          --dart-define=FLOTARYX_ECOSYSTEM_QA=true
+          --dart-define=FLOTARYX_GARAGE_SANDBOX_ENTITLEMENT=true
+          --dart-define=FLOTARYX_GARAGE_SANDBOX_CHECKOUT_CLIENT=true
+          --dart-define=FLOTARYX_GARAGE_SANDBOX_CHECKOUT_UI=true
+          --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_zCJeAEB-H39k6Y3785vxEQ_UwBMJyqs
+          --dart-define=QA_AUTH_CALLBACK_URL=https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/
+      - name: Assemble isolated Garage Sandbox preview without publishing
+        run: |
+          cp -a site garage-sandbox-site
+          rm garage-sandbox-site/qa-release-integrity.json
+          rm -rf garage-sandbox-site/app
+          mkdir -p garage-sandbox-site/app
+          cp -a build/web/. garage-sandbox-site/app/
+          python3 tools/verify_release_candidate.py garage-sandbox-site
+          python3 tools/release_integrity.py write garage-sandbox-site --commit "$GITHUB_SHA"
+          python3 tools/release_integrity.py check garage-sandbox-site --commit "$GITHUB_SHA"
+      - name: Preserve unpublished Garage Sandbox preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-garage-sandbox-preview-site
+          path: garage-sandbox-site/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
           compression-level: 6
