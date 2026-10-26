@@ -47,6 +47,13 @@ class AppConfig {
         clientEnabled: garageSandboxCheckoutEnabled,
         entitlementEnabled: garageSandboxEntitlementEnabled);
 
+  // Independently enabled only in an exact QA build with entitlement reads.
+  static const _garageTrialCancellationRequested =
+      bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_TRIAL_CANCELLATION_CLIENT');
+  static bool get garageSandboxTrialCancellationEnabled =>
+      _garageTrialCancellationRequested && garageSandboxEntitlementEnabled &&
+      isEcosystemQaBackend(supabaseUrl);
+
   // Production is a separate explicit build opt-in after backend installation.
   // Neither flag can connect the ecosystem to an arbitrary backend.
   static const _productionRequested =
