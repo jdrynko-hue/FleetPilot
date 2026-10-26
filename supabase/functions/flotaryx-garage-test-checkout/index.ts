@@ -12,6 +12,9 @@ const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const enabled = Deno.env.get('FLOTARYX_GARAGE_SANDBOX_CHECKOUT') === 'true';
 
 if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) || !anonKey || !serviceKey || anonKey === serviceKey) {
+  console.warn('garage_checkout_bootstrap_failure', !enabled ? 'disabled' :
+    url !== qaUrl ? 'qa_url' : !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) ? 'test_key_format' :
+    !anonKey ? 'anon_key_missing' : !serviceKey ? 'service_key_missing' : 'keys_not_distinct');
   Deno.serve(() => new Response(JSON.stringify({ error: 'Garage Sandbox billing unavailable' }), {
     status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site', 'Vary': 'Origin' },
@@ -23,6 +26,7 @@ if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) 
   const serviceClient = createClient(qaUrl, serviceKey, options);
   Deno.serve(createGarageSandboxCheckoutHandler({ enabled, supabaseUrl: qaUrl, stripeKey }, {
     authClient, serviceClient,
+    diagnostic(stage) { console.warn('garage_checkout_failure', stage); },
     createStripeClient(key) {
       const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient(),
         maxNetworkRetries: 1, timeout: 12000 });

@@ -175,3 +175,39 @@ test('exact QA preview preflight permits browser Auth headers without upstream c
   assert.match(response.headers.get('access-control-allow-methods'), /POST/);
   assert.equal(f.calls.auth.length, 0);
 });
+
+for (const [failure, expected] of [
+  ['catalog', 'catalog_resolve'], ['price', 'stripe_price_read'],
+  ['customer', 'stripe_customer_read'], ['validation', 'stripe_catalog_validate'],
+]) {
+  test(`diagnostics identify ${failure} without exposing private error data`, async () => {
+    const f = fixture(); const stages = [];
+    f.dependencies.diagnostic = stage => stages.push(stage);
+    if (failure === 'catalog') f.errors.storage = true;
+    else if (failure === 'validation') f.customer.metadata.product = 'unexpected';
+    else {
+      const create = f.dependencies.createStripeClient;
+      f.dependencies.createStripeClient = key => {
+        const stripe = create(key);
+        stripe[failure === 'price' ? 'prices' : 'customers'].retrieve = async () => {
+          throw new Error('PRIVATE sk_test_secret Bearer token customer_id');
+        };
+        return stripe;
+      };
+    }
+    const response = await f.handler()(f.request());
+    assert.equal(response.status, 503);
+    assert.deepEqual(stages, [expected]);
+    assert.equal(await response.text(), JSON.stringify({error:'Garage Sandbox billing unavailable'}));
+    assert.equal(f.calls.create.length, 0);
+    assert.equal(f.calls.rpc.some(call => call.name === 'garage_reserve_test_trial'), false);
+  });
+}
+
+test('diagnostic sink failure does not escape the fail-closed response', async () => {
+  const f = fixture(); f.errors.storage = true;
+  f.dependencies.diagnostic = () => { throw new Error('PRIVATE sink error'); };
+  const response = await f.handler()(f.request());
+  assert.equal(response.status, 503);
+  assert.equal(await response.text(), JSON.stringify({error:'Garage Sandbox billing unavailable'}));
+});
