@@ -53,3 +53,14 @@ test('only literal true acknowledges a database write', async () => {
   const storage = garagePaidWebhookStorage({ rpc: async () => ({ data: 'true', error: null }) });
   assert.equal(await storage.recordFailed({ ...base, attemptCount: 1 }), false);
 });
+
+test('clock invoice uses separate service RPC without rewriting event creation',async () => {
+  const calls=[];
+  const storage=garagePaidWebhookStorage({rpc:async (name,args) => {
+    calls.push([name,args]);return {data:true,error:null};
+  }});
+  await storage.recordPaid({...base,amountPaid:4900,paidAt:'virtual-paid',testClockTime:'virtual-now'});
+  assert.equal(calls[0][0],'garage_record_test_clock_invoice_paid');
+  assert.equal(calls[0][1].p_event_created,'event-time');
+  assert.equal(calls[0][1].p_test_clock_time,'virtual-now');
+});

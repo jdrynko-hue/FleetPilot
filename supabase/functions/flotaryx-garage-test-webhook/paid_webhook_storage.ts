@@ -31,8 +31,10 @@ export function garagePaidWebhookStorage(client: Client): Storage {
         throw new Error('garage_paid_storage_unavailable');
       return result as Awaited<ReturnType<Storage['lookupClaim']>>;
     },
-    recordPaid: async record => (await rpc('garage_record_test_invoice_paid', {
+    recordPaid: async record => (await rpc(record.testClockTime === undefined
+      ? 'garage_record_test_invoice_paid' : 'garage_record_test_clock_invoice_paid', {
       ...invoiceArgs(record), p_event_type: record.eventType,
+      ...(record.testClockTime === undefined ? {} : {p_test_clock_time: record.testClockTime}),
       p_amount_paid: record.amountPaid,
       p_paid_at: record.paidAt, p_livemode: false,
     })) === true,

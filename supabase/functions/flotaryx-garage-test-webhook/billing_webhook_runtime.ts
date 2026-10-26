@@ -157,6 +157,7 @@ export function createGarageSandboxBillingWebhookRuntime(configuration: {
         data: { object: projected },
       }),
       retrieveInvoice: (id) => stripe.invoices.retrieve(id),
+      retrieveTestClock: (id) => stripe.testHelpers.testClocks.retrieve(id),
       retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
     });
     return handler(forwarded);

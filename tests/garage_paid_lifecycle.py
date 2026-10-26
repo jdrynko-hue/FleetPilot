@@ -188,4 +188,23 @@ assert run(f"SELECT public.garage_lookup_test_entitlement('{attempt}');",
            'service_role')
 checks += 1
 
+# Clock events use wall time, while the paid invoice uses virtual time.
+clock_paid = paid('evt_clockpaid', 'in_clockpaid',
+    '2030-04-08T00:00:00Z', '2030-05-08T00:00:00Z',
+    '2030-04-08T01:00:00Z', '2030-01-01T00:00:00Z')
+run(clock_paid, 'service_role', error='22023')
+clock_paid = clock_paid.replace('garage_record_test_invoice_paid',
+    'garage_record_test_clock_invoice_paid').replace('false);',
+    "false,'2030-04-08T02:00:00Z');")
+for role in ['anon', 'authenticated']:
+    run(clock_paid, role, error='42501')
+assert run(clock_paid, 'service_role') == 't'
+assert run(clock_paid, 'service_role') == 't'
+assert run("SELECT event_created_at='2030-01-01T00:00:00Z' FROM "
+    "garage_private.test_billing_events WHERE event_id='evt_clockpaid';") == 't'
+checks += 3
+bad_clock = clock_paid.replace('evt_clockpaid','evt_badclock').replace(
+    'in_clockpaid','in_badclock').replace('2030-04-08T02:00:00Z','2030-04-08T00:00:00Z')
+run(bad_clock, 'service_role', error='22023')
+
 print(f'Garage paid lifecycle: {checks} checks PASS (replay/order/access loss)')
