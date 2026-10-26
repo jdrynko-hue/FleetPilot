@@ -23,6 +23,7 @@ if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) 
   const serviceClient = createClient(qaUrl, serviceKey, options);
   Deno.serve(createGarageSandboxCheckoutHandler({ enabled, supabaseUrl: qaUrl, stripeKey }, {
     authClient, serviceClient,
+    diagnostic(stage) { console.warn('garage_checkout_failure', stage); },
     createStripeClient(key) {
       const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient(),
         maxNetworkRetries: 1, timeout: 12000 });
