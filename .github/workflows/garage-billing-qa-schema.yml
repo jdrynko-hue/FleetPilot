@@ -83,7 +83,7 @@ jobs:
               JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
               WHERE n.nspname='garage_private'
                 AND p.proname IN ('record_test_billing_event','test_entitlement_at');
-            IF public_rpcs <> 13 OR private_helpers <> 2 THEN
+            IF public_rpcs <> 14 OR private_helpers <> 2 THEN
               RAISE EXCEPTION 'Billing RPC count differs: %, %', public_rpcs, private_helpers;
             END IF;
 
