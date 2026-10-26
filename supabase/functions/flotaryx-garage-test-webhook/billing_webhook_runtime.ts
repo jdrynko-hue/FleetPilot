@@ -83,7 +83,21 @@ export function createGarageSandboxBillingWebhookRuntime(configuration: {
     !stripeKey || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) ||
     !signingSecret || !/^whsec_[A-Za-z0-9]+$/.test(signingSecret) ||
     !serviceKey
-  ) return async (_request: Request) => reply(503);
+  ) {
+    // Internal QA diagnostics contain field NAMES ONLY: never print keys,
+    // prefixes, lengths, bodies, Authorization, or secret contents.
+    const reasons = [
+      enabled !== true ? "feature_opt_in_missing" : null,
+      supabaseUrl !== qaUrl ? "qa_project_mismatch" : null,
+      !stripeKey || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey)
+        ? "stripe_test_key_invalid_or_missing" : null,
+      !signingSecret || !/^whsec_[A-Za-z0-9]+$/.test(signingSecret)
+        ? "stripe_signing_secret_invalid_or_missing" : null,
+      !serviceKey ? "supabase_service_key_missing" : null,
+    ].filter(Boolean);
+    console.warn("Garage Sandbox QA configuration NO-GO:", reasons.join(","));
+    return async (_request: Request) => reply(503);
+  }
 
   const stripe = new Stripe(stripeKey, {
     httpClient: Stripe.createFetchHttpClient(),
