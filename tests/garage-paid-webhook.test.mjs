@@ -126,3 +126,59 @@ test('false ledger acknowledgement requests a Stripe retry', async () => {
   const f = fixture(); f.deps.recordFailed = async () => false;
   assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 503);
 });
+
+function freeTrialFixture() {
+  const f = fixture('invoice.paid');
+  Object.assign(f.sub, {status:'trialing', trial_start:start, trial_end:start + 7 * 86400});
+  Object.assign(f.invoice, {status:'paid', billing_reason:'subscription_create',
+    amount_due:0, amount_paid:0, amount_remaining:0});
+  // Current Stripe invoice responses can omit the legacy paid boolean.
+  delete f.invoice.paid;
+  f.invoice.lines.data[0].period.end = f.sub.trial_end;
+  return f;
+}
+
+test('initial zero-value trial receipt is acknowledged without a billing ledger write, including replay', async () => {
+  const f = freeTrialFixture(); const handler = createGaragePaidWebhook(f.deps);
+  assert.equal((await handler(f.request())).status, 200);
+  assert.equal((await handler(f.request())).status, 200);
+  assert.deepEqual(f.calls.map(call => call[0]),
+    ['verify','invoice','subscription','lookup','verify','invoice','subscription','lookup']);
+});
+
+for (const status of ['active','canceled','past_due']) {
+  test(`delayed initial trial receipt cannot alter current ${status} access`, async () => {
+    const f = freeTrialFixture(); f.sub.status = status;
+    assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 200);
+    assert.equal(f.calls.some(call => ['paid','failed','ended'].includes(call[0])), false);
+  });
+}
+
+for (const [name, change] of [
+  ['different invoice ID', f => f.invoice.id = 'in_other'],
+  ['live invoice', f => f.invoice.livemode = true],
+  ['different customer', f => f.invoice.customer = 'cus_other'],
+  ['different currency', f => f.invoice.currency = 'eur'],
+  ['positive amount due', f => f.invoice.amount_due = 1],
+  ['positive amount paid', f => f.invoice.amount_paid = 1],
+  ['amount remaining', f => f.invoice.amount_remaining = 1],
+  ['cycle invoice', f => f.invoice.billing_reason = 'subscription_cycle'],
+  ['not paid', f => f.invoice.status = 'open'],
+  ['contradictory legacy state', f => f.invoice.paid = false],
+  ['missing trial start', f => delete f.sub.trial_start],
+  ['short trial', f => f.sub.trial_end--],
+  ['long trial', f => f.sub.trial_end++],
+  ['different line period', f => f.invoice.lines.data[0].period.start++],
+  ['different line price', f => f.invoice.lines.data[0].pricing.price_details.price = 'price_other'],
+  ['multiple lines', f => f.invoice.lines.data.push(f.invoice.lines.data[0])],
+  ['pagination', f => f.invoice.lines.has_more = true],
+  ['different quantity', f => f.invoice.lines.data[0].quantity = 2],
+  ['payment failed event', f => f.event.type = 'invoice.payment_failed'],
+  ['missing claim', f => f.deps.lookupClaim = async () => null],
+]) {
+  test(`initial trial receipt rejects ${name} without granting paid access`, async () => {
+    const f = freeTrialFixture(); change(f);
+    assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 409);
+    assert.equal(f.calls.some(call => ['paid','failed','ended'].includes(call[0])), false);
+  });
+}
