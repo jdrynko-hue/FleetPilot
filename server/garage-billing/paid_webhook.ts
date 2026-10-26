@@ -109,7 +109,7 @@ function initialTrialReceipt(event: Event, invoice: Invoice, sub: Subscription,
   claim: Claim, subscription: string): boolean {
   if (event.type !== 'invoice.paid' || invoice.id !== event.data.object.id ||
       !invoiceId.test(invoice.id) || invoice.livemode !== false ||
-      invoice.status !== 'paid' || invoice.paid === false ||
+      invoice.status !== 'paid' || (invoice.paid !== undefined && invoice.paid !== true) ||
       invoice.billing_reason !== 'subscription_create' ||
       invoice.customer !== claim.customer_id || invoice.currency !== claim.currency ||
       subscriptionFromInvoice(invoice) !== subscription ||
@@ -202,7 +202,7 @@ export function createGaragePaidWebhook(dependencies: {
 
       // A delayed payment_failed delivery may observe an invoice already paid.
       // Current authoritative paid state wins, never the event name alone.
-      if (invoice.status === 'paid' && invoice.paid === true &&
+      if (invoice.status === 'paid' && (invoice.paid === undefined || invoice.paid === true) &&
           invoice.amount_paid === invoice.amount_due && invoice.amount_remaining === 0 &&
           Number.isSafeInteger(invoice.status_transitions?.paid_at) &&
           invoice.status_transitions!.paid_at! > 0) {
@@ -211,7 +211,7 @@ export function createGaragePaidWebhook(dependencies: {
         return reply(saved === true ? 200 : 503);
       }
       if (event.type === 'invoice.payment_failed' && invoice.status === 'open' &&
-          invoice.paid === false && invoice.amount_paid === 0 &&
+          (invoice.paid === undefined || invoice.paid === false) && invoice.amount_paid === 0 &&
           invoice.amount_remaining === invoice.amount_due &&
           Number.isSafeInteger(invoice.attempt_count) && invoice.attempt_count > 0) {
         const saved = await dependencies.recordFailed({ ...record,
