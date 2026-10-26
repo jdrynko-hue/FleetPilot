@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fleetpilot/auth/billing_markets.dart';
+import 'package:fleetpilot/garage/billing_markets.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/garage/booking_profile_screen.dart';
 import 'package:fleetpilot/garage/consumer_booking_repository.dart';
@@ -8,7 +8,7 @@ import 'package:fleetpilot/garage/workshop_time_zone.dart';
 
 void main() {
   test('all supported workshop countries have an editable IANA suggestion', () {
-    expect(workshopTimeZoneSuggestions.keys.toSet(), supportedFleetCountries.keys.toSet());
+    expect(workshopTimeZoneSuggestions.keys.toSet(), supportedGarageCountries.keys.toSet());
     expect(suggestedWorkshopTimeZone(' pl '), 'Europe/Warsaw');
     expect(suggestedWorkshopTimeZone('GB'), 'Europe/London');
     expect(suggestedWorkshopTimeZone('ES'), 'Europe/Madrid');

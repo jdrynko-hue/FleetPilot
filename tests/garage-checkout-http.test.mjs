@@ -29,7 +29,7 @@ function fixture() {
     const data = name === 'garage_resolve_test_billing_context' ? structuredClone(catalog)
       : name === 'garage_reserve_test_trial' ? { attempt_id: attempt, state: 'reserved' }
       : name === 'garage_prepare_test_checkout' ? { state: 'prepared', attempt_id: attempt,
-        workspace_id: workspace, customer_id: customer.id, price_id: price.id, currency: 'gbp',
+        workspace_id: workspace, customer_id: customer.id, price_id: price.id, currency: catalog.currency,
         billing_interval: 'month', expires_at: now / 1000 + 3600, session_id: null, checkout_url: null }
       : name === 'garage_save_test_checkout' ? true : null;
     assert.notEqual(data, null, `Unexpected RPC ${name}`);
@@ -211,3 +211,14 @@ test('diagnostic sink failure does not escape the fail-closed response', async (
   assert.equal(response.status, 503);
   assert.equal(await response.text(), JSON.stringify({error:'Garage Sandbox billing unavailable'}));
 });
+
+for (const currency of ['gbp', 'pln', 'eur']) {
+  test(`Checkout preserves server catalog ${currency} and disables location-based conversion`, async () => {
+    const f = fixture(); f.catalog.currency = currency; f.price.currency = currency;
+    const response = await f.handler()(f.request());
+    assert.equal(response.status, 200);
+    assert.deepEqual(f.calls.create[0].params.adaptive_pricing, {enabled:false});
+    assert.equal(f.calls.create[0].params.line_items[0].price, f.catalog.price_id);
+    assert.equal(f.calls.rpc.find(call => call.name === 'garage_reserve_test_trial').args.p_currency, currency);
+  });
+}

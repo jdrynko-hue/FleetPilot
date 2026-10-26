@@ -66,6 +66,19 @@ run(f"SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub','{C}',fa
 run(f"INSERT INTO garage_private.test_billing_customers VALUES ('{C}','{WC}','cus_catalogeur');")
 assert json.loads(run(resolve(actor=C, workspace=WC), 'service_role'))['currency'] == 'eur'
 checks += 1
+# All 27 EU members, not just countries using the euro domestically.
+eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU',
+      'IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE']
+for country in ['GB'] + eu:
+    expected = 'gbp' if country == 'GB' else 'pln' if country == 'PL' else 'eur'
+    run(f"UPDATE public.garage_workspaces SET country='{country}',currency='{expected.upper()}' WHERE id='{WC}';")
+    context = json.loads(run(resolve(actor=C, workspace=WC), 'service_role'))
+    assert context['currency'] == expected and context['price_id'] == f'price_{expected}fixture'
+    checks += 1
+    wrong = 'gbp' if expected != 'gbp' else 'eur'
+    run(f"UPDATE public.garage_workspaces SET currency='{wrong.upper()}' WHERE id='{WC}';")
+    run(resolve(actor=C, workspace=WC), 'service_role', error='P0001')
+run(f"UPDATE public.garage_workspaces SET country='FR',currency='EUR' WHERE id='{WC}';")
 run(resolve(plan='missing'), 'service_role', error='P0001')
 run(resolve(plan='INVALID'), 'service_role', error='22023')
 run(resolve(interval='week'), 'service_role', error='22023')

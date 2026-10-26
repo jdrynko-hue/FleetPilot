@@ -9,6 +9,8 @@ const workshopTimeZoneSuggestions = <String, String>{
   'LT': 'Europe/Vilnius', 'LU': 'Europe/Luxembourg', 'MT': 'Europe/Malta',
   'NL': 'Europe/Amsterdam', 'PT': 'Europe/Lisbon', 'SK': 'Europe/Bratislava',
   'SI': 'Europe/Ljubljana', 'ES': 'Europe/Madrid',
+  'CZ': 'Europe/Prague', 'DK': 'Europe/Copenhagen', 'HU': 'Europe/Budapest',
+  'RO': 'Europe/Bucharest', 'SE': 'Europe/Stockholm',
 };
 
 String suggestedWorkshopTimeZone(String? country) =>
