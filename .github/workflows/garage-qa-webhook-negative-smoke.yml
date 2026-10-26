@@ -1,0 +1,24 @@
+name: Garage QA webhook rejects unsigned requests
+
+on:
+  pull_request:
+    branches:
+      - integration/garage-fleet-booking-qa-candidate-20261018
+    paths:
+      - 'tools/smoke_garage_qa_webhook_rejections.sh'
+      - '.github/workflows/garage-qa-webhook-negative-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  webhook-signature-denials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify smoke script syntax (offline)
+        run: bash -n tools/smoke_garage_qa_webhook_rejections.sh
+      - name: Verify unsigned and invalid-signed calls are rejected by QA only
+        run: bash tools/smoke_garage_qa_webhook_rejections.sh
