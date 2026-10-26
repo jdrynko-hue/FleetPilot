@@ -129,7 +129,7 @@ Deno.test("real Supabase SDK keeps Auth and service entitlement credentials sepa
         headers: {
           authorization: "Bearer fixture-user-token",
           "content-type": "application/json",
-          origin: "https://flotaryx.com",
+          origin: "https://flotaryx-qa-preview.fairdrake9.chatgpt.site",
         },
         body: JSON.stringify({ workspace_id: workspace }),
       }),

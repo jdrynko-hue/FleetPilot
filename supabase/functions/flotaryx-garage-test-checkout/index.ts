@@ -14,7 +14,7 @@ const enabled = Deno.env.get('FLOTARYX_GARAGE_SANDBOX_CHECKOUT') === 'true';
 if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) || !anonKey || !serviceKey || anonKey === serviceKey) {
   Deno.serve(() => new Response(JSON.stringify({ error: 'Garage Sandbox billing unavailable' }), {
     status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': 'https://flotaryx.com', 'Vary': 'Origin' },
+      'Access-Control-Allow-Origin': 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site', 'Vary': 'Origin' },
   }));
 } else {
   const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };

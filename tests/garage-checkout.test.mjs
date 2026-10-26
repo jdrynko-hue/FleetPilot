@@ -60,6 +60,10 @@ test('coordinates owner-derived RPCs, seven-day Checkout and durable save before
   assert.equal(f.requests[0].args.p_actor, f.context.actorId);
   assert.equal(f.creates[0].params.subscription_data.trial_period_days, 7);
   assert.equal(f.creates[0].params.payment_method_collection, 'always');
+  assert.equal(f.creates[0].params.success_url,
+    'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=success');
+  assert.equal(f.creates[0].params.cancel_url,
+    'https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage&garage_checkout=cancel');
   assert.equal(f.creates[0].params.expires_at, f.prepared.expires_at);
   assert.match(f.creates[0].params.integration_identifier, /^flotaryx_garage_[a-p]{8}$/);
   assert.equal(f.saved[0].p_livemode, false);

@@ -26,7 +26,7 @@ function fixture() {
   } };
   const request = (body = { workspace_id: workspace }, options = {}) =>
     new Request('https://qa.example.test/garage-trial-cancel', {
-      method: 'POST', headers: { origin: 'https://flotaryx.com',
+      method: 'POST', headers: { origin: 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site',
         authorization: 'Bearer fixture-token', 'content-type': 'application/json' },
       body: JSON.stringify(body), ...options,
     });
@@ -123,4 +123,33 @@ for (const mutate of [
   const text = await response.text();
   assert.equal(text.includes('sub_privatefixture'), false);
   assert.equal(text.includes('cus_private'), false);
+});
+
+// Browser-origin policy is deliberately narrower than the Auth trust boundary.
+// No-origin server calls still require the existing verified Auth and RPC checks.
+for (const origin of [
+  'https://flotaryx.com',
+  'https://www.flotaryx.com',
+  'null',
+  'http://flotaryx-qa-preview.fairdrake9.chatgpt.site',
+  'https://flotaryx-qa-preview.fairdrake9.chatgpt.site.evil.test',
+  'https://flotaryx-qa-preview.fairdrake9.chatgpt.site:444',
+]) test(`rejects disallowed browser preflight ${origin} without side effects`, async () => {
+  const f = fixture();
+  const response = await f.handler()(f.request(undefined, { method: 'OPTIONS', body: undefined, headers: { origin } }));
+  assert.equal(response.status, 403);
+  assert.equal(f.calls.auth.length, 0);
+  assert.equal(response.headers.get('access-control-allow-origin'),
+    'https://flotaryx-qa-preview.fairdrake9.chatgpt.site');
+});
+
+test('exact QA preview preflight permits browser Auth headers without upstream calls', async () => {
+  const f = fixture();
+  const origin = 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site';
+  const response = await f.handler()(f.request(undefined, { method: 'OPTIONS', body: undefined, headers: { origin } }));
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get('access-control-allow-origin'), origin);
+  assert.match(response.headers.get('access-control-allow-headers'), /authorization/);
+  assert.match(response.headers.get('access-control-allow-methods'), /POST/);
+  assert.equal(f.calls.auth.length, 0);
 });

@@ -8,7 +8,7 @@ type ServiceClient = { rpc(name: string, args: Record<string, unknown>):
 type Entitlement = { active: boolean; source: 'trial' | 'paid' | null;
   access_ends_at: string | null; last_payment_state: 'failed' | 'paid' | null };
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const origin = 'https://flotaryx.com';
+const origin = 'https://flotaryx-qa-preview.fairdrake9.chatgpt.site';
 
 async function boundedJson(request: Request) {
   const reader = request.body?.getReader();
