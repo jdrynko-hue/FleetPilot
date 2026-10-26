@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'server/garage-billing/test_trial_ledger.sql'
+      - 'server/garage-billing/test_trial_eligibility.sql'
+      - 'tests/garage_trial_eligibility.py'
       - 'server/garage-billing/test_paid_lifecycle.sql'
       - 'server/garage-billing/test_entitlement_access.sql'
       - 'server/garage-billing/test_billing_catalog.sql'
@@ -66,3 +68,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_billing_catalog.sql
       - name: Verify owner-only catalog and server-derived billing markets
         run: python3 tests/garage_billing_catalog.py
+      - name: Verify owner-only trial eligibility hint
+        run: |
+          psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_trial_eligibility.sql
+          python3 tests/garage_trial_eligibility.py

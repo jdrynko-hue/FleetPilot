@@ -58,14 +58,15 @@ class GarageEntitlement {
 enum GarageEntitlementReadState { disabled, verified, unavailable }
 
 class GarageEntitlementRead {
-  const GarageEntitlementRead._(this.state, this.entitlement);
+  const GarageEntitlementRead._(this.state, this.entitlement, [this.trialAvailable = false]);
   const GarageEntitlementRead.disabled()
       : this._(GarageEntitlementReadState.disabled, null);
   const GarageEntitlementRead.unavailable()
       : this._(GarageEntitlementReadState.unavailable, null);
-  const GarageEntitlementRead.verified(GarageEntitlement value)
-      : this._(GarageEntitlementReadState.verified, value);
+  const GarageEntitlementRead.verified(GarageEntitlement value, {bool trialAvailable = false})
+      : this._(GarageEntitlementReadState.verified, value, trialAvailable);
 
+  final bool trialAvailable;
   final GarageEntitlementReadState state;
   final GarageEntitlement? entitlement;
   // An authoritative grant is valid only inside the server-confirmed period.
@@ -88,20 +89,22 @@ typedef GarageEntitlementInvoke = Future<Object?> Function(String workspaceId);
 class GarageEntitlementRepository {
   const GarageEntitlementRepository({required this.enabled,
     required this.supabaseUrl, required this.currentUserId,
-    this.currentSessionKey, required this.invoke});
+    this.currentSessionKey, required this.invoke, this.billingStatus = false});
 
-  factory GarageEntitlementRepository.forClient(SupabaseClient client) =>
+  factory GarageEntitlementRepository.forClient(SupabaseClient client, {bool billingStatus = false}) =>
       GarageEntitlementRepository(
         enabled: AppConfig.garageSandboxEntitlementEnabled,
+        billingStatus: billingStatus,
         supabaseUrl: AppConfig.supabaseUrl,
         currentUserId: () => client.auth.currentUser?.id,
         currentSessionKey: () => client.auth.currentSession?.accessToken,
         invoke: (workspaceId) async => (await client.functions.invoke(
           'flotaryx-garage-test-entitlement',
-          body: {'workspace_id': workspaceId},
+          body: {'workspace_id': workspaceId, if (billingStatus) 'billing_status': true},
         )).data,
       );
 
+  final bool billingStatus;
   final bool enabled;
   final String supabaseUrl;
   final String? Function() currentUserId;
@@ -133,6 +136,16 @@ class GarageEntitlementRepository {
       if (currentUserId() != actor ||
           (currentSessionKey != null && currentSessionKey!() != sessionKey)) {
         return const GarageEntitlementRead.unavailable();
+      }
+      if (billingStatus) {
+        if (raw is! Map || raw.length != 2 || !raw.containsKey('entitlement') ||
+            raw['trial_available'] is! bool) throw const FormatException('Invalid billing status');
+        final status = GarageEntitlement.parse(raw['entitlement']);
+        if (status.active && raw['trial_available'] == true) {
+          throw const FormatException('Invalid billing status');
+        }
+        return GarageEntitlementRead.verified(status,
+          trialAvailable: raw['trial_available'] as bool);
       }
       return GarageEntitlementRead.verified(GarageEntitlement.parse(raw));
     } catch (_) {
