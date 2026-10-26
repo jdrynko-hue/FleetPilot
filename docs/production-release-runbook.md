@@ -6,6 +6,23 @@ This is a **release gate**, not evidence that Fleet, Garage or Booking is ready 
 
 QA approval does not authorize production deployment or Stripe Live. Production web publishing requires explicit separate owner approval. The Deploy Flotaryx workflow must be manually triggered from main with the exact confirm_release input PUBLISH-FLOTARYX. A merge to main should not publish the site automatically.
 
+## Archived billing installer safety
+
+The old `.github/workflows/flotaryx-billing-oneclick.yml` and
+`.github/workflows/flotaryx-billing-fixed-installer.yml` must remain
+**explicitly disabled and read-only**. The former could deploy GitHub Pages
+directly without the primary `Deploy Flotaryx` confirmation; both had
+repository write capability. The `release-deploy-gate.yml` tests reject
+restoring these permissions or triggering those jobs.
+
+**Residual risk:** Other historical installer workflows may still have
+`contents: write` or `git push origin HEAD:main`. An explicit manual
+Pages gate prevents automatic publication by the main deployment workflow,
+but it does not prevent privileged historical workflows from changing
+repository contents. Review and retire them; configure GitHub branch
+protection/rulesets and environment reviewers before commercial launch.
+No test or documentation change alone can enforce these GitHub settings.
+
 ## Mandatory launch gates
 
 - [ ] Review PR dependency order, candidate commit and mandatory CI outcomes for that exact commit.
