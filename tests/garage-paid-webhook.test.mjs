@@ -71,6 +71,57 @@ test('late payment_failed delivery records current paid state, not stale failure
   assert.equal(f.calls.some(call => call[0] === 'failed'), false);
 });
 
+for (const type of ['invoice.paid', 'invoice.payment_failed']) {
+  test(`current paid invoice without legacy boolean records payment for ${type}`, async () => {
+    const f = fixture(type);
+    Object.assign(f.invoice, {status:'paid', amount_paid:4900, amount_remaining:0,
+      status_transitions:{paid_at:start + 5}});
+    delete f.invoice.paid;
+    assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 200);
+    assert.equal(f.calls.filter(c => c[0] === 'paid').length, 1);
+    assert.equal(f.calls.some(c => c[0] === 'failed'), false);
+  });
+}
+
+test('current failed invoice without legacy boolean records failure only', async () => {
+  const f = fixture(); delete f.invoice.paid;
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 200);
+  assert.equal(f.calls.filter(c => c[0] === 'failed').length, 1);
+  assert.equal(f.calls.some(c => c[0] === 'paid'), false);
+});
+
+for (const paid of [false, null, 'true', 1]) {
+  test(`paid status rejects contradictory legacy value ${JSON.stringify(paid)}`, async () => {
+    const f = fixture('invoice.paid');
+    Object.assign(f.invoice, {status:'paid', paid, amount_paid:4900, amount_remaining:0,
+      status_transitions:{paid_at:start + 5}});
+    await createGaragePaidWebhook(f.deps)(f.request());
+    assert.equal(f.calls.some(c => ['paid','failed'].includes(c[0])), false);
+  });
+}
+
+for (const paid of [true, null, 'false', 0]) {
+  test(`open status rejects contradictory legacy value ${JSON.stringify(paid)}`, async () => {
+    const f = fixture(); f.invoice.paid = paid;
+    await createGaragePaidWebhook(f.deps)(f.request());
+    assert.equal(f.calls.some(c => ['paid','failed'].includes(c[0])), false);
+  });
+}
+
+for (const [name, change] of [
+  ['partial payment', f => f.invoice.amount_paid = 4800],
+  ['remaining balance', f => f.invoice.amount_remaining = 1],
+  ['missing payment date', f => f.invoice.status_transitions = null],
+  ['void status', f => f.invoice.status = 'void'],
+]) test(`missing legacy boolean does not bypass ${name}`, async () => {
+  const f = fixture('invoice.paid');
+  Object.assign(f.invoice, {status:'paid', amount_paid:4900, amount_remaining:0,
+    status_transitions:{paid_at:start + 5}});
+  delete f.invoice.paid; change(f);
+  await createGaragePaidWebhook(f.deps)(f.request());
+  assert.equal(f.calls.some(c => ['paid','failed'].includes(c[0])), false);
+});
+
 test('authoritative subscription deletion caps access', async () => {
   const f = fixture('customer.subscription.deleted');
   f.sub.status = 'canceled'; f.sub.canceled_at = start;
