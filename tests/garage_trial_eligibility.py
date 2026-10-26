@@ -12,7 +12,7 @@ def run(sql, error=None):
         return r.stdout.strip()
 a='00000000-0000-4000-8000-000000000991'
 w='00000000-0000-4000-8000-000000000992'
-run(f"INSERT INTO auth.users(id) VALUES('{a}'); INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) VALUES('{w}','{a}','Synthetic eligibility','GB','GBP');")
+run(f"SELECT set_config('request.jwt.claim.sub','{a}',false); INSERT INTO auth.users(id) VALUES('{a}'); INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) VALUES('{w}','{a}','Synthetic eligibility','GB','GBP');")
 call=f"SELECT public.garage_test_trial_available('{a}','{w}');"
 assert run('SET ROLE service_role; '+call)=='t'
 for role in ['anon','authenticated']:
@@ -25,4 +25,6 @@ run(f"SELECT public.garage_confirm_test_trial(attempt_id,'sub_eligible','2030-01
 assert run('SET ROLE service_role; '+call)=='f'
 run(f"SELECT public.garage_prepare_test_trial_cancellation('{a}','{w}');")
 assert run('SET ROLE service_role; '+call)=='f'
-print('Eligibility owner/permissions/fresh/reserved/started/cancel-pending PASS')
+run(f"UPDATE garage_private.test_trial_claims SET state='trial_canceled',canceled_at='2030-01-02' WHERE owner_user_id='{a}';")
+assert run('SET ROLE service_role; '+call)=='f'
+print('Eligibility owner/permissions/fresh/reserved/started/cancel-pending/canceled PASS')
