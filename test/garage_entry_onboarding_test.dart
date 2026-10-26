@@ -22,7 +22,45 @@ void main() {
     expect(find.text('Workshop setup'), findsNothing);
     expect(opened, 1);
     expect(find.byKey(const Key('ecosystem_create_workshop')), findsOneWidget);
+    expect(find.byKey(const Key('ecosystem_fleet')), findsNothing);
+    expect(find.byKey(const Key('ecosystem_customer')), findsNothing);
+    expect(find.text('Flotaryx Garage'), findsOneWidget);
   });
+  for (final hasFleet in [false, true]) {
+    testWidgets('Garage back stays workshop-only even when fleet membership is $hasFleet', (tester) async {
+      var loads = 0;
+      await tester.pumpWidget(MaterialApp(home: EcosystemGate(
+        preferredPortal: PortalEntry.garage,
+        loadAccess: () async {
+          loads++;
+          return EcosystemAccess(hasFleet: hasFleet, garages: const [
+            EcosystemDestination(EcosystemModule.workshop,
+              workspaceId: 'qa-shop', name: 'QA workshop'),
+          ]);
+        },
+        signOut: () async {}, createWorkshopBuilder: (_) => const Scaffold(),
+        destinationBuilder: (destination) {
+          expect(destination.module, EcosystemModule.workshop);
+          return Scaffold(appBar: AppBar(title: const Text('Workshop panel')));
+        })));
+      await tester.pumpAndSettle();
+      expect(find.text('Workshop panel'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Workshop panel'), findsNothing);
+      expect(find.byKey(const Key('ecosystem_fleet')), findsNothing);
+      expect(find.byKey(const Key('ecosystem_customer')), findsNothing);
+      expect(find.byKey(const Key('ecosystem_qa-shop')), findsOneWidget);
+      expect(find.byKey(const Key('ecosystem_create_workshop')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('ecosystem_refresh')));
+      await tester.pumpAndSettle();
+      expect(loads, greaterThanOrEqualTo(3));
+      expect(find.byKey(const Key('ecosystem_fleet')), findsNothing);
+      await tester.tap(find.byKey(const Key('ecosystem_qa-shop')));
+      await tester.pumpAndSettle();
+      expect(find.text('Workshop panel'), findsOneWidget);
+    });
+  }
   testWidgets('failed lookup does not assume the account has no workshop', (tester) async {
     await tester.pumpWidget(MaterialApp(home: EcosystemGate(
       preferredPortal: PortalEntry.garage,

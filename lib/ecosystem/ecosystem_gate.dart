@@ -52,12 +52,15 @@ class _EcosystemGateState extends State<EcosystemGate> {
     try { return await widget.loadAccess(); } catch (_) { return null; }
   }
   bool get _current => widget.isCurrentAccount?.call() ?? true;
+  bool get _garagePortal => widget.preferredPortal == PortalEntry.garage;
   void _reload() {
     if (!_current) return;
     setState(() { _error = null; _access = _loadAccess(); });
   }
   void _open(EcosystemDestination destination) {
     if (_opening || _signingOut || !_current) return;
+    if (_garagePortal && destination.module != EcosystemModule.workshop &&
+        destination.module != EcosystemModule.mechanic) return;
     _opening = true;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => widget.destinationBuilder(destination),
@@ -92,7 +95,7 @@ class _EcosystemGateState extends State<EcosystemGate> {
   );
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Flotaryx'), actions: [
+    appBar: AppBar(title: Text(_garagePortal ? 'Flotaryx Garage' : 'Flotaryx'), actions: [
       IconButton(key: const Key('ecosystem_refresh'), onPressed: _signingOut ? null : _reload,
         tooltip: GarageUiText.get('refresh'), icon: const Icon(Icons.refresh)),
       IconButton(key: const Key('ecosystem_logout'), onPressed: _signingOut ? null : _logout,
@@ -134,12 +137,14 @@ class _EcosystemGateState extends State<EcosystemGate> {
         }
         return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(GarageUiText.get('chooseModule'),
-              style: Theme.of(context).textTheme.headlineSmall),
+            if (!_garagePortal)
+              Text(GarageUiText.get('chooseModule'),
+                style: Theme.of(context).textTheme.headlineSmall),
             if (_error != null) Text(_error!),
-            _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
-              GarageUiText.get('createFleet'), Icons.local_shipping_outlined,
-              const EcosystemDestination(EcosystemModule.fleet)),
+            if (!_garagePortal)
+              _tile('ecosystem_fleet', access.hasFleet ? 'Flotaryx Fleet' :
+                GarageUiText.get('createFleet'), Icons.local_shipping_outlined,
+                const EcosystemDestination(EcosystemModule.fleet)),
             if (widget.createWorkshopBuilder != null)
               Card(child: ListTile(key: const Key('ecosystem_create_workshop'),
                 leading: const Icon(Icons.add_business_outlined),
@@ -151,9 +156,10 @@ class _EcosystemGateState extends State<EcosystemGate> {
                 garage.module == EcosystemModule.mechanic
                   ? GarageUiText.get('myAssignedJobs') : 'Flotaryx Garage',
                 Icons.build_outlined, garage, subtitle: garage.name),
-            _tile('ecosystem_customer', GarageUiText.get('workshopBookings'),
-              Icons.calendar_month_outlined,
-              const EcosystemDestination(EcosystemModule.customer)),
+            if (!_garagePortal)
+              _tile('ecosystem_customer', GarageUiText.get('workshopBookings'),
+                Icons.calendar_month_outlined,
+                const EcosystemDestination(EcosystemModule.customer)),
           ]),
         ));
       }),
