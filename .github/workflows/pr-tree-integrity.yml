@@ -1,0 +1,23 @@
+name: Guard Flotaryx PR source tree
+
+on:
+  pull_request:
+    branches: [main, 'integration/garage-fleet-booking-qa-candidate-20261018']
+
+permissions:
+  contents: read
+
+jobs:
+  source-tree-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify guard regression cases without hosted services
+        run: python3 -m unittest discover -s tools -p test_check_pr_tree_integrity.py -v
+      - name: Reject missing release entrypoints or mass deletions
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 tools/check_pr_tree_integrity.py --base "$PR_BASE_SHA" --head HEAD
