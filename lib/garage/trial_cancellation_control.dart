@@ -58,7 +58,7 @@ class _CancellationState extends State<GarageTrialCancellationControl> {
         : text('Cancellation could not be confirmed. Refresh the status before taking further action.',
             'Nie udało się potwierdzić anulowania. Odśwież status przed dalszym działaniem.');
     });
-    widget.onRefresh();
+    if (result == GarageTrialCancellationState.canceled) widget.onRefresh();
   }
 
   @override
@@ -67,6 +67,10 @@ class _CancellationState extends State<GarageTrialCancellationControl> {
       OutlinedButton(onPressed: _available && !_busy && !_attempted ? _cancel : null,
         child: Text(_busy ? text('Checking…', 'Sprawdzam…') :
           text('Cancel test trial', 'Anuluj testowy trial'))),
-      if (_message != null) Text(_message!, semanticsLabel: _message),
+      if (_message != null) ...[
+        Text(_message!, semanticsLabel: _message),
+        TextButton(onPressed: _busy ? null : widget.onRefresh,
+          child: Text(text('Refresh subscription status', 'Odśwież status subskrypcji'))),
+      ],
     ]);
 }
