@@ -3,10 +3,9 @@ name: Flotaryx Billing — Fixed Installer
 on:
   workflow_dispatch:
 
+# Archived installer; no repository writes or Pages publishing allowed.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: flotaryx-billing-fixed-installer
@@ -14,6 +13,9 @@ concurrency:
 
 jobs:
   install:
+    # Disabled: legacy workflow bypassed the reviewed manual release path.
+    # Re-activation requires its own reviewed PR and explicit owner approval.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
