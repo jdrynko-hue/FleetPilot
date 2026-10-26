@@ -38,7 +38,7 @@ export async function checkGarageQaOwner({email, password, anonKey}, request = f
   const options = {redirect: 'error', signal: AbortSignal.timeout(15000)};
   const headers = {'Content-Type': 'application/json', apikey: anonKey};
   let token;
-  let logoutAttempted = false;
+  let validated = false;
   try {
     const authResponse = await request(QA + '/auth/v1/token?grant_type=password', {
       ...options, method: 'POST', headers, body: JSON.stringify({email, password}),
@@ -76,21 +76,26 @@ export async function checkGarageQaOwner({email, password, anonKey}, request = f
         (!status.active && (status.source !== null || status.access_ends_at !== null))) {
       throw new Error('Entitlement returned an unexpected or inconsistent status');
     }
+    validated = true;
     return {authVerified: true, correctOwner: true, entitlementReadable: true,
       activeAccess: status.active};
   } finally {
-    // Best effort: logout revokes refresh token/server-side session but
-    // issued access JWT may remain valid until its normal expiry.
+    // Supabase sign-out revokes refresh tokens/server-side session, but
+    // existing access JWTs can remain valid until expiry. Never claim a
+    // successful preflight if the explicit sign-out request did not succeed.
     if (token) {
+      let logoutConfirmed = false;
       try {
-        logoutAttempted = true;
-        await request(QA + '/auth/v1/logout?scope=local', {
+        const response = await request(QA + '/auth/v1/logout?scope=local', {
           ...options, method: 'POST',
           headers: {...headers, Authorization: 'Bearer ' + token},
         });
-      } catch { /* short-lived disposable QA credential only */ }
+        logoutConfirmed = response.ok;
+      } catch { /* do not print token or transport response */ }
+      if (!logoutConfirmed && validated) {
+        throw new Error('QA logout not confirmed; revoke disposable test session');
+      }
     }
-    void logoutAttempted;
   }
 }
 
