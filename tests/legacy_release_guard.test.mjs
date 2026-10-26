@@ -36,14 +36,14 @@ for (const path of legacyInstallers) {
   });
 }
 
-const fixture = String.raw`name: Example installer
+const fixture = `name: Example installer
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   install:
-    if: ${{ false }}
+    if: \${{ false }}
     runs-on: ubuntu-latest
 `;
 
