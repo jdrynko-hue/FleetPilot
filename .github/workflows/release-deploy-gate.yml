@@ -1,0 +1,27 @@
+name: Verify manual production release gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/release-deploy-gate.yml'
+      - 'tests/release_deploy_gate.test.mjs'
+      - 'tests/legacy_release_guard.test.mjs'
+      - '.github/workflows/flotaryx-billing-oneclick.yml'
+      - '.github/workflows/flotaryx-billing-fixed-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Reject automatic publishing and require manual main-only release
+        run: node --test tests/release_deploy_gate.test.mjs tests/legacy_release_guard.test.mjs

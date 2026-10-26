@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_config.dart';
 import '../garage/booking_management_screens.dart';
 import '../garage/booking_profile_screen.dart';
 import '../garage/calendar_settings_screen.dart';
@@ -16,6 +17,7 @@ import '../garage/garage_ui_text.dart';
 import '../garage/setup_guide.dart';
 import '../garage/garage_shell.dart';
 import '../garage/billing_screen.dart';
+import '../garage/entitlement_repository.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -57,7 +59,12 @@ class EcosystemModuleHub extends StatelessWidget {
     final pages = <String, Widget Function()>{
         if (destination.canConfigure)
           GarageBillingScreen.text(0): () => GarageBillingScreen(
-            workshopName: destination.name!, isOwner: destination.canConfigure),
+            workshopName: destination.name!, isOwner: destination.canConfigure,
+            workspaceId: destination.workspaceId!,
+            loadEntitlement: AppConfig.garageSandboxEntitlementEnabled
+              ? () => GarageEntitlementRepository.forClient(client)
+                .load(destination.workspaceId!)
+              : null),
         if (destination.canConfigure)
           GarageUiText.get('fleetConnections'): () =>
             GarageBridgeConnectionsScreen.forClient(client: client,

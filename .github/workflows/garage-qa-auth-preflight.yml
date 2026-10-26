@@ -1,0 +1,27 @@
+name: Garage QA authenticated owner preflight (offline)
+
+on:
+  pull_request:
+    branches:
+      - integration/garage-fleet-booking-qa-candidate-20261018
+    paths:
+      - 'tools/garage_qa_auth_preflight.mjs'
+      - 'tests/garage-qa-auth-preflight.test.mjs'
+      - '.github/workflows/garage-qa-auth-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owner-auth-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Node syntax without credentials or network
+        run: |
+          node --check tools/garage_qa_auth_preflight.mjs
+          node --check tests/garage-qa-auth-preflight.test.mjs
+      - name: Run synthetic Auth and entitlement adapter tests offline
+        run: node --test tests/garage-qa-auth-preflight.test.mjs

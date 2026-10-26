@@ -1,9 +1,14 @@
 name: Deploy Flotaryx
 
+# Publishing is intentionally manual. Merging a PR must never deploy public
+# pages; do a production release only after approved acceptance gates.
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: "Type PUBLISH-FLOTARYX to approve a production release from main"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +21,8 @@ concurrency:
 
 jobs:
   build:
+    # Ref and explicit approval are both required; do not run from PR or tags.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_release == 'PUBLISH-FLOTARYX' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -66,6 +73,12 @@ jobs:
           grep -Fq '<base href="/app/">' site/app/index.html
           grep -Fq 'flutter_bootstrap.js' site/app/index.html
           grep -Fq 'flotaryx.com' site/CNAME
+
+      # Only run the publisher after the *assembled production build* passes
+      # the same privacy, legal/PWA and portal integrity validation as QA.
+      # This gate does not authorize billing or establish hosted E2E readiness.
+      - name: Validate production release artifact before upload
+        run: python3 tools/verify_release_candidate.py site
 
       - uses: actions/configure-pages@v5
 
