@@ -14,6 +14,8 @@ void main() {
   const production = 'https://wqhymmtiawfwjikdaujo.supabase.co';
   const user = '00000000-0000-4000-8000-000000000001';
   const workspace = '00000000-0000-4000-8000-000000000002';
+  // Fixed time keeps historical trial response tests deterministic after expiry.
+  // Runtime expiry enforcement stays strict and uses the actual clock.
   const activeTrial = <String, Object?>{
     'active': true,
     'source': 'trial',
@@ -67,7 +69,7 @@ void main() {
 
   test('only the exact authoritative response shape grants access', () async {
     final accepted = await repository().load(workspace);
-    expect(accepted.allowsPaidFeatures, isTrue);
+    expect(accepted.allowsPaidFeaturesAt(DateTime.utc(2026, 10, 20)), isTrue);
     expect(accepted.entitlement?.source, GarageEntitlementSource.trial);
     expect(accepted.entitlement?.accessEndsAt,
       DateTime.utc(2026, 10, 25, 8));
@@ -249,7 +251,7 @@ void main() {
         email: 'fixture@example.test', password: 'fixture-only');
       final read = await GarageEntitlementRepository.forClient(client)
         .load(workspace);
-      expect(read.allowsPaidFeatures, isTrue);
+      expect(read.allowsPaidFeaturesAt(DateTime.utc(2026, 10, 20)), isTrue);
       expect(functionCalls, 1);
     } else {
       final read = await GarageEntitlementRepository.forClient(client)

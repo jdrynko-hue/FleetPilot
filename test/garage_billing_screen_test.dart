@@ -64,6 +64,7 @@ void main() {
   testWidgets('verified trial is labeled from the server decision', (tester) async {
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', isOwner: true,
+      now: () => DateTime.utc(2026, 10, 20),
       loadEntitlement: () async => GarageEntitlementRead.verified(
         GarageEntitlement(active: true,
           source: GarageEntitlementSource.trial,
@@ -286,7 +287,8 @@ void main() {
     Widget page(String workspaceId, GarageEntitlementLoader loader) =>
         MaterialApp(home: GarageBillingScreen(
           workshopName: 'Same workshop name', workspaceId: workspaceId,
-          isOwner: true, loadEntitlement: loader));
+          isOwner: true, now: () => DateTime.utc(2026, 10, 20),
+          loadEntitlement: loader));
 
     await tester.pumpWidget(page('workspace-A', () {
       firstCalls++;
@@ -354,6 +356,7 @@ void main() {
     final pending = Completer<GarageEntitlementRead>();
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', workspaceId: workshopId, isOwner: true,
+      now: () => DateTime.utc(2026, 10, 20),
       loadEntitlement: () async => GarageEntitlementRead.verified(
         GarageEntitlement(active: true, source: GarageEntitlementSource.trial,
           accessEndsAt: DateTime.utc(2026, 10, 25, 8))))));
@@ -362,6 +365,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', workspaceId: workshopId, isOwner: true,
+      now: () => DateTime.utc(2026, 10, 20),
       loadEntitlement: () => pending.future)));
     await tester.pump();
     expect(find.textContaining('confirmed until'), findsNothing);
@@ -384,14 +388,16 @@ void main() {
     };
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', workspaceId: 'workspace-A',
-      isOwner: true, loadEntitlement: loader)));
+      isOwner: true, now: () => DateTime.utc(2026, 10, 20),
+      loadEntitlement: loader)));
     await tester.pumpAndSettle();
     expect(find.textContaining('Paid access confirmed'), findsOneWidget);
     expect(calls, 1);
 
     await tester.pumpWidget(MaterialApp(home: GarageBillingScreen(
       workshopName: 'Workshop', workspaceId: 'workspace-A',
-      isOwner: false, loadEntitlement: loader)));
+      isOwner: false, now: () => DateTime.utc(2026, 10, 20),
+      loadEntitlement: loader)));
     await tester.pumpAndSettle();
     expect(find.text(GarageBillingScreen.text(1)), findsOneWidget);
     expect(find.textContaining('confirmed until'), findsNothing);
