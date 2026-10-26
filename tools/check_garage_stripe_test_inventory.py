@@ -26,6 +26,84 @@ CURRENCIES = {"gbp", "eur", "pln"}
 INTERVALS = {"month", "year"}
 
 
+
+def verify_qa_catalog_parity(inventory: dict) -> list[str]:
+    """Compare sanitized Stripe TEST prices against hosted Garage QA catalog.
+
+    Supply non-secret billing fields only. This check never calls Stripe,
+    Supabase, a payment endpoint or a remote service.
+    """
+    rows = inventory.get("qa_catalog")
+    if not isinstance(rows, list):
+        return ["Missing sanitized QA catalog (qa_catalog list required)"]
+    products, prices = inventory.get("products"), inventory.get("prices")
+    if not isinstance(products, list) or not isinstance(prices, list):
+        return ["Products and prices must be lists"]
+
+    garage_products = {
+        product["id"] for product in products
+        if isinstance(product, dict) and product.get("active") is True
+        and isinstance(product.get("id"), str)
+        and isinstance(product.get("name"), str)
+        and "garage" in product["name"].casefold()
+    }
+    stripe_prices = {
+        price["id"]: price for price in prices
+        if isinstance(price, dict) and isinstance(price.get("id"), str)
+    }
+    errors: list[str] = []
+    keys: set[tuple[str, str, str]] = set()
+    mapped_prices: set[str] = set()
+    coverage: set[tuple[str, str]] = set()
+
+    for row in rows:
+        if not isinstance(row, dict):
+            errors.append("Malformed QA catalog row")
+            continue
+        if row.get("active") is not True:
+            continue
+        plan = row.get("plan_code")
+        currency = row.get("currency")
+        interval = row.get("billing_interval")
+        price_id = row.get("stripe_price_id")
+        amount = row.get("amount_minor")
+
+        if (not isinstance(plan, str) or not plan.strip()
+                or not isinstance(currency, str) or currency not in CURRENCIES
+                or not isinstance(interval, str) or interval not in INTERVALS
+                or not isinstance(price_id, str)
+                or not price_id.startswith("price_")
+                or type(amount) is not int or amount <= 0):
+            errors.append("Malformed active QA catalog row")
+            continue
+
+        key = (plan, currency, interval)
+        if key in keys or price_id in mapped_prices:
+            errors.append("Duplicate active QA catalog plan or Stripe price mapping")
+            continue
+        keys.add(key)
+        mapped_prices.add(price_id)
+        stripe_price = stripe_prices.get(price_id)
+        if (stripe_price is None
+                or stripe_price.get("active") is not True
+                or stripe_price.get("livemode") is not False
+                or stripe_price.get("product") not in garage_products
+                or stripe_price.get("currency") != currency
+                or stripe_price.get("unit_amount") != amount
+                or stripe_price.get("type") != "recurring"
+                or not isinstance(stripe_price.get("recurring"), dict)
+                or stripe_price["recurring"].get("interval") != interval
+                or stripe_price["recurring"].get("interval_count") != 1):
+            errors.append("QA catalog entry differs from active Garage Stripe test price")
+            continue
+        coverage.add((currency, interval))
+    missing = sorted({(c, t) for c in CURRENCIES for t in INTERVALS} - coverage)
+    if missing:
+        errors.append("Missing verified QA catalog prices: " +
+                      ", ".join(f"{c}/{t}" for c, t in missing))
+    return errors
+
+
 def verify_inventory(inventory: dict) -> list[str]:
     issues: list[str] = []
     if not isinstance(inventory, dict):
@@ -112,6 +190,7 @@ def verify_inventory(inventory: dict) -> list[str]:
         valid_webhooks += 1
     if valid_webhooks != 1:
         issues.append("Expected exactly one eligible enabled, signed Garage QA webhook")
+    issues.extend(verify_qa_catalog_parity(inventory))
     return issues
 
 
