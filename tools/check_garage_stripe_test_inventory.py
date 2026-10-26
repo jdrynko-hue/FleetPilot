@@ -91,9 +91,14 @@ def verify_qa_catalog_parity(inventory: dict) -> list[str]:
                 or stripe_price.get("currency") != currency
                 or stripe_price.get("unit_amount") != amount
                 or stripe_price.get("type") != "recurring"
+                or stripe_price.get("billing_scheme") != "per_unit"
+                or not isinstance(stripe_price.get("metadata"), dict)
+                or stripe_price["metadata"].get("product") != "garage"
+                or stripe_price["metadata"].get("plan_code") != plan
                 or not isinstance(stripe_price.get("recurring"), dict)
                 or stripe_price["recurring"].get("interval") != interval
-                or stripe_price["recurring"].get("interval_count") != 1):
+                or stripe_price["recurring"].get("interval_count") != 1
+                or stripe_price["recurring"].get("usage_type") != "licensed"):
             errors.append("QA catalog entry differs from active Garage Stripe test price")
             continue
         coverage.add((currency, interval))
