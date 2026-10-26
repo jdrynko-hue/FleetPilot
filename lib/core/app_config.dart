@@ -24,6 +24,17 @@ class AppConfig {
       garageSandboxEntitlementEnabledFor(supabaseUrl,
           requested: _garageSandboxEntitlementRequested);
 
+  // Independent, default-off client gate. Enabling Garage navigation or
+  // entitlement reads must never implicitly enable a Checkout request.
+  static const _garageSandboxCheckoutRequested =
+      bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_CHECKOUT_CLIENT');
+  static bool garageSandboxCheckoutEnabledFor(String url,
+          {required bool requested}) =>
+      requested && isEcosystemQaBackend(url);
+  static bool get garageSandboxCheckoutEnabled =>
+      garageSandboxCheckoutEnabledFor(supabaseUrl,
+          requested: _garageSandboxCheckoutRequested);
+
   // Production is a separate explicit build opt-in after backend installation.
   // Neither flag can connect the ecosystem to an arbitrary backend.
   static const _productionRequested =
