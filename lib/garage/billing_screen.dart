@@ -4,22 +4,27 @@ import 'package:flutter/material.dart';
 
 import '../core/localization.dart';
 import 'entitlement_repository.dart';
+import 'checkout_card.dart';
+import 'checkout_repository.dart';
 
 typedef GarageEntitlementLoader = Future<GarageEntitlementRead> Function();
 
 /// Garage billing has its own rollout. Never opens Fleet checkout or infers a
 /// subscription from workshop creation. The optional Sandbox status comes only
-/// from the member-checked server entitlement; purchase controls stay disabled.
+/// from the member-checked server entitlement. Optional owner Checkout controls
+/// require a separately gated QA repository; default builds keep the notice.
 class GarageBillingScreen extends StatefulWidget {
   const GarageBillingScreen({required this.workshopName,
     required this.isOwner, this.workspaceId, this.loadEntitlement,
-    this.now, super.key});
+    this.now, this.checkoutRepository, this.openCheckout, super.key});
 
   final String workshopName;
   final bool isOwner;
   // Keep owner-only server decisions scoped to the workshop being displayed.
   final String? workspaceId;
   final GarageEntitlementLoader? loadEntitlement;
+  final GarageCheckoutRepository? checkoutRepository;
+  final GarageCheckoutLauncher? openCheckout;
   // Injectable clock keeps expiry boundary tests deterministic.
   final DateTime Function()? now;
 
@@ -216,7 +221,15 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
                 _accessCard(context),
                 const SizedBox(height: 12),
               ],
-              Card(child: Padding(padding: const EdgeInsets.all(20),
+              if (GarageSandboxCheckoutCard.available(widget.checkoutRepository,
+                  widget.workspaceId, widget.isOwner))
+                GarageSandboxCheckoutCard(repository: widget.checkoutRepository!,
+                  workspaceId: widget.workspaceId!, isOwner: widget.isOwner,
+                  openCheckout: widget.openCheckout,
+                  onRefreshStatus: widget.loadEntitlement == null ? null : () {
+                    setState(_readForCurrentWorkshop);
+                  })
+              else Card(child: Padding(padding: const EdgeInsets.all(20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Icon(Icons.credit_card_off_outlined),
                   const SizedBox(height: 12),
