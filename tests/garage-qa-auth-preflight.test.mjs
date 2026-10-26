@@ -33,7 +33,7 @@ function mock(changes={}) {
     }
     if (url.includes('/auth/v1/logout?scope=local')) {
       if (changes.failLogout) throw Error('simulated transport issue');
-      return new Response(null,{status:204});
+      return new Response(null,{status:changes.logoutStatus??204});
     }
     throw Error('Unexpected URL');
   };
@@ -120,9 +120,14 @@ test('reject missing, real-domain, or leaked-privilege credentials before any re
   assert.equal(calls.length,0);
 });
 
-test('logout transport failure cannot turn a safe read into Checkout',async()=>{
+test('logout transport failure rejects the preflight and performs no billing',async()=>{
   const {request,calls}=mock({failLogout:true});
-  const result=await checkGarageQaOwner(input,request);
-  assert.equal(result.correctOwner,true);
+  await assert.rejects(checkGarageQaOwner(input,request),/QA logout not confirmed/);
+  assert.equal(calls.length,4);
+});
+
+test('logout HTTP non-success rejects preflight',async()=>{
+  const {request,calls}=mock({logoutStatus:503});
+  await assert.rejects(checkGarageQaOwner(input,request),/QA logout not confirmed/);
   assert.equal(calls.length,4);
 });
