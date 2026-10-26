@@ -16,7 +16,7 @@ type Price = {
 type Subscription = {
   id: string; livemode: boolean; status: string; customer: string;
   canceled_at: number | null; metadata: Record<string, string>;
-  trial_start?: number | null; trial_end?: number | null;
+  trial_start?: number | null; trial_end?: number | null; test_clock?: string | null;
   items: { has_more: boolean; data: { quantity: number; price: Price }[] };
 };
 type InvoiceLine = {
@@ -30,7 +30,7 @@ type Invoice = {
   parent?: { subscription_details?: { subscription?: string | null } | null } | null;
   currency: string; billing_reason: string | null;
   amount_due: number; amount_paid: number; amount_remaining: number;
-  attempt_count: number;
+  attempt_count: number; test_clock?: string | null;
   status_transitions?: { paid_at?: number | null } | null;
   lines: { has_more: boolean; data: InvoiceLine[] };
 };
@@ -127,8 +127,9 @@ export function createGaragePaidWebhook(dependencies: {
   verify: (raw: Uint8Array, signature: string) => Promise<Event>;
   retrieveInvoice: (id: string) => Promise<unknown>;
   retrieveSubscription: (id: string) => Promise<unknown>;
+  retrieveTestClock?: (id: string) => Promise<unknown>;
   lookupClaim: (attempt: string) => Promise<Claim | null>;
-  recordPaid: (record: RecordInvoice & { amountPaid: number; paidAt: string }) => Promise<boolean>;
+  recordPaid: (record: RecordInvoice & { amountPaid: number; paidAt: string; testClockTime?: string }) => Promise<boolean>;
   recordFailed: (record: RecordInvoice & { attemptCount: number }) => Promise<boolean>;
   recordEnded: (record: { attempt: string; event: string; eventCreated: string;
     subscription: string; customer: string; endedAt: string }) => Promise<boolean>;
@@ -206,8 +207,23 @@ export function createGaragePaidWebhook(dependencies: {
           invoice.amount_paid === invoice.amount_due && invoice.amount_remaining === 0 &&
           Number.isSafeInteger(invoice.status_transitions?.paid_at) &&
           invoice.status_transitions!.paid_at! > 0) {
+        let testClockTime: string | undefined;
+        if (invoice.test_clock != null || sub.test_clock != null) {
+          const clockId = invoice.test_clock;
+          if (typeof clockId !== 'string' || !/^clock_[A-Za-z0-9]+$/.test(clockId) ||
+              sub.test_clock !== clockId || !dependencies.retrieveTestClock) return reply(409);
+          const clock = await dependencies.retrieveTestClock(clockId) as {
+            id: string; livemode: boolean; status: string; frozen_time: number;
+          };
+          if (!clock || clock.id !== clockId || clock.livemode !== false ||
+              !['ready', 'advancing'].includes(clock.status) ||
+              !Number.isSafeInteger(clock.frozen_time) || clock.frozen_time <= 0 ||
+              clock.frozen_time < invoice.status_transitions!.paid_at!) return reply(409);
+          testClockTime = iso(clock.frozen_time);
+        }
         const saved = await dependencies.recordPaid({ ...record,
-          amountPaid: invoice.amount_paid, paidAt: iso(invoice.status_transitions!.paid_at!) });
+          amountPaid: invoice.amount_paid, paidAt: iso(invoice.status_transitions!.paid_at!),
+          ...(testClockTime === undefined ? {} : {testClockTime}) });
         return reply(saved === true ? 200 : 503);
       }
       if (event.type === 'invoice.payment_failed' && invoice.status === 'open' &&

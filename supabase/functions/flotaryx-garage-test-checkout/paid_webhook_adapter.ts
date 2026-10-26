@@ -32,6 +32,7 @@ export function createSignedGaragePaidWebhook(configuration: {
         } } };
     },
     retrieveInvoice: id => stripe.invoices.retrieve(id),
+    retrieveTestClock: id => stripe.testHelpers.testClocks.retrieve(id),
     retrieveSubscription: id => stripe.subscriptions.retrieve(id),
   });
 }

@@ -233,3 +233,41 @@ for (const [name, change] of [
     assert.equal(f.calls.some(call => ['paid','failed','ended'].includes(call[0])), false);
   });
 }
+
+function clockPaidFixture() {
+  const f = fixture('invoice.paid');
+  Object.assign(f.invoice, {status:'paid', paid:true, amount_paid:4900, amount_remaining:0,
+    test_clock:'clock_fixture', status_transitions:{paid_at:start + 7 * 86400}});
+  f.sub.test_clock = 'clock_fixture';
+  f.event.created = start;
+  f.deps.retrieveTestClock = async () => ({id:'clock_fixture',livemode:false,
+    status:'ready',frozen_time:start + 8 * 86400});
+  return f;
+}
+
+test('verified test clock preserves real event date and supplies separate virtual time', async () => {
+  const f = clockPaidFixture();
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status,200);
+  const record = f.calls.at(-1)[1];
+  assert.equal(f.calls.at(-1)[0],'paid');
+  assert.equal(record.eventCreated,new Date(start * 1000).toISOString());
+  assert.equal(record.testClockTime,new Date((start + 8 * 86400) * 1000).toISOString());
+});
+for (const [name,change] of [
+  ['missing retriever',f => delete f.deps.retrieveTestClock],
+  ['mismatched subscription clock',f => f.sub.test_clock='clock_other'],
+  ['invoice clock absent',f => delete f.invoice.test_clock],
+  ['live clock',f => f.deps.retrieveTestClock=async () => ({id:'clock_fixture',livemode:true,status:'ready',frozen_time:start+8*86400})],
+  ['wrong clock',f => f.deps.retrieveTestClock=async () => ({id:'clock_other',livemode:false,status:'ready',frozen_time:start+8*86400})],
+  ['clock before payment',f => f.deps.retrieveTestClock=async () => ({id:'clock_fixture',livemode:false,status:'ready',frozen_time:start})],
+  ['failed clock',f => f.deps.retrieveTestClock=async () => ({id:'clock_fixture',livemode:false,status:'internal_failure',frozen_time:start+8*86400})],
+]) test(`test clock fails closed: ${name}`,async () => {
+  const f=clockPaidFixture();change(f);
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status,409);
+  assert.equal(f.calls.some(c => c[0]==='paid'),false);
+});
+test('test clock fetch failure requests retry without persisting payment',async () => {
+  const f=clockPaidFixture();f.deps.retrieveTestClock=async () => {throw Error('private');};
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status,503);
+  assert.equal(f.calls.some(c => c[0]==='paid'),false);
+});
