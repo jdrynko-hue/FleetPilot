@@ -15,7 +15,7 @@ type Price = {
 };
 type Subscription = {
   id: string; livemode: boolean; status: string; customer: string;
-  canceled_at: number | null; metadata: Record<string, string>;
+  ended_at: number | null; metadata: Record<string, string>;
   trial_start?: number | null; trial_end?: number | null; test_clock?: string | null;
   items: { has_more: boolean; data: { quantity: number; price: Price }[] };
 };
@@ -188,16 +188,18 @@ export function createGaragePaidWebhook(dependencies: {
         if (typeof attempt !== 'string' || !uuid.test(attempt)) return reply(409);
         const claim = await dependencies.lookupClaim(attempt);
         if (!claim || !validSubscription(sub, claim) || sub.status !== 'canceled' ||
-            !Number.isSafeInteger(sub.canceled_at) || sub.canceled_at! <= 0) return reply(409);
+            !Number.isSafeInteger(sub.ended_at) || sub.ended_at! <= 0) return reply(409);
+        // canceled_at records the request when renewal is stopped in advance.
+        // The freshly retrieved ended_at is the actual access boundary.
         let testClockTime: string | undefined;
         if (sub.test_clock != null) {
-          const verified = await verifiedClockTime(sub.test_clock, sub.canceled_at!);
+          const verified = await verifiedClockTime(sub.test_clock, sub.ended_at!);
           if (verified === null) return reply(409);
           testClockTime = verified;
         }
         const saved = await dependencies.recordEnded({ attempt, event: event.id,
           eventCreated: iso(event.created), subscription: id, customer: claim.customer_id,
-          endedAt: iso(sub.canceled_at!),
+          endedAt: iso(sub.ended_at!),
           ...(testClockTime === undefined ? {} : {testClockTime}) });
         return reply(saved === true ? 200 : 503);
       }

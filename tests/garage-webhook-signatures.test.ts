@@ -173,7 +173,7 @@ Deno.test('signed virtual subscription end retrieves its real SDK test clock bef
       if(url.pathname==='/v1/subscriptions/sub_fixture') {
         calls.push('subscription');
         return json({id:'sub_fixture',livemode:false,status:'canceled',customer:'cus_fixture',
-          canceled_at:ended,test_clock:'clock_fixture',metadata:{product:'garage',
+          canceled_at:ended-120,ended_at:ended,test_clock:'clock_fixture',metadata:{product:'garage',
             attempt_id:attempt,workspace_id:workspace,currency:'gbp',billing_interval:'month'},
           items:{has_more:false,data:[{quantity:1,price:{id:'price_fixture',livemode:false,
             currency:'gbp',recurring:{interval:'month',interval_count:1,usage_type:'licensed'}}}]}});
