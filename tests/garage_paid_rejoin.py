@@ -29,7 +29,7 @@ def rpc(name,*args,error=None,role='service_role'):
   if isinstance(x,(dict,list)):return "'"+json.dumps(x).replace("'","''")+"'::jsonb"
   return "'"+str(x).replace("'","''")+"'"
  out=run('SELECT public.'+name+'('+','.join(val(x) for x in args)+');',role,error=error)
- return json.loads(out) if out else None
+ return (out=='t') if out in ('t','f') else json.loads(out) if out else None
 
 owner,mechanic,outsider,shop=[str(uuid4()) for _ in range(4)]
 for a in [owner,mechanic,outsider]:run(f"INSERT INTO auth.users(id,email,email_confirmed_at) VALUES('{a}','{a}@example.test',now());")

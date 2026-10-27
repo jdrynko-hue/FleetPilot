@@ -32,6 +32,7 @@ export function purchase(value:unknown):PaidPurchase {
 export async function startGaragePaidRejoin(context:Context,deps:{stripe:Stripe;client:Rpc;now?:()=>number}){
  // Reuse validated catalog policy, then REMOVE trial fields from the paid flow.
  // Durable trial history is never changed or reused as a new reservation.
+ if(!uuid.test(context.actorId))throw Error('garage_paid_rejoin_unavailable');
  const trial=buildGarageSandboxTrial({...context,history:{trialUsed:false,subscriptionExists:false,checkoutPending:false}});
  const state=object(await paidRpc(deps.client,'garage_paid_rejoin_context',{
  p_actor:context.actorId,p_workspace:context.workspaceId}));
@@ -136,7 +137,7 @@ export async function recordPaidRejoinEvent(event:PaidEvent,deps:{client:Rpc;str
    line?.quantity!==1||(line.price?.id??line.pricing?.price_details?.price)!==p.price_id||
    !Number.isSafeInteger(line.period?.start)||!Number.isSafeInteger(line.period?.end)||line.period.start<=0||line.period.end<=line.period.start)
    throw Error('garage_paid_rejoin_receipt');
-  const paid=i.status==='paid'&&i.amount_paid===p.amount_minor&&i.amount_remaining===0&&Number.isSafeInteger(i.status_transitions?.paid_at)&&i.status_transitions.paid_at>0;
+  const paid=i.status==='paid'&&(i.paid===undefined||i.paid===true)&&i.amount_paid===p.amount_minor&&i.amount_remaining===0&&Number.isSafeInteger(i.status_transitions?.paid_at)&&i.status_transitions.paid_at>0;
   if(!paid&&(event.type!=='invoice.payment_failed'||i.status!=='open'||i.amount_paid!==0||i.amount_remaining!==p.amount_minor||!Number.isSafeInteger(i.attempt_count)||i.attempt_count<1))
    throw Error('garage_paid_rejoin_receipt');
   Object.assign(record,{action:paid?'paid':'failed',price_id:p.price_id,currency:p.currency,billing_interval:p.billing_interval,

@@ -211,8 +211,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
               widget.isOwner && widget.workspaceId != null &&
               widget.cancellationRepository?.available(widget.workspaceId!) == true)
             GarageTrialCancellationControl(
-              key: ValueKey('${widget.workspaceId}:$_readGeneration:$paid'),
-                      paidRejoin: paid,
+              key: ValueKey('${widget.workspaceId}:$_readGeneration'),
               canCancel: () => snapshot.data?.allowsPaidFeaturesAt(_now()) == true,
               repository: widget.cancellationRepository!,
               workspaceId: widget.workspaceId!,
