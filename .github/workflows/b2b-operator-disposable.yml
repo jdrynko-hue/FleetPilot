@@ -1,0 +1,42 @@
+name: B2B operator disposable RLS checks
+on:
+  pull_request:
+    paths:
+      - 'supabase/qa_admin_staging/**'
+      - 'tests/b2b_operator_disposable_pg.sql'
+      - '.github/workflows/b2b-operator-disposable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  b2b-operator-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: local-fixture-only
+          POSTGRES_DB: flotaryx_b2b_fixture
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d flotaryx_b2b_fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: flotaryx_b2b_fixture
+      PGPASSWORD: local-fixture-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql if unavailable
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Verify isolated B2B tables, RLS and operator RPCs
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/b2b_operator_disposable_pg.sql

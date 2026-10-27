@@ -1,0 +1,40 @@
+name: B2B operator isolation (disposable PostgreSQL)
+on:
+  pull_request:
+    paths:
+      - 'supabase/qa_admin_staging/**'
+      - 'tests/qa_b2b_operator_isolation.sql'
+      - '.github/workflows/qa-b2b-operator-isolation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b2b-operator-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-b2b-ci-only
+          POSTGRES_DB: b2b_operator_qa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d b2b_operator_qa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: b2b_operator_qa
+      PGPASSWORD: disposable-b2b-ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client if missing
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Run B2B auth, RLS, audit and revocation regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/qa_b2b_operator_isolation.sql

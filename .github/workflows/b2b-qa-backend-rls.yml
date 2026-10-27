@@ -1,0 +1,40 @@
+name: QA B2B operator backend RLS
+on:
+  pull_request:
+    paths:
+      - 'supabase/qa_admin_staging/**'
+      - 'tests/b2b_operator_*.sql'
+      - '.github/workflows/b2b-qa-backend-rls.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-b2b-permissions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-b2b-ci-only
+          POSTGRES_DB: isolated_b2b_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d isolated_b2b_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: isolated_b2b_test
+      PGPASSWORD: disposable-b2b-ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client when absent
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Test isolated B2B schema and operator authorization
+        run: psql -v ON_ERROR_STOP=1 -f tests/b2b_operator_rls.sql
