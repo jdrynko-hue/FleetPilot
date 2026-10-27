@@ -1,8 +1,10 @@
+import {startGaragePaidRejoin} from './paid_rejoin.ts';
 import { garageTrialLedger, startGarageSandboxCheckout } from './checkout.ts';
 
 type RpcClient = Parameters<typeof garageTrialLedger>[0];
 type StripeClient = Parameters<typeof startGarageSandboxCheckout>[1]['stripe'] & {
   prices: { retrieve(id: string): Promise<unknown> };
+  subscriptions?: {retrieve(id:string):Promise<unknown>};
   customers: { retrieve(id: string): Promise<unknown> };
 };
 type AuthClient = { auth: {
@@ -39,7 +41,7 @@ async function boundedJson(request: Request) {
  * The SDK factory must instantiate a Stripe client using only the checked key.
  */
 export function createGarageSandboxCheckoutHandler(configuration: {
-  enabled?: boolean; supabaseUrl: string; stripeKey: string;
+  enabled?: boolean; paidRejoinEnabled?: boolean; supabaseUrl: string; stripeKey: string;
 }, dependencies: {
   authClient: AuthClient; serviceClient: RpcClient;
   createStripeClient(key: string): StripeClient;
@@ -72,14 +74,16 @@ export function createGarageSandboxCheckoutHandler(configuration: {
     }
     let input;
     try { input = await boundedJson(request); } catch { return reply(400, 'Invalid request'); }
-    const allowed = ['workspace_id', 'plan_code', 'billing_interval', 'business_purchase_confirmed'];
+    const allowed = ['workspace_id', 'plan_code', 'billing_interval', 'business_purchase_confirmed', 'purchase_kind'];
     if (!input || typeof input !== 'object' || Array.isArray(input) ||
         Object.keys(input).some(key => !allowed.includes(key)) ||
         typeof input.workspace_id !== 'string' || !uuid.test(input.workspace_id) ||
         typeof input.plan_code !== 'string' || !/^[a-z][a-z0-9_]{1,31}$/.test(input.plan_code) ||
+        (input.purchase_kind !== undefined && input.purchase_kind !== 'paid_rejoin') ||
         !['month', 'year'].includes(input.billing_interval) || input.business_purchase_confirmed !== true) {
       return reply(400, 'Invalid request');
     }
+    if (input.purchase_kind === 'paid_rejoin' && configuration.paidRejoinEnabled !== true) return reply(503, 'Garage Sandbox billing unavailable');
     let actor: string;
     try {
       // Real Auth verification, not decoded client JWT/user_metadata/getSession.
@@ -129,6 +133,11 @@ export function createGarageSandboxCheckoutHandler(configuration: {
         return reply(503, 'Garage Sandbox billing unavailable');
       }
       stage = 'checkout_coordinate';
+      if (input.purchase_kind === 'paid_rejoin') {
+        if (!stripe.subscriptions || (rawCustomer as {test_clock?:unknown}).test_clock != null) return reply(503, 'Garage Sandbox billing unavailable');
+        const result = await startGaragePaidRejoin({actorId:actor,planCode:catalog.plan_code,ownerVerified:true,workspaceId:catalog.workspace_id,currency:catalog.currency,price,customer:{id:customer.id,livemode:false}}, {stripe:{...stripe,subscriptions:stripe.subscriptions},client:dependencies.serviceClient,now:dependencies.now});
+        return new Response(JSON.stringify(result),{status:200,headers});
+      }
       const result = await startGarageSandboxCheckout({ actorId: actor, ownerVerified: true,
         workspaceId: catalog.workspace_id, currency: catalog.currency, price,
         customer: { id: customer.id, livemode: false } }, {

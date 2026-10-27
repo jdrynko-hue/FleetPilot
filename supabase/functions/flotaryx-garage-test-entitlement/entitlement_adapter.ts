@@ -26,6 +26,7 @@ function unavailable() {
 // service credential is confined to the separate RPC client.
 export function createGarageSandboxEntitlementRuntime(configuration: {
   enabled?: boolean;
+  paidRejoinEnabled?: boolean;
   supabaseUrl: string;
   anonKey?: string;
   serviceKey?: string;
@@ -47,6 +48,7 @@ export function createGarageSandboxEntitlementRuntime(configuration: {
   const serviceClient = createClient(qaUrl, serviceKey, options);
   return createGarageSandboxEntitlementHandler({
     enabled: true,
+    paidRejoinEnabled: configuration.paidRejoinEnabled,
     supabaseUrl: qaUrl,
   }, { authClient, serviceClient });
 }

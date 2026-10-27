@@ -26,6 +26,9 @@ class AppConfig {
 
   // Independent, default-off client gate. Enabling Garage navigation or
   // entitlement reads must never implicitly enable a Checkout request.
+  static const _garagePaidRejoinRequested = bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_PAID_REJOIN_CLIENT');
+  static bool get garagePaidRejoinEnabled => _garagePaidRejoinRequested && garageSandboxCheckoutUiEnabled;
+
   static const _garageSandboxCheckoutRequested =
       bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_CHECKOUT_CLIENT');
   static bool garageSandboxCheckoutEnabledFor(String url,

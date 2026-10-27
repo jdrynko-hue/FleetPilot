@@ -6,7 +6,7 @@ const base='supabase/functions/flotaryx-garage-test-webhook/';
 const read=p=>readFileSync(p,'utf8');
 
 test('webhook billing coordinators and storage are exact reviewed copies',()=>{
-  for(const file of ['paid_webhook.ts','paid_webhook_storage.ts','trial_webhook.ts','trial_webhook_storage.ts']){
+  for(const file of ['paid_rejoin.ts','trial_policy.ts','paid_webhook.ts','paid_webhook_storage.ts','trial_webhook.ts','trial_webhook_storage.ts']){
     assert.equal(read(base+file),read('server/garage-billing/'+file),file);
   }
 });

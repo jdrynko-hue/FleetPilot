@@ -242,17 +242,20 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
                 FutureBuilder<GarageEntitlementRead>(future: _entitlement,
                   builder: (context, snapshot) {
                     final read = snapshot.data;
+                    final paid = widget.checkoutRepository?.paidRejoinEnabled == true && read?.paidAvailable == true;
                     final allowed = snapshot.connectionState == ConnectionState.done &&
                       read?.state == GarageEntitlementReadState.verified &&
-                      read?.entitlement?.active == false && read?.trialAvailable == true;
+                      read?.entitlement?.active == false && (read?.trialAvailable == true || paid);
                     if (!allowed) return Align(alignment: Alignment.centerLeft,
                       child: TextButton(onPressed: widget.loadEntitlement == null ? null : () {
                         setState(_readForCurrentWorkshop);
                       }, child: Text(GarageCheckoutText.get(9))));
                     return GarageSandboxCheckoutCard(
-                      key: ValueKey('${widget.workspaceId}:$_readGeneration'),
+                      key: ValueKey('${widget.workspaceId}:$_readGeneration:$paid'),
+                      paidRejoin: paid,
                       canPrepare: () => read?.state == GarageEntitlementReadState.verified &&
-                        read?.entitlement?.active == false && read?.trialAvailable == true,
+                        read?.entitlement?.active == false &&
+                        (paid ? read?.paidAvailable == true : read?.trialAvailable == true),
                       repository: widget.checkoutRepository!,
                       workspaceId: widget.workspaceId!, isOwner: widget.isOwner,
                       openCheckout: widget.openCheckout,

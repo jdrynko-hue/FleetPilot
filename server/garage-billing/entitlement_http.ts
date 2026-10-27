@@ -45,7 +45,7 @@ function entitlement(value: unknown): Entitlement | null {
 
 /** QA-only, dependency-injected read adapter. It is not served or deployed. */
 export function createGarageSandboxEntitlementHandler(configuration: {
-  enabled?: boolean; supabaseUrl: string;
+  enabled?: boolean; paidRejoinEnabled?: boolean; supabaseUrl: string;
 }, dependencies: { authClient: AuthClient; serviceClient: ServiceClient }) {
   const { enabled, supabaseUrl } = configuration;
   const headers = { 'Content-Type': 'application/json; charset=utf-8',
@@ -104,8 +104,16 @@ export function createGarageSandboxEntitlementHandler(configuration: {
         if (eligibility.error || typeof eligibility.data !== 'boolean') {
           return reply(503, 'Garage Sandbox access unavailable');
         }
+        let paidAvailable: boolean | undefined;
+        if (configuration.paidRejoinEnabled === true) {
+          const paid = await dependencies.serviceClient.rpc('garage_paid_rejoin_context', {p_actor:actor,p_workspace:raw.workspace_id});
+          const value = paid.data as {eligible?:unknown} | null;
+          if (paid.error || typeof value?.eligible !== 'boolean') return reply(503, 'Garage Sandbox access unavailable');
+          paidAvailable = value.eligible && !status.active && eligibility.data === false;
+        }
         return new Response(JSON.stringify({entitlement: status,
-          trial_available: eligibility.data === true && status.active === false}),
+          trial_available: eligibility.data === true && status.active === false,
+          ...(paidAvailable === undefined ? {} : {paid_available:paidAvailable})}),
           {status: 200, headers});
       }
       return new Response(JSON.stringify(status), { status: 200, headers });

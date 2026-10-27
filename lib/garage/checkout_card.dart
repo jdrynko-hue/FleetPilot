@@ -5,6 +5,7 @@ import '../core/app_config.dart';
 import '../core/localization.dart';
 import 'checkout_repository.dart';
 import 'checkout_text.dart';
+import 'paid_rejoin_text.dart';
 
 typedef GarageCheckoutLauncher = Future<bool> Function(Uri url);
 
@@ -14,11 +15,12 @@ typedef GarageCheckoutLauncher = Future<bool> Function(Uri url);
 class GarageSandboxCheckoutCard extends StatefulWidget {
   const GarageSandboxCheckoutCard({required this.repository,
     required this.workspaceId, required this.isOwner,
-    this.openCheckout, this.onRefreshStatus, this.canPrepare, super.key});
+    this.openCheckout, this.onRefreshStatus, this.canPrepare, this.paidRejoin = false, super.key});
 
   final GarageCheckoutRepository repository;
   final String workspaceId;
   final bool isOwner;
+  final bool paidRejoin;
   final GarageCheckoutLauncher? openCheckout;
   final VoidCallback? onRefreshStatus;
   final bool Function()? canPrepare;
@@ -52,7 +54,7 @@ class _CheckoutCardState extends State<GarageSandboxCheckoutCard> {
   String? _preparedActor;
   String? _preparedSession;
 
-  bool get _available => (widget.canPrepare?.call() ?? true) &&
+  bool get _available => (!widget.paidRejoin || widget.repository.paidRejoinEnabled) && (widget.canPrepare?.call() ?? true) &&
     GarageSandboxCheckoutCard.available(
     widget.repository, widget.workspaceId, widget.isOwner);
 
@@ -73,7 +75,7 @@ class _CheckoutCardState extends State<GarageSandboxCheckoutCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.repository != widget.repository ||
         oldWidget.workspaceId != widget.workspaceId ||
-        oldWidget.isOwner != widget.isOwner) {
+        oldWidget.isOwner != widget.isOwner || oldWidget.paidRejoin != widget.paidRejoin) {
       ++_generation;
       _discard();
       _busy = false;
@@ -102,7 +104,7 @@ class _CheckoutCardState extends State<GarageSandboxCheckoutCard> {
     try {
       result = await repository.start(workspaceId: workspace,
         planCode: 'garage_qa_pilot', billingInterval: _interval,
-        businessPurchaseConfirmed: _confirmed);
+        businessPurchaseConfirmed: _confirmed, paidRejoin: widget.paidRejoin);
     } catch (_) {
       result = const GarageCheckoutResult.reconciliationRequired();
     }
@@ -151,10 +153,10 @@ class _CheckoutCardState extends State<GarageSandboxCheckoutCard> {
       final locked = _busy || _attempted;
       return Card(child: Padding(padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(GarageCheckoutText.get(0),
+          Text(widget.paidRejoin ? GaragePaidRejoinText.get(0) : GarageCheckoutText.get(0),
             style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
-          Text(GarageCheckoutText.get(6)),
+          Text(widget.paidRejoin ? GaragePaidRejoinText.get(1) : GarageCheckoutText.get(6)),
           const SizedBox(height: 12),
           Text(GarageCheckoutText.get(10)),
           DropdownButton<String>(value: _interval, isExpanded: true,
