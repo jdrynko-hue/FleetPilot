@@ -12,12 +12,16 @@ class IssueFormScreen extends StatefulWidget {
     required this.company,
     this.issue,
     this.initialVehicleId,
+    this.initialTitle,
+    this.initialDescription,
     super.key,
   });
 
   final CompanyMembership company;
   final FleetIssue? issue;
   final String? initialVehicleId;
+  final String? initialTitle;
+  final String? initialDescription;
 
   @override
   State<IssueFormScreen> createState() => _IssueFormScreenState();
@@ -42,8 +46,8 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   void initState() {
     super.initState();
     final i = widget.issue;
-    _title = TextEditingController(text: i?.title ?? '');
-    _description = TextEditingController(text: i?.description ?? '');
+    _title = TextEditingController(text: i?.title ?? widget.initialTitle ?? '');
+    _description = TextEditingController(text: i?.description ?? widget.initialDescription ?? '');
     _mileage = TextEditingController(
       text: i?.mileageAtReport?.toString() ?? '',
     );
