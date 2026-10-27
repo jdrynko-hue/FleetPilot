@@ -99,6 +99,33 @@ checks += 4
 run(first_paid.replace('in_firstcycle', 'in_conflict'),
     'service_role', error='55000')
 
+# The coordinator re-reads the current invoice on EVERY delivery. A replay of
+# the exact previously recorded failed event therefore reaches the paid RPC
+# after recovery. Preserve the first receipt rather than rejecting its new
+# reconciliation result or rewriting the historical failure.
+failed_receipt = run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+                     "WHERE event_id='evt_firstfailed';")
+replayed_failure_paid = first_paid.replace('evt_firstpaid', 'evt_firstfailed').replace(
+    "'invoice.paid'", "'invoice.payment_failed'").replace(
+    '2030-01-08T00:00:30Z', '2030-01-08T00:00:10Z')
+assert run(replayed_failure_paid, 'service_role') == 't'
+assert run(replayed_failure_paid, 'service_role') == 't'
+assert run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+           "WHERE event_id='evt_firstfailed';") == failed_receipt
+assert run("SELECT count(*) FROM garage_private.test_billing_invoices "
+           "WHERE invoice_id='in_firstcycle' AND payment_state='paid' "
+           "AND amount_paid=4900;") == '1'
+checks += 4
+for original, changed in [
+    ('in_firstcycle', 'in_foreignreplay'),
+    ('2030-01-08T00:00:10Z', '2030-01-08T00:00:11Z'),
+    ("'invoice.payment_failed'", "'invoice.paid'"),
+    ('2030-02-08T00:00:00Z', '2030-02-09T00:00:00Z'),
+    ('4900,4900', '5000,5000'),
+    ('2030-01-08T00:00:20Z', '2030-01-08T00:00:21Z'),
+]:
+    run(replayed_failure_paid.replace(original, changed), 'service_role', error='55000')
+
 # A delayed failure delivery cannot downgrade the invoice already observed as
 # paid. A failed renewal does not revoke time already paid, and cannot extend it.
 late_failure = failed('evt_latefailure', 'in_firstcycle',
@@ -206,6 +233,47 @@ checks += 3
 bad_clock = clock_paid.replace('evt_clockpaid','evt_badclock').replace(
     'in_clockpaid','in_badclock').replace('2030-04-08T02:00:00Z','2030-04-08T00:00:00Z')
 run(bad_clock, 'service_role', error='22023')
+
+# Clock-backed recovery can be observed on a replay before invoice.paid arrives.
+# Real event time stays fixed while the verified paid time is in the future.
+clock_failed = failed('evt_clockfailedreplay', 'in_clockrecovered',
+    '2030-04-08T00:00:00Z', '2030-05-08T00:00:00Z',
+    created='2030-01-01T00:00:00Z')
+assert run(clock_failed, 'service_role') == 't'
+clock_failed_receipt = run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+                           "WHERE event_id='evt_clockfailedreplay';")
+clock_recovery = clock_paid.replace('evt_clockpaid', 'evt_clockfailedreplay').replace(
+    'in_clockpaid', 'in_clockrecovered').replace(
+    "'invoice.paid'", "'invoice.payment_failed'")
+with ThreadPoolExecutor(max_workers=2) as pool:
+    assert list(pool.map(run_parallel, [clock_recovery, clock_recovery])) == ['t', 't']
+assert run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+           "WHERE event_id='evt_clockfailedreplay';") == clock_failed_receipt
+assert run("SELECT count(*) FROM garage_private.test_billing_invoices "
+           "WHERE invoice_id='in_clockrecovered' AND payment_state='paid' "
+           "AND amount_paid=4900 AND paid_at='2030-04-08T01:00:00Z';") == '1'
+assert run(clock_recovery, 'service_role') == 't'
+# The earlier subscription end must still cap this reconciled paid period.
+assert entitlement('2030-04-09T00:00:00Z')['active'] is False
+checks += 6
+run(clock_recovery.replace('in_clockrecovered', 'in_foreignclockreplay'),
+    'service_role', error='55000')
+run(clock_recovery.replace('2030-01-01T00:00:00Z', '2030-01-01T00:00:01Z'),
+    'service_role', error='55000')
+run(clock_recovery.replace('2030-04-08T02:00:00Z', '2030-04-08T00:00:00Z'),
+    'service_role', error='22023')
+
+# A first late failure can reconcile paid state, but its receipt must not later
+# accept a reverse paid -> failed action under that same ID.
+first_late_paid = clock_paid.replace('evt_clockpaid', 'evt_firstlatepaid').replace(
+    'in_clockpaid', 'in_firstlatepaid').replace("'invoice.paid'", "'invoice.payment_failed'")
+assert run(first_late_paid, 'service_role') == 't'
+run(failed('evt_firstlatepaid', 'in_firstlatepaid',
+    '2030-04-08T00:00:00Z', '2030-05-08T00:00:00Z',
+    created='2030-01-01T00:00:00Z'), 'service_role', error='55000')
+assert run("SELECT action FROM garage_private.test_billing_events "
+           "WHERE event_id='evt_firstlatepaid';") == 'paid'
+checks += 2
 
 # A future virtual subscription end keeps its real event time. The ordinary
 # end RPC retains its five-minute wall-time guard; only the clock RPC accepts it.

@@ -66,10 +66,16 @@ BEGIN
     IF existing.attempt_id IS DISTINCT FROM p_attempt OR
        existing.object_id IS DISTINCT FROM p_object OR
        existing.event_type IS DISTINCT FROM p_type OR
-       existing.action IS DISTINCT FROM p_action OR
+       (existing.action IS DISTINCT FROM p_action AND NOT (
+         existing.action='failed' AND p_action='paid' AND
+         p_type='invoice.payment_failed')) OR
        existing.event_created_at IS DISTINCT FROM p_created THEN
       RAISE EXCEPTION 'Billing event replay conflict' USING ERRCODE='55000';
     END IF;
+    -- A signed failure may be replayed after the current invoice is paid.
+    -- Its first receipt stays immutable; the calling paid RPC still validates
+    -- the full invoice and time domain before reconciling or acknowledging it.
+    -- No other action change, event identity change or reverse is accepted.
   END IF;
 END;
 $$;
