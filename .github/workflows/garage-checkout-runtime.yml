@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'server/garage-billing/**'
+      - 'supabase/functions/flotaryx-garage-test-paid-renewal/**'
+      - 'tests/garage-paid-renewal-runtime.test.ts'
       - 'supabase/functions/flotaryx-garage-test-checkout/**'
       - 'supabase/functions/flotaryx-garage-test-entitlement/**'
       - 'supabase/functions/flotaryx-garage-test-trial-cancel/**'
@@ -57,6 +59,10 @@ jobs:
         run: deno test --allow-read=supabase,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-checkout/deno.json --lock supabase/functions/flotaryx-garage-test-checkout/deno.lock tests/garage-paid-rejoin-runtime.test.ts tests/garage-checkout-runtime.test.ts tests/garage-webhook-signatures.test.ts tests/garage-trial-cancellation-runtime.test.ts tests/garage-trial-cancellation-entrypoint.test.ts tests/garage-sandbox-lifecycle-runtime.test.ts tests/garage-entitlement-runtime.test.ts tests/garage-entitlement-entrypoint.test.ts tests/garage-webhook-entrypoint.test.ts
       - name: Verify isolated entitlement Edge bundle parity and fail-closed configuration
         run: node --test tests/garage-entitlement-edge-bundle.test.mjs tests/garage-checkout-edge-bundle.test.mjs tests/garage-cancellation-edge-bundle.test.mjs tests/garage-webhook-edge-bundle.test.mjs
+      - name: Check paid renewal SDK and isolated transport
+        run: |
+          deno check --frozen-lockfile --config supabase/functions/flotaryx-garage-test-paid-renewal/deno.json --lock supabase/functions/flotaryx-garage-test-paid-renewal/deno.lock supabase/functions/flotaryx-garage-test-paid-renewal/index.ts
+          deno test --allow-read=supabase,server/garage-billing --frozen-lockfile --config supabase/functions/flotaryx-garage-test-paid-renewal/deno.json --lock supabase/functions/flotaryx-garage-test-paid-renewal/deno.lock tests/garage-paid-renewal-runtime.test.ts
       - name: Preserve resolved dependency lock for review
         if: always()
         uses: actions/upload-artifact@v4

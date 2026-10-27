@@ -5,6 +5,7 @@ on:
       - 'server/garage-billing/**'
       - 'supabase/garage_staging/**'
       - 'tests/garage_paid_rejoin.py'
+      - 'tests/garage_paid_renewal.py'
       - '.github/workflows/garage-paid-rejoin.yml'
   workflow_dispatch:
 permissions:
@@ -65,3 +66,7 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_billing_catalog.sql -f server/garage-billing/test_entitlement_access.sql -f server/garage-billing/test_paid_rejoin.sql
           python3 tests/garage_paid_rejoin.py
+      - name: Verify owner paid renewal selection without hosted writes
+        run: |
+          psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_paid_renewal.sql
+          python3 tests/garage_paid_renewal.py

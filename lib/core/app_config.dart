@@ -24,6 +24,9 @@ class AppConfig {
       garageSandboxEntitlementEnabledFor(supabaseUrl,
           requested: _garageSandboxEntitlementRequested);
 
+  static const _paidRenewalRequested = bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_PAID_RENEWAL_CLIENT');
+  static bool get garagePaidRenewalEnabled => _paidRenewalRequested && garageSandboxEntitlementEnabled && isEcosystemQaBackend(supabaseUrl);
+
   // Independent, default-off client gate. Enabling Garage navigation or
   // entitlement reads must never implicitly enable a Checkout request.
   static const _garagePaidRejoinRequested = bool.fromEnvironment('FLOTARYX_GARAGE_SANDBOX_PAID_REJOIN_CLIENT');

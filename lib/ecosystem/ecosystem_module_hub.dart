@@ -21,6 +21,7 @@ import '../garage/entitlement_repository.dart';
 import '../garage/operation_access_notice.dart';
 import '../garage/checkout_repository.dart';
 import '../garage/trial_cancellation_repository.dart';
+import '../garage/paid_renewal_repository.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -71,6 +72,8 @@ class EcosystemModuleHub extends StatelessWidget {
           GarageBillingScreen.text(0): () => GarageBillingScreen(
             workshopName: destination.name!, isOwner: destination.canConfigure,
             workspaceId: destination.workspaceId!,
+            paidRenewalRepository: AppConfig.garagePaidRenewalEnabled
+              ? GaragePaidRenewalRepository.forClient(client) : null,
             cancellationRepository: AppConfig.garageSandboxTrialCancellationEnabled
               ? GarageTrialCancellationRepository.forClient(client) : null,
             checkoutRepository: AppConfig.garageSandboxCheckoutUiEnabled
