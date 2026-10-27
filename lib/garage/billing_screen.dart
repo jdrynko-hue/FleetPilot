@@ -212,6 +212,7 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
               widget.cancellationRepository?.available(widget.workspaceId!) == true)
             GarageTrialCancellationControl(
               key: ValueKey('${widget.workspaceId}:$_readGeneration'),
+              canCancel: () => snapshot.data?.allowsPaidFeaturesAt(_now()) == true,
               repository: widget.cancellationRepository!,
               workspaceId: widget.workspaceId!,
               trialEndsAt: snapshot.data!.entitlement!.accessEndsAt!,
@@ -250,6 +251,8 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
                       }, child: Text(GarageCheckoutText.get(9))));
                     return GarageSandboxCheckoutCard(
                       key: ValueKey('${widget.workspaceId}:$_readGeneration'),
+                      canPrepare: () => read?.state == GarageEntitlementReadState.verified &&
+                        read?.entitlement?.active == false && read?.trialAvailable == true,
                       repository: widget.checkoutRepository!,
                       workspaceId: widget.workspaceId!, isOwner: widget.isOwner,
                       openCheckout: widget.openCheckout,

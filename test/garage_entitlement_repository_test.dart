@@ -201,6 +201,11 @@ void main() {
     expect(read.state, GarageEntitlementReadState.verified);
     expect(read.allowsPaidFeaturesAt(DateTime.utc(2026, 10, 20)), isTrue);
     session = 'session-456';
+    expect(read.state, GarageEntitlementReadState.unavailable);
+    expect(read.allowsPaidFeaturesAt(DateTime.utc(2026, 10, 20)), isFalse);
+    expect(read.entitlement, isNull);
+    session = 'session-123';
+    expect(read.state, GarageEntitlementReadState.unavailable);
   });
 
   test('configured factory uses authenticated SDK transport and exact body',

@@ -7,11 +7,12 @@ import 'trial_cancellation_repository.dart';
 class GarageTrialCancellationControl extends StatefulWidget {
   const GarageTrialCancellationControl({required this.repository,
     required this.workspaceId, required this.trialEndsAt,
-    required this.onRefresh, super.key});
+    required this.onRefresh, this.canCancel, super.key});
   final GarageTrialCancellationRepository repository;
   final String workspaceId;
   final DateTime trialEndsAt;
   final VoidCallback onRefresh;
+  final bool Function()? canCancel;
   @override
   State<GarageTrialCancellationControl> createState() => _CancellationState();
 }
@@ -21,7 +22,8 @@ class _CancellationState extends State<GarageTrialCancellationControl> {
   bool _attempted = false;
   String? _message;
   String text(String en, String pl) => AppLocale.language.value == 'pl' ? pl : en;
-  bool get _available => widget.repository.available(widget.workspaceId) &&
+  bool get _available => (widget.canCancel?.call() ?? true) &&
+    widget.repository.available(widget.workspaceId) &&
     widget.trialEndsAt.isAfter(DateTime.now().toUtc());
 
   Future<void> _cancel() async {
