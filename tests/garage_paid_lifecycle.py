@@ -309,4 +309,77 @@ run(clock_end.replace('evt_clockended','evt_conflictingend').replace(
     "'2030-01-20T00:00:00Z',false", "'2030-01-19T00:00:00Z',false"),
     'service_role', error='55000')
 
+# A real failure can precede recovery by hours. Its delayed delivery still
+# carries the original signed event time, even though the fresh non-clock
+# invoice has a later paid_at. Use a separate historical claim so this tests
+# real database wall time without changing the DB clock or the clock fixtures.
+delay_owner = '00000000-0000-4000-8000-000000000302'
+delay_workspace = '00000000-0000-4000-8000-000000000402'
+run(f"INSERT INTO auth.users(id) VALUES('{delay_owner}');")
+run(f"SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub','{delay_owner}',false); "
+    f"INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) "
+    f"VALUES('{delay_workspace}','{delay_owner}','Delayed recovery fixture','GB','GBP');")
+delay_attempt = json.loads(run(
+    f"SELECT public.garage_reserve_test_trial('{delay_owner}','{delay_workspace}',"
+    "'price_delayfixture','gbp','month');", 'service_role'))['attempt_id']
+run(f"SELECT public.garage_prepare_test_checkout('{delay_owner}','{delay_attempt}',"
+    "'cus_delayfixture');", 'service_role')
+run(f"SELECT public.garage_confirm_test_trial('{delay_attempt}','sub_delayfixture',"
+    "'2020-01-01T00:00:00Z','2020-01-08T00:00:00Z',false);", 'service_role')
+
+
+def delayed_paid(event, invoice='in_delayedcycle', event_type='invoice.payment_failed',
+                 created='2020-01-08T00:00:10Z', paid_at='2020-01-08T01:00:00Z'):
+    return (f"SELECT public.garage_record_test_invoice_paid('{delay_attempt}','{event}',"
+            f"'{event_type}','{created}','{invoice}','sub_delayfixture','cus_delayfixture',"
+            "'price_delayfixture','gbp','month','2020-01-08T00:00:00Z',"
+            f"'2020-02-08T00:00:00Z',4900,4900,'{paid_at}',false);")
+
+
+delay_failed = (f"SELECT public.garage_record_test_invoice_failed('{delay_attempt}',"
+    "'evt_delayedrecovery','2020-01-08T00:00:10Z','in_delayedcycle',"
+    "'sub_delayfixture','cus_delayfixture','price_delayfixture','gbp','month',"
+    "'2020-01-08T00:00:00Z','2020-02-08T00:00:00Z',4900,1,false);")
+assert run(delay_failed, 'service_role') == 't'
+delay_receipt = run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+                   "WHERE event_id='evt_delayedrecovery';")
+delay_recovery = delayed_paid('evt_delayedrecovery')
+for role in ['anon', 'authenticated']:
+    run(delay_recovery, role, error='42501')
+assert run(delay_recovery, 'service_role') == 't'
+assert run(delay_recovery, 'service_role') == 't'
+assert run("SELECT row_to_json(e) FROM garage_private.test_billing_events e "
+           "WHERE event_id='evt_delayedrecovery';") == delay_receipt
+assert run("SELECT count(*) FROM garage_private.test_billing_invoices WHERE "
+           "invoice_id='in_delayedcycle' AND payment_state='paid' AND amount_paid=4900;") == '1'
+history = json.loads(run(f"SELECT garage_private.test_entitlement_at('{delay_attempt}',"
+                         "'2020-01-09T00:00:00Z');"))
+assert history['source'] == 'paid'
+assert json.loads(run(f"SELECT garage_private.test_entitlement_at('{delay_attempt}',"
+                       "'2020-02-08T00:00:00Z');"))['active'] is False
+checks += 7
+
+# First delivery can also observe recovery before the distinct paid event.
+first_delayed = delayed_paid('evt_firstdelayed', 'in_firstdelayed')
+with ThreadPoolExecutor(max_workers=2) as pool:
+    assert list(pool.map(run_parallel, [first_delayed, first_delayed])) == ['t', 't']
+assert run("SELECT count(*) FROM garage_private.test_billing_events WHERE "
+           "event_id='evt_firstdelayed' AND action='paid';") == '1'
+checks += 2
+
+# A non-clock late failure must not authorize a future virtual payment date.
+future_paid = run("SELECT clock_timestamp()+interval '1 day';")
+run(delayed_paid('evt_futurefailure', 'in_futurefailure', paid_at=future_paid),
+    'service_role', error='22023')
+# Direct invoice.paid keeps its existing signed-event five-minute bound.
+run(delayed_paid('evt_directlatepaid', 'in_directlatepaid', event_type='invoice.paid'),
+    'service_role', error='22023')
+run(delay_recovery.replace('cus_delayfixture', 'cus_foreign'),
+    'service_role', error='55000')
+run(delay_recovery.replace('4900,4900', '5000,5000'),
+    'service_role', error='55000')
+assert run("SELECT count(*) FROM garage_private.test_billing_events WHERE "
+           "event_id IN ('evt_futurefailure','evt_directlatepaid');") == '0'
+checks += 1
+
 print(f'Garage paid lifecycle: {checks} checks PASS (replay/order/access loss)')
