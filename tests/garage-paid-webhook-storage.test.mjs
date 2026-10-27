@@ -64,3 +64,17 @@ test('clock invoice uses separate service RPC without rewriting event creation',
   assert.equal(calls[0][1].p_event_created,'event-time');
   assert.equal(calls[0][1].p_test_clock_time,'virtual-now');
 });
+
+test('clock subscription end maps virtual time to a separate service RPC', async () => {
+  const calls=[];
+  const storage=garagePaidWebhookStorage({rpc:async (name,args) => {
+    calls.push([name,args]); return {data:true,error:null};
+  }});
+  await storage.recordEnded({attempt:'attempt',event:'evt_fixture',eventCreated:'real-event',
+    subscription:'sub_fixture',customer:'cus_fixture',endedAt:'virtual-end',testClockTime:'virtual-now'});
+  assert.deepEqual(calls, [['garage_record_test_clock_subscription_ended', {
+    p_attempt:'attempt',p_event:'evt_fixture',p_event_created:'real-event',
+    p_subscription:'sub_fixture',p_customer:'cus_fixture',p_ended_at:'virtual-end',
+    p_livemode:false,p_test_clock_time:'virtual-now',
+  }]]);
+});

@@ -207,4 +207,38 @@ bad_clock = clock_paid.replace('evt_clockpaid','evt_badclock').replace(
     'in_clockpaid','in_badclock').replace('2030-04-08T02:00:00Z','2030-04-08T00:00:00Z')
 run(bad_clock, 'service_role', error='22023')
 
+# A future virtual subscription end keeps its real event time. The ordinary
+# end RPC retains its five-minute wall-time guard; only the clock RPC accepts it.
+clock_end = (f"SELECT public.garage_record_test_subscription_ended('{attempt}',"
+             "'evt_clockended','2029-12-31T00:00:00Z','sub_paidfixture',"
+             "'cus_paidfixture','2030-01-20T00:00:00Z',false);")
+run(clock_end, 'service_role', error='22023')
+clock_end = clock_end.replace('garage_record_test_subscription_ended',
+    'garage_record_test_clock_subscription_ended').replace('false);',
+    "false,'2030-01-20T00:01:00Z');")
+for role in ['anon', 'authenticated']:
+    run(clock_end, role, error='42501')
+assert run(clock_end, 'service_role') == 't'
+assert run(clock_end, 'service_role') == 't'
+assert run("SELECT event_created_at='2029-12-31T00:00:00Z' FROM "
+    "garage_private.test_billing_events WHERE event_id='evt_clockended';") == 't'
+assert entitlement('2030-01-19T00:00:00Z')['source'] == 'paid'
+assert entitlement('2030-01-20T00:00:00Z')['active'] is False
+checks += 5
+bad_end_clock = clock_end.replace('evt_clockended','evt_badendclock').replace(
+    '2030-01-20T00:01:00Z','2030-01-19T23:59:59Z')
+run(bad_end_clock, 'service_role', error='22023')
+run(clock_end.replace("'2030-01-20T00:01:00Z'", 'NULL'),
+    'service_role', error='22023')
+run(clock_end.replace("false,'2030", "true,'2030"),
+    'service_role', error='22023')
+run(clock_end.replace('sub_paidfixture', 'sub_foreign'),
+    'service_role', error='55000')
+assert run("SELECT count(*) FROM garage_private.test_billing_events "
+    "WHERE event_id='evt_badendclock';") == '0'
+checks += 1
+run(clock_end.replace('evt_clockended','evt_conflictingend').replace(
+    "'2030-01-20T00:00:00Z',false", "'2030-01-19T00:00:00Z',false"),
+    'service_role', error='55000')
+
 print(f'Garage paid lifecycle: {checks} checks PASS (replay/order/access loss)')

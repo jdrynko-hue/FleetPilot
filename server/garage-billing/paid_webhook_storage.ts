@@ -41,10 +41,12 @@ export function garagePaidWebhookStorage(client: Client): Storage {
     recordFailed: async record => (await rpc('garage_record_test_invoice_failed', {
       ...invoiceArgs(record), p_attempt_count: record.attemptCount, p_livemode: false,
     })) === true,
-    recordEnded: async record => (await rpc('garage_record_test_subscription_ended', {
+    recordEnded: async record => (await rpc(record.testClockTime === undefined
+      ? 'garage_record_test_subscription_ended' : 'garage_record_test_clock_subscription_ended', {
       p_attempt: record.attempt, p_event: record.event,
       p_event_created: record.eventCreated, p_subscription: record.subscription,
       p_customer: record.customer, p_ended_at: record.endedAt, p_livemode: false,
+      ...(record.testClockTime === undefined ? {} : {p_test_clock_time: record.testClockTime}),
     })) === true,
   };
 }

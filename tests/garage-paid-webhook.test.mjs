@@ -131,6 +131,54 @@ test('authoritative subscription deletion caps access', async () => {
   assert.equal(f.calls.at(-1)[1].endedAt, new Date(start * 1000).toISOString());
 });
 
+test('clock subscription end freshly validates virtual time without changing event creation', async () => {
+  const f = fixture('customer.subscription.deleted');
+  Object.assign(f.sub, {status:'canceled', canceled_at:start, test_clock:'clock_fixture'});
+  f.event.created = start - 30 * 86400;
+  f.deps.retrieveTestClock = async id => {
+    f.calls.push(['clock', id]);
+    return {id, livemode:false, status:'ready', frozen_time:start + 60};
+  };
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 200);
+  assert.deepEqual(f.calls.map(c => c[0]), ['verify','subscription','lookup','clock','ended']);
+  const record = f.calls.at(-1)[1];
+  assert.equal(record.eventCreated, new Date(f.event.created * 1000).toISOString());
+  assert.equal(record.testClockTime, new Date((start + 60) * 1000).toISOString());
+});
+
+test('clock subscription end refuses cancellation later than verified frozen time', async () => {
+  const f = fixture('customer.subscription.deleted');
+  Object.assign(f.sub, {status:'canceled', canceled_at:start, test_clock:'clock_fixture'});
+  f.deps.retrieveTestClock = async id =>
+    ({id, livemode:false, status:'ready', frozen_time:start - 1});
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status, 409);
+  assert.equal(f.calls.some(c => c[0] === 'ended'), false);
+});
+
+for (const [name, change] of [
+  ['wrong clock', c => c.id='clock_other'],
+  ['live clock', c => c.livemode=true],
+  ['failed clock', c => c.status='internal_failure'],
+  ['fractional clock', c => c.frozen_time=start + 0.5],
+]) test(`clock subscription end fails closed for ${name}`, async () => {
+  const f=fixture('customer.subscription.deleted');
+  Object.assign(f.sub,{status:'canceled',canceled_at:start,test_clock:'clock_fixture'});
+  const clock={id:'clock_fixture',livemode:false,status:'ready',frozen_time:start+60};
+  change(clock); f.deps.retrieveTestClock=async () => clock;
+  assert.equal((await createGaragePaidWebhook(f.deps)(f.request())).status,409);
+  assert.equal(f.calls.some(c => c[0]==='ended'),false);
+});
+
+test('clock subscription end retries a temporary clock retrieval failure', async () => {
+  const f=fixture('customer.subscription.deleted');
+  Object.assign(f.sub,{status:'canceled',canceled_at:start,test_clock:'clock_fixture'});
+  f.deps.retrieveTestClock=async () => {throw Error('private-clock-failure');};
+  const response=await createGaragePaidWebhook(f.deps)(f.request());
+  assert.equal(response.status,503);
+  assert.equal((await response.text()).includes('private-clock-failure'),false);
+  assert.equal(f.calls.some(c => c[0]==='ended'),false);
+});
+
 for (const [name, change] of [
   ['live invoice', f => f.invoice.livemode = true],
   ['wrong customer', f => f.invoice.customer = 'cus_other'],
