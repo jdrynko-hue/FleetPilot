@@ -14,13 +14,14 @@ typedef GarageCheckoutLauncher = Future<bool> Function(Uri url);
 class GarageSandboxCheckoutCard extends StatefulWidget {
   const GarageSandboxCheckoutCard({required this.repository,
     required this.workspaceId, required this.isOwner,
-    this.openCheckout, this.onRefreshStatus, super.key});
+    this.openCheckout, this.onRefreshStatus, this.canPrepare, super.key});
 
   final GarageCheckoutRepository repository;
   final String workspaceId;
   final bool isOwner;
   final GarageCheckoutLauncher? openCheckout;
   final VoidCallback? onRefreshStatus;
+  final bool Function()? canPrepare;
 
   static final _uuid = RegExp(
     r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$');
@@ -51,7 +52,8 @@ class _CheckoutCardState extends State<GarageSandboxCheckoutCard> {
   String? _preparedActor;
   String? _preparedSession;
 
-  bool get _available => GarageSandboxCheckoutCard.available(
+  bool get _available => (widget.canPrepare?.call() ?? true) &&
+    GarageSandboxCheckoutCard.available(
     widget.repository, widget.workspaceId, widget.isOwner);
 
   bool _sameContext(GarageCheckoutRepository repository, String workspace,

@@ -58,17 +58,25 @@ class GarageEntitlement {
 enum GarageEntitlementReadState { disabled, verified, unavailable }
 
 class GarageEntitlementRead {
-  const GarageEntitlementRead._(this.state, this.entitlement, [this.trialAvailable = false]);
+  const GarageEntitlementRead._(this._state, this._entitlement,
+      [this._trialAvailable = false, this._contextCurrent]);
   const GarageEntitlementRead.disabled()
       : this._(GarageEntitlementReadState.disabled, null);
   const GarageEntitlementRead.unavailable()
       : this._(GarageEntitlementReadState.unavailable, null);
-  const GarageEntitlementRead.verified(GarageEntitlement value, {bool trialAvailable = false})
-      : this._(GarageEntitlementReadState.verified, value, trialAvailable);
+  const GarageEntitlementRead.verified(GarageEntitlement value,
+      {bool trialAvailable = false, bool Function()? contextCurrent})
+      : this._(GarageEntitlementReadState.verified, value, trialAvailable, contextCurrent);
 
-  final bool trialAvailable;
-  final GarageEntitlementReadState state;
-  final GarageEntitlement? entitlement;
+  final bool _trialAvailable;
+  final GarageEntitlementReadState _state;
+  final GarageEntitlement? _entitlement;
+  final bool Function()? _contextCurrent;
+  bool get isCurrent => _contextCurrent?.call() ?? true;
+  bool get trialAvailable => isCurrent && _trialAvailable;
+  GarageEntitlementReadState get state => isCurrent
+      ? _state : GarageEntitlementReadState.unavailable;
+  GarageEntitlement? get entitlement => isCurrent ? _entitlement : null;
   // An authoritative grant is valid only inside the server-confirmed period.
   // A cached positive response must not keep access open after expiry.
   bool allowsPaidFeaturesAt(DateTime instant) {
@@ -137,6 +145,15 @@ class GarageEntitlementRepository {
           (currentSessionKey != null && currentSessionKey!() != sessionKey)) {
         return const GarageEntitlementRead.unavailable();
       }
+      // Keep the completed result tied to the same in-memory Auth context.
+      // Once an observed mismatch invalidates it, returning to an old identity
+      // cannot revive the cached result; obtain a new server decision instead.
+      var invalidated = false;
+      bool contextCurrent() {
+        invalidated = invalidated || currentUserId() != actor ||
+          (currentSessionKey != null && currentSessionKey!() != sessionKey);
+        return !invalidated;
+      }
       if (billingStatus) {
         if (raw is! Map || raw.length != 2 || !raw.containsKey('entitlement') ||
             raw['trial_available'] is! bool) throw const FormatException('Invalid billing status');
@@ -145,9 +162,9 @@ class GarageEntitlementRepository {
           throw const FormatException('Invalid billing status');
         }
         return GarageEntitlementRead.verified(status,
-          trialAvailable: raw['trial_available'] as bool);
+          trialAvailable: raw['trial_available'] as bool, contextCurrent: contextCurrent);
       }
-      return GarageEntitlementRead.verified(GarageEntitlement.parse(raw));
+      return GarageEntitlementRead.verified(GarageEntitlement.parse(raw), contextCurrent: contextCurrent);
     } catch (_) {
       return const GarageEntitlementRead.unavailable();
     }

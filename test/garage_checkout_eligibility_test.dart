@@ -45,4 +45,44 @@ void main() {
       expect(read.trialAvailable,raw['trial_available']==true);
     });
   }
+  test('completed billing hint expires on account replacement and requires a fresh read',() async {
+    var user=actor;
+    final repo=GarageEntitlementRepository(enabled:true,billingStatus:true,
+      supabaseUrl:'https://fyestmquqvkdebxxbcky.supabase.co',
+      currentUserId:()=>user,currentSessionKey:()=> 'synthetic',
+      invoke:(_)async=>{'entitlement':{'active':false,'source':null,
+        'access_ends_at':null,'last_payment_state':null},'trial_available':true});
+    final read=await repo.load(workspace);
+    expect(read.trialAvailable,isTrue);
+    user='00000000-0000-4000-8000-000000000003';
+    expect(read.trialAvailable,isFalse);
+    expect(read.state,GarageEntitlementReadState.unavailable);
+    user=actor;
+    expect(read.trialAvailable,isFalse);
+    expect((await repo.load(workspace)).trialAvailable,isTrue);
+  });
+  testWidgets('account switch after checkbox cannot dispatch using the previous hint',(tester) async {
+    var user=actor;var calls=0;
+    final statuses=GarageEntitlementRepository(enabled:true,billingStatus:true,
+      supabaseUrl:'https://fyestmquqvkdebxxbcky.supabase.co',
+      currentUserId:()=>user,currentSessionKey:()=> 'synthetic',
+      invoke:(_)async=>{'entitlement':{'active':false,'source':null,
+        'access_ends_at':null,'last_payment_state':null},'trial_available':true});
+    final checkout=GarageCheckoutRepository(enabled:true,
+      supabaseUrl:'https://fyestmquqvkdebxxbcky.supabase.co',
+      currentUserId:()=>user,currentSessionKey:()=> 'synthetic',
+      invoke:(_)async {calls++;return null;});
+    await tester.pumpWidget(MaterialApp(home:GarageBillingScreen(
+      workshopName:'Synthetic',workspaceId:workspace,isOwner:true,
+      checkoutRepository:checkout,loadEntitlement:()=>statuses.load(workspace))));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile));await tester.pumpAndSettle();
+    final button=find.widgetWithText(FilledButton,'Prepare test Checkout');
+    await tester.ensureVisible(button);
+    user='00000000-0000-4000-8000-000000000003';
+    await tester.tap(button);await tester.pump();
+    expect(calls,0);
+  });
+
 }
