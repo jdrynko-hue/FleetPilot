@@ -1,0 +1,63 @@
+name: Garage operation entitlement
+on:
+  pull_request:
+    paths:
+      - 'server/garage-billing/**'
+      - 'supabase/garage_staging/**'
+      - 'tests/garage_operation_access.py'
+      - '.github/workflows/garage-operation-access.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  operation-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable-operation-ci-only
+          POSTGRES_DB: garage_trial_qa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d garage_trial_qa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: garage_trial_qa
+      PGPASSWORD: disposable-operation-ci-only
+      GARAGE_TRIAL_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable workshop and billing fixtures
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f tests/garage_rls_isolation.sql \
+            -f tests/garage_invites_diagnosis.sql \
+            -f tests/garage_assignment_rls.sql \
+            -f tests/garage_quote_approval_rls.sql \
+            -f tests/garage_repairbridge_rls.sql \
+            -f tests/garage_consumer_bookings_rls.sql \
+            -f tests/garage_resource_calendar_rls.sql \
+            -f tests/garage_mechanic_roster_rls.sql
+          psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE service_role NOLOGIN BYPASSRLS; GRANT USAGE ON SCHEMA public TO service_role;'
+          psql -v ON_ERROR_STOP=1 -f server/garage-billing/test_trial_ledger.sql -f server/garage-billing/test_paid_lifecycle.sql
+          # Media helper has no Storage metadata dependency. Genuine Storage API
+          # coverage remains in the separate ephemeral Supabase job.
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          s=Path('supabase/garage_staging/005_private_media_storage.sql').read_text()
+          a=s.index('CREATE FUNCTION garage_private.media_path_allowed(')
+          b=s.index('-- No UPDATE or DELETE policy',a)
+          subprocess.run(['psql','-v','ON_ERROR_STOP=1'],input=s[a:b],text=True,check=True)
+          PY
+      - name: Verify active, expired, direct API and restricted completion paths
+        run: python3 tests/garage_operation_access.py

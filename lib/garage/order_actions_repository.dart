@@ -37,4 +37,14 @@ class GarageOrderActionsRepository {
     if (result != mechanic) throw const FormatException('Unexpected assignee');
     return mechanic;
   }
+
+  Future<String> finish(String workspace, String order, String target) async {
+    if (!const {'ready', 'collected'}.contains(target)) {
+      throw ArgumentError.value(target, 'target');
+    }
+    final result = await _call('garage_finish_existing_order', workspace, order,
+      {'p_status': target});
+    if (result != target) throw const FormatException('Unexpected order status');
+    return target;
+  }
 }
