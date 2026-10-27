@@ -61,11 +61,23 @@ for(const mutate of [f=>f.sub.customer='cus_other',f=>f.sub.test_clock='clock_ne
  const f=fixture();mutate(f);await assert.rejects(()=>hook(f));assert.equal(f.calls.some(c=>c[0]==='garage_record_paid_rejoin'),false);
 });
 test('fresh cancellation caps a late paid event atomically',async()=>{
- const f=fixture();Object.assign(f.sub,{status:'canceled',canceled_at:f.now});await hook(f);
+ const f=fixture();Object.assign(f.sub,{status:'canceled',canceled_at:f.now,ended_at:f.now});await hook(f);
  assert.equal(f.calls.at(-1)[1].p_record.subscription_ended_at,new Date(f.now*1000).toISOString());
 });
 for(const currency of ['gbp','pln','eur'])for(const interval of ['month','year'])test('exact server market '+currency+interval,async()=>{
  const f=fixture();f.context.currency=f.context.price.currency=f.p.currency=f.session.metadata.currency=currency;
  f.context.price.recurring.interval=f.p.billing_interval=f.session.metadata.billing_interval=interval;
  await start(f);assert.deepEqual(f.created[0][0].line_items,[{quantity:1,price:'price_paid'}]);
+});
+
+for(const type of ['customer.subscription.deleted','invoice.paid','invoice.payment_failed'])test('effective end is separate from the earlier stop-renewal request for '+type,async()=>{
+ const f=fixture();f.event.type=type;
+ if(type==='customer.subscription.deleted')f.event.data.object.id=f.sub.id;
+ Object.assign(f.sub,{status:'canceled',canceled_at:f.now-120,ended_at:f.now});
+ await hook(f);const record=f.calls.at(-1)[1].p_record;
+ assert.equal(record[type==='customer.subscription.deleted'?'ended_at':'subscription_ended_at'],new Date(f.now*1000).toISOString());
+});
+for(const ended_at of [undefined,null,0,-1,1.5,'1800000000'])test('canceled paid receipt rejects unverified effective end '+String(ended_at),async()=>{
+ const f=fixture();Object.assign(f.sub,{status:'canceled',canceled_at:f.now,ended_at});
+ await assert.rejects(()=>hook(f));assert.equal(f.calls.some(c=>c[0]==='garage_record_paid_rejoin'),false);
 });

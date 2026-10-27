@@ -79,6 +79,7 @@ Deno.test(
       trial_start: trialStart,
       trial_end: trialEnd,
       canceled_at: state.canceledAt,
+      ended_at: state.canceledAt,
       metadata: {
         product: "garage",
         attempt_id: attempt,

@@ -123,13 +123,14 @@ export async function recordPaidRejoinEvent(event:PaidEvent,deps:{client:Rpc;str
  validatePaidSession(session,p,'complete');
  if(session.subscription!==sub.id)throw Error('garage_paid_rejoin_receipt');
  if(!['active','past_due','unpaid','incomplete','canceled'].includes(sub.status))throw Error('garage_paid_rejoin_receipt');
- if(sub.status==='canceled'&&(!Number.isSafeInteger(sub.canceled_at)||sub.canceled_at<=0))throw Error('garage_paid_rejoin_receipt');
+ // canceled_at can be the earlier stop-renewal request; only ended_at caps access.
+ if(sub.status==='canceled'&&(!Number.isSafeInteger(sub.ended_at)||sub.ended_at<=0))throw Error('garage_paid_rejoin_receipt');
  const record:Record<string,unknown>={attempt_id:p.attempt_id,session_id:p.session_id,workspace_id:p.workspace_id,
  subscription_id:sub.id,customer_id:p.customer_id,livemode:false,test_clock:'none',
  event_id:event.id,event_created_at:new Date(event.created*1000).toISOString(),event_type:event.type,object_id:event.data.object.id};
  if(ended){
-  if(sub.status!=='canceled'||!Number.isSafeInteger(sub.canceled_at)||sub.canceled_at<=0)throw Error('garage_paid_rejoin_receipt');
-  Object.assign(record,{action:'ended',ended_at:new Date(sub.canceled_at*1000).toISOString()});
+  if(sub.status!=='canceled')throw Error('garage_paid_rejoin_receipt');
+  Object.assign(record,{action:'ended',ended_at:new Date(sub.ended_at*1000).toISOString()});
  }else{
   const i=invoice!;const line=i.lines?.data?.[0];
   if(i.customer!==p.customer_id||!['subscription_create','subscription_cycle'].includes(i.billing_reason)||
@@ -142,7 +143,7 @@ export async function recordPaidRejoinEvent(event:PaidEvent,deps:{client:Rpc;str
    throw Error('garage_paid_rejoin_receipt');
   Object.assign(record,{action:paid?'paid':'failed',price_id:p.price_id,currency:p.currency,billing_interval:p.billing_interval,
   period_start:new Date(line.period.start*1000).toISOString(),period_end:new Date(line.period.end*1000).toISOString(),
-  subscription_ended_at:sub.status==='canceled'?new Date(sub.canceled_at*1000).toISOString():null,
+  subscription_ended_at:sub.status==='canceled'?new Date(sub.ended_at*1000).toISOString():null,
   billing_reason:i.billing_reason,amount_due:i.amount_due,amount_paid:i.amount_paid,
   paid_at:paid?new Date(i.status_transitions.paid_at*1000).toISOString():null});
  }
