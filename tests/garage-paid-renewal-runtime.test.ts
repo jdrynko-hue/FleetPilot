@@ -1,4 +1,6 @@
 import {createPaidRenewalRuntime} from '../supabase/functions/flotaryx-garage-test-paid-renewal/runtime.ts';
+import Stripe from 'stripe';
+import {createGarageSandboxBillingWebhookRuntime} from '../supabase/functions/flotaryx-garage-test-webhook/billing_webhook_runtime.ts';
 const assert=(v:unknown,m:string)=>{if(!v)throw Error(m);};
 const qa='https://fyestmquqvkdebxxbcky.supabase.co';
 const owner='11111111-1111-4111-8111-111111111111',shop='22222222-2222-4222-8222-222222222222';
@@ -48,4 +50,19 @@ Deno.test('disabled or Live runtime has no external requests',async()=>{
 Deno.test('paid renewal deploy bundle equals canonical reviewed modules',async()=>{
  for(const file of ['paid_renewal.ts','paid_renewal_http.ts'])assert(
   await Deno.readTextFile('server/garage-billing/'+file)===await Deno.readTextFile('supabase/functions/flotaryx-garage-test-paid-renewal/'+file),'bundle '+file);
+});
+Deno.test('signed paid renewal update is acknowledged without touching trial history or granting access',async()=>{
+ const original=globalThis.fetch,now=Math.floor(Date.now()/1000),secret='whsec_renewalfixture';let reads=0;
+ globalThis.fetch=async(input)=>{
+  const u=new URL(input instanceof Request?input.url:String(input));
+  assert(u.hostname==='api.stripe.com'&&u.pathname==='/v1/subscriptions/sub_fixture','no legacy ledger read or write');reads++;
+  return new Response(JSON.stringify({id:'sub_fixture',livemode:false,status:'active',metadata:{product:'garage',purchase_kind:'paid_rejoin'}}),{headers:{'content-type':'application/json'}});
+ };
+ try{
+  const handler=createGarageSandboxBillingWebhookRuntime({enabled:true,supabaseUrl:qa,stripeKey:'rk_test_fixture',signingSecret:secret,serviceKey:'service-fixture'});
+  const body=JSON.stringify({id:'evt_fixture',type:'customer.subscription.updated',created:now,livemode:false,data:{object:{id:'sub_fixture'}}});
+  const signature=await Stripe.webhooks.generateTestHeaderStringAsync({payload:body,timestamp:now,secret,cryptoProvider:Stripe.createSubtleCryptoProvider()});
+  assert((await handler(new Request(qa+'/functions/v1/webhook',{method:'POST',headers:{'stripe-signature':signature},body}))).status===200,'ack signed update');
+  assert(reads===1,'fresh subscription lookup only');
+ }finally{globalThis.fetch=original;}
 });

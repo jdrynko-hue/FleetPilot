@@ -26,7 +26,6 @@ for kind in ['legacy','paid_rejoin']:
  for a in [owner,mechanic,outsider]:run(f"INSERT INTO auth.users(id,email,email_confirmed_at) VALUES('{a}','{a}@example.test',now());")
  run(f"INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) VALUES('{shop}','{owner}','Synthetic renewal fixture','GB','GBP');",'authenticated',owner)
  # Trusted fixture inserts are not a client bypass or a hosted rollout.
- run(f"INSERT INTO public.garage_members(workspace_id,user_id,role) VALUES('{shop}','{mechanic}','mechanic');")
  run(f"INSERT INTO garage_private.test_billing_customers VALUES('{owner}','{shop}','{customer}');")
  context(owner,shop,error='55000')
  if kind=='legacy':
@@ -42,6 +41,7 @@ for kind in ['legacy','paid_rejoin']:
    VALUES('{attempt}','{shop}','{owner}','{price}','{customer}','gbp','month',100,'subscribed','cs_test_{uuid4().hex}','{sub}');
    INSERT INTO garage_private.test_paid_purchase_invoices(invoice_id,attempt_id,period_start,period_end,amount_due,paid_at)
    VALUES('in_{uuid4().hex}','{attempt}',now()-interval '1 day',now()+interval '29 days',100,now()-interval '1 day');""")
+ run(f"INSERT INTO public.garage_members(workspace_id,user_id,role) VALUES('{shop}','{mechanic}','mechanic');")
  table='test_trial_claims' if kind=='legacy' else 'test_paid_purchases'
  frozen=run(f"SELECT to_jsonb(t)::text FROM garage_private.{table} t WHERE attempt_id='{attempt}';")
  b=context(owner,shop);yes(len(b)==11 and b['kind']==kind and b['subscription_id']==sub and b['customer_id']==customer)

@@ -63,6 +63,10 @@ export function createGarageTrialWebhook(dependencies: {
       if (!sub || sub.id !== id || sub.livemode !== false) return reply(409);
       // Other products share Stripe. Do not consume a Garage claim for them.
       if (sub.metadata?.product !== 'garage') return reply(200);
+      // Separate paid purchases have no claim in the once-only trial ledger.
+      // Created/updated status (including scheduled renewal stop) grants no
+      // access. Signed invoices/deletion use the separately bound paid path.
+      if (sub.metadata?.purchase_kind === 'paid_rejoin') return reply(200);
       const attempt = sub.metadata.attempt_id;
       if (typeof attempt !== 'string' || !uuid.test(attempt)) return reply(409);
       const claim = await dependencies.lookupClaim(attempt);

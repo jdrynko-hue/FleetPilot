@@ -74,3 +74,13 @@ test('false storage acknowledgement is retriable', async () => {
   const f = fixture(); f.deps.confirm = async () => false;
   assert.equal((await createGarageTrialWebhook(f.deps)(f.request())).status, 503);
 });
+
+for (const type of ['customer.subscription.created','customer.subscription.updated']) {
+ test(`separate paid ${type} is acknowledged without a trial lookup or grant`,async()=>{
+  const f=fixture();f.sub.metadata.purchase_kind='paid_rejoin';f.sub.status='active';
+  f.sub.trial_start=null;f.sub.trial_end=null;
+  f.deps.verify=async()=>({type,livemode:false,data:{object:{id:'sub_fixture'}}});
+  assert.equal((await createGarageTrialWebhook(f.deps)(f.request())).status,200);
+  assert.deepEqual(f.calls,[['retrieve','sub_fixture']]);
+ });
+}
