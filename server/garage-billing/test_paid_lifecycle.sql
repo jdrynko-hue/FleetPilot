@@ -95,6 +95,9 @@ DECLARE
   invoice garage_private.test_billing_invoices%ROWTYPE;
   duration interval;
 BEGIN
+  -- A delayed failure can observe a payment made after that signed event.
+  -- Only that event type may use real DB observation time as an additional
+  -- upper bound. Future virtual payments still require the separate clock RPC.
   IF p_livemode IS DISTINCT FROM false OR p_attempt IS NULL OR
      p_event IS NULL OR p_event !~ '^evt_[A-Za-z0-9]+$' OR
      p_event_type NOT IN ('invoice.paid','invoice.payment_failed') OR
@@ -108,7 +111,10 @@ BEGIN
      NOT isfinite(p_period_start) OR NOT isfinite(p_period_end) OR
      p_period_end<=p_period_start OR p_amount_due IS NULL OR p_amount_due<=0 OR
      p_amount_paid IS DISTINCT FROM p_amount_due OR p_paid_at IS NULL OR
-     NOT isfinite(p_paid_at) OR p_paid_at>p_event_created+interval '5 minutes' THEN
+     NOT isfinite(p_paid_at) OR
+     (p_paid_at>p_event_created+interval '5 minutes' AND
+      (p_event_type IS DISTINCT FROM 'invoice.payment_failed' OR
+       p_paid_at>clock_timestamp()+interval '5 minutes')) THEN
     RAISE EXCEPTION 'Invalid Sandbox paid invoice' USING ERRCODE='22023';
   END IF;
   duration := p_period_end-p_period_start;
