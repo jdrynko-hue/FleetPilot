@@ -101,3 +101,4 @@ ctx=rpc('garage_paid_rejoin_context',owner,shop);yes(ctx['eligible']);yes(ctx['s
 p2=rpc('garage_prepare_paid_rejoin',owner,shop,'rejoin','month',ctx['subscription_ids']);yes(p2['attempt_id']!=attempt)
 yes(run(f"SELECT to_jsonb(c)::text FROM garage_private.test_trial_claims c WHERE attempt_id='{old}';")==frozen)
 print(f'Paid rejoin SQL {checks} checks PASS')
+subprocess.run(['python3','tests/garage_paid_end_correction.py'],check=True)
