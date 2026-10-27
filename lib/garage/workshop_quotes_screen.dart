@@ -188,9 +188,10 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
       content: Text(order.complaint),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false),
-          child: const Icon(Icons.close)),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel)),
         FilledButton(key: const Key('garage_finish_confirm'),
-          onPressed: () => Navigator.pop(context, true), child: const Icon(Icons.check)),
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(MaterialLocalizations.of(context).okButtonLabel)),
       ],
     ));
     _finishRoute = route;

@@ -77,6 +77,9 @@ yes(run(f"SELECT count(*) FROM garage_private.test_started_work WHERE order_id='
 current = order(start=True)
 pending = order(approved=True)
 received = order(diagnose=False)
+unapproved = order()
+quote_lines = json.dumps([dict(type='labour',description='Fixture labour',quantity=1,unit_price_minor=100,tax_minor=0)])
+rpc('garage_publish_quote', f"'{shop}','{unapproved[2]}','{quote_lines}'::jsonb,'GBP'", owner)
 yes(run(f"SELECT count(*) FROM garage_private.test_started_work WHERE order_id='{current[2]}';") == '1')
 # Keep one active invitation for revocation after expiry.
 token = rpc('garage_issue_staff_invite', f"'{shop}','{stranger}@example.test','mechanic'", owner)
@@ -112,6 +115,9 @@ for actor in [owner, adviser]:
     run(f"SELECT public.garage_start_approved_repair('{shop}','{pending[2]}');", actor, error='42501')
     run(f"SELECT public.garage_finish_existing_order('{shop}','{unproven[2]}','ready');", actor, error='42501')
 run(f"SELECT public.garage_assign_mechanic('{shop}','{received[2]}',NULL);", owner, error='42501')
+run(f"SELECT public.garage_publish_quote('{shop}','{pending[2]}','{quote_lines}'::jsonb,'GBP');", owner, error='42501')
+run(f"SELECT public.garage_customer_approve_quote('{shop}','{unapproved[2]}',1);", customer, error='42501')
+yes(bool(rpc('garage_customer_current_quote', f"'{shop}','{unapproved[2]}'", customer)))
 run(f"SELECT public.garage_issue_staff_invite('{shop}','next@example.test','mechanic');", owner, error='42501')
 run(f"SELECT public.garage_accept_staff_invite('{token}');", stranger, error='42501')
 run(f"SELECT public.garage_booking_request({booking_args(slot)});", stranger, error='42501')
@@ -141,7 +147,7 @@ yes(rpc('garage_booking_cancel', f"'{b2}'", customer) == 'cancellation_requested
 yes(rpc('garage_booking_confirm_cancellation', f"'{b2}'", owner) == 'cancelled')
 yes(rpc('garage_revoke_staff_invite', f"'{shop}','{token}'", owner) == 't')
 yes(rpc('garage_fleet_revoke_connection', f"'{f['company_id']}','{shop}'", owner) == 't')
-yes(int(run('SELECT count(*) FROM public.vehicles;', fleet)) > 0)
+yes(bool(json.loads(rpc('repairbridge_test_create_fleet', "'ACCESS-NEXT','Independent Fleet work'", fleet))['vehicle_id']))
 for role in ['anon', 'authenticated', 'service_role']:
     run(f"SELECT garage_private.test_operation_grant('{shop}');", role=role, error='42501')
     run('SELECT * FROM garage_private.test_started_work;', role=role, error='42501')

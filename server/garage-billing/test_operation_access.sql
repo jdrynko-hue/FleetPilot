@@ -52,6 +52,12 @@ BEGIN
  AND NOT EXISTS(SELECT 1 FROM public.garage_members m WHERE m.workspace_id=shop) THEN
    RETURN NEW;
  END IF;
+ -- Direct table writes must not reveal another tenant's billing state before
+ -- its RLS WITH CHECK runs. Definer order/customer writes also require staff.
+ IF auth.uid() IS NOT NULL AND TG_TABLE_NAME IN
+    ('garage_customers','garage_vehicles','garage_work_orders')
+    AND NOT garage_private.has_role(shop,ARRAY['owner','service_adviser']) THEN
+   RAISE EXCEPTION 'Workshop staff required' USING ERRCODE='42501'; END IF;
  grant_value:=garage_private.test_operation_grant(shop);
  IF coalesce((grant_value->>'active')::boolean,false) THEN
    IF TG_TABLE_NAME='garage_work_orders' AND TG_OP='UPDATE'
@@ -164,6 +170,8 @@ CREATE TABLE garage_private.test_completion_events(
 );
 ALTER TABLE garage_private.test_completion_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON garage_private.test_completion_events FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON SEQUENCE garage_private.test_completion_events_id_seq
+ FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.garage_finish_existing_order(uuid,uuid,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.garage_finish_existing_order(uuid,uuid,text) TO authenticated;
 
