@@ -24,13 +24,14 @@ if (!enabled || url !== qaUrl || !/^(sk|rk)_test_[A-Za-z0-9]+$/.test(stripeKey) 
   // Separate clients: a caller's bearer token never replaces service RPC Auth.
   const authClient = createClient(qaUrl, anonKey, options);
   const serviceClient = createClient(qaUrl, serviceKey, options);
-  Deno.serve(createGarageSandboxCheckoutHandler({ enabled, supabaseUrl: qaUrl, stripeKey }, {
+  Deno.serve(createGarageSandboxCheckoutHandler({ enabled, paidRejoinEnabled: Deno.env.get('FLOTARYX_GARAGE_SANDBOX_PAID_REJOIN') === 'true', supabaseUrl: qaUrl, stripeKey }, {
     authClient, serviceClient,
     diagnostic(stage) { console.warn('garage_checkout_failure', stage); },
     createStripeClient(key) {
       const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient(),
         maxNetworkRetries: 1, timeout: 12000 });
       return {
+        subscriptions: {retrieve: (id) => stripe.subscriptions.retrieve(id)},
         prices: { retrieve: (id) => stripe.prices.retrieve(id) },
         customers: { retrieve: (id) => stripe.customers.retrieve(id) },
         checkout: { sessions: {

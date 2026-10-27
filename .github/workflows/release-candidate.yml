@@ -88,6 +88,7 @@ jobs:
           --dart-define=FLOTARYX_GARAGE_SANDBOX_CHECKOUT_CLIENT=true
           --dart-define=FLOTARYX_GARAGE_SANDBOX_CHECKOUT_UI=true
           --dart-define=FLOTARYX_GARAGE_SANDBOX_TRIAL_CANCELLATION_CLIENT=true
+          --dart-define=FLOTARYX_GARAGE_SANDBOX_PAID_REJOIN_CLIENT=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_zCJeAEB-H39k6Y3785vxEQ_UwBMJyqs
           --dart-define=QA_AUTH_CALLBACK_URL=https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/

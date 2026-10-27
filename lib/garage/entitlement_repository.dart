@@ -59,16 +59,18 @@ enum GarageEntitlementReadState { disabled, verified, unavailable }
 
 class GarageEntitlementRead {
   const GarageEntitlementRead._(this._state, this._entitlement,
-      [this._trialAvailable = false, this._contextCurrent]);
+      [this._trialAvailable = false, this._contextCurrent, this._paidAvailable = false]);
   const GarageEntitlementRead.disabled()
       : this._(GarageEntitlementReadState.disabled, null);
   const GarageEntitlementRead.unavailable()
       : this._(GarageEntitlementReadState.unavailable, null);
   const GarageEntitlementRead.verified(GarageEntitlement value,
-      {bool trialAvailable = false, bool Function()? contextCurrent})
-      : this._(GarageEntitlementReadState.verified, value, trialAvailable, contextCurrent);
+      {bool trialAvailable = false, bool paidAvailable = false, bool Function()? contextCurrent})
+      : this._(GarageEntitlementReadState.verified, value, trialAvailable, contextCurrent, paidAvailable);
 
   final bool _trialAvailable;
+  final bool _paidAvailable;
+  bool get paidAvailable => isCurrent && _paidAvailable;
   final GarageEntitlementReadState _state;
   final GarageEntitlement? _entitlement;
   final bool Function()? _contextCurrent;
@@ -155,14 +157,16 @@ class GarageEntitlementRepository {
         return !invalidated;
       }
       if (billingStatus) {
-        if (raw is! Map || raw.length != 2 || !raw.containsKey('entitlement') ||
+        if (raw is! Map || !{2, 3}.contains(raw.length) || !raw.containsKey('entitlement') ||
+            (raw.length == 3 && raw['paid_available'] is! bool) ||
             raw['trial_available'] is! bool) throw const FormatException('Invalid billing status');
         final status = GarageEntitlement.parse(raw['entitlement']);
-        if (status.active && raw['trial_available'] == true) {
+        if ((status.active && (raw['trial_available'] == true || raw['paid_available'] == true)) ||
+            (raw['trial_available'] == true && raw['paid_available'] == true)) {
           throw const FormatException('Invalid billing status');
         }
         return GarageEntitlementRead.verified(status,
-          trialAvailable: raw['trial_available'] as bool, contextCurrent: contextCurrent);
+          trialAvailable: raw['trial_available'] as bool, paidAvailable: raw['paid_available'] == true, contextCurrent: contextCurrent);
       }
       return GarageEntitlementRead.verified(GarageEntitlement.parse(raw), contextCurrent: contextCurrent);
     } catch (_) {

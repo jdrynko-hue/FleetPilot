@@ -1,3 +1,4 @@
+import {recordPaidRejoinEvent} from '../../../server/garage-billing/paid_rejoin.ts';
 import Stripe from "stripe";
 import { createClient } from "supabase";
 import {
@@ -147,6 +148,33 @@ export function createGarageSandboxBillingWebhookRuntime(configuration: {
       return handler(forwarded);
     }
 
+    // Signed events belonging to a separate paid purchase must never pass
+    // through the original trial claim ledger, even during purchase UI pause.
+    let routedInvoice: Stripe.Invoice | undefined;
+    let routedSub: Stripe.Subscription | undefined;
+    try {
+      let invoice: Stripe.Invoice | undefined;
+      let subId = projected.id;
+      if (event.type !== 'customer.subscription.deleted') {
+        invoice = await stripe.invoices.retrieve(projected.id);
+        subId = invoice.parent?.subscription_details?.subscription as string;
+        const legacy = invoice as unknown as {subscription?: string};
+        subId = legacy.subscription ?? subId;
+      }
+      const sub = await stripe.subscriptions.retrieve(subId);
+      routedInvoice=invoice; routedSub=sub;
+      if (sub.metadata?.purchase_kind === 'paid_rejoin') {
+        await recordPaidRejoinEvent({id:event.id,type:event.type,created:event.created,
+          livemode:false,data:{object:projected}}, {client:serviceClient,stripe:{
+          subscriptions:{retrieve:async id=>id===sub.id?sub:stripe.subscriptions.retrieve(id)},
+          invoices:{retrieve:async id=>invoice?.id===id?invoice:stripe.invoices.retrieve(id)},
+          checkout:{sessions:{create:async()=>{throw Error('Webhook cannot create Checkout');},
+            retrieve:(id,params)=>stripe.checkout.sessions.retrieve(id,params)}},
+        }});
+        return reply(200);
+      }
+    } catch { return reply(503); }
+
     const handler = createGaragePaidWebhook({
       ...paidStorage,
       verify: async () => ({
@@ -156,9 +184,9 @@ export function createGarageSandboxBillingWebhookRuntime(configuration: {
         livemode: event.livemode,
         data: { object: projected },
       }),
-      retrieveInvoice: (id) => stripe.invoices.retrieve(id),
+      retrieveInvoice: async (id) => routedInvoice?.id===id?routedInvoice:stripe.invoices.retrieve(id),
       retrieveTestClock: (id) => stripe.testHelpers.testClocks.retrieve(id),
-      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      retrieveSubscription: async (id) => routedSub?.id===id?routedSub:stripe.subscriptions.retrieve(id),
     });
     return handler(forwarded);
   };

@@ -6,7 +6,7 @@ const root='supabase/functions/flotaryx-garage-test-checkout/';
 const load=p=>readFileSync(p,'utf8');
 
 test('packaged Checkout modules exactly match reviewed server policy',()=>{
-  for(const file of ['trial_policy.ts','checkout.ts','http_handler.ts']){
+  for(const file of ['paid_rejoin.ts','trial_policy.ts','checkout.ts','http_handler.ts']){
     assert.equal(load(root+file),load('server/garage-billing/'+file),file);
   }
 });

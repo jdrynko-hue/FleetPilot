@@ -18,12 +18,12 @@ class GarageCheckoutResult {
   final GarageCheckoutState state;
   final Uri? url;
 
-  static GarageCheckoutResult parse(Object? raw) {
+  static GarageCheckoutResult parse(Object? raw, {int trialDays = 7}) {
     const fields = {'mode', 'session_id', 'url', 'trial_days'};
     if (raw is! Map || raw.length != fields.length ||
         raw.keys.any((key) => !fields.contains(key)) ||
         raw['mode'] != 'test' || raw['trial_days'] is! int ||
-        raw['trial_days'] != 7 || raw['session_id'] is! String ||
+        !{0, 7}.contains(trialDays) || raw['trial_days'] != trialDays || raw['session_id'] is! String ||
         !RegExp(r'^cs_test_[A-Za-z0-9]+$').hasMatch(raw['session_id'] as String) ||
         raw['url'] is! String) {
       throw const FormatException('Invalid Garage Checkout response');
@@ -56,11 +56,12 @@ typedef GarageCheckoutInvoke = Future<Object?> Function(Map<String, Object> body
 class GarageCheckoutRepository {
   GarageCheckoutRepository({required this.enabled, required this.supabaseUrl,
     required this.currentUserId, required this.currentSessionKey,
-    required this.invoke, this.requestTimeout = const Duration(seconds: 12)});
+    required this.invoke, this.paidRejoinEnabled = false, this.requestTimeout = const Duration(seconds: 12)});
 
   factory GarageCheckoutRepository.forClient(SupabaseClient client) =>
       GarageCheckoutRepository(
         enabled: AppConfig.garageSandboxCheckoutEnabled,
+        paidRejoinEnabled: AppConfig.garagePaidRejoinEnabled,
         supabaseUrl: AppConfig.supabaseUrl,
         currentUserId: () => client.auth.currentUser?.id,
         currentSessionKey: () => client.auth.currentSession?.accessToken,
@@ -69,6 +70,7 @@ class GarageCheckoutRepository {
       );
 
   final bool enabled;
+  final bool paidRejoinEnabled;
   final String supabaseUrl;
   final String? Function() currentUserId;
   // Memory-only equality check; never decode, log, persist or include in JSON.
@@ -83,9 +85,9 @@ class GarageCheckoutRepository {
 
   Future<GarageCheckoutResult> start({required String workspaceId,
       required String planCode, required String billingInterval,
-      required bool businessPurchaseConfirmed}) async {
+      required bool businessPurchaseConfirmed, bool paidRejoin = false}) async {
     if (!enabled) return const GarageCheckoutResult.disabled();
-    if (!AppConfig.isEcosystemQaBackend(supabaseUrl) ||
+    if ((paidRejoin && !paidRejoinEnabled) || !AppConfig.isEcosystemQaBackend(supabaseUrl) ||
         !_uuid.hasMatch(workspaceId) || !_plan.hasMatch(planCode) ||
         !{'month', 'year'}.contains(billingInterval) ||
         !businessPurchaseConfirmed || requestTimeout <= Duration.zero ||
@@ -110,11 +112,12 @@ class GarageCheckoutRepository {
         'plan_code': planCode,
         'billing_interval': billingInterval,
         'business_purchase_confirmed': true,
+        if (paidRejoin) 'purchase_kind': 'paid_rejoin',
       })).timeout(requestTimeout);
       if (currentUserId() != actor || currentSessionKey() != session) {
         return const GarageCheckoutResult.reconciliationRequired();
       }
-      return GarageCheckoutResult.parse(raw);
+      return GarageCheckoutResult.parse(raw, trialDays: paidRejoin ? 0 : 7);
     } catch (_) {
       // Never surface raw SDK exceptions, tokens, customer data or URLs.
       return const GarageCheckoutResult.reconciliationRequired();

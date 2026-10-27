@@ -34,11 +34,13 @@ def rpc(name,*args,error=None,role='service_role'):
 owner,mechanic,outsider,shop=[str(uuid4()) for _ in range(4)]
 for a in [owner,mechanic,outsider]:run(f"INSERT INTO auth.users(id,email,email_confirmed_at) VALUES('{a}','{a}@example.test',now());")
 run(f"INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency) VALUES('{shop}','{owner}','Paid fixture','PL','PLN');",'authenticated',owner)
-run(f"INSERT INTO public.garage_members(workspace_id,user_id,role) VALUES('{shop}','{mechanic}','mechanic');")
+
 old=str(uuid4())
 run(f"""INSERT INTO garage_private.test_trial_claims(owner_user_id,workspace_id,attempt_id,price_id,currency,billing_interval,
 state,stripe_subscription_id,trial_started_at,trial_ends_at,cancellation_requested_at,canceled_at)
-VALUES('{owner}','{shop}','{old}','price_old','pln','month','trial_canceled','sub_old',now()-interval '8 days',now()-interval '1 day',now()-interval '7 days',now()-interval '7 days');""")
+VALUES('{owner}','{shop}','{old}','price_old','pln','month','trial_started','sub_old',now()-interval '1 day',now()+interval '6 days',NULL,NULL);""")
+run(f"INSERT INTO public.garage_members(workspace_id,user_id,role) VALUES('{shop}','{mechanic}','mechanic');")
+run(f"UPDATE garage_private.test_trial_claims SET state='trial_canceled',trial_started_at=now()-interval '8 days',trial_ends_at=now()-interval '1 day',cancellation_requested_at=now()-interval '7 days',canceled_at=now()-interval '7 days' WHERE attempt_id='{old}';")
 run(f"INSERT INTO garage_private.test_billing_catalog VALUES('rejoin','pln','month','price_rejoin',100,true),('rejoin','pln','year','price_year',1000,true);")
 run(f"INSERT INTO garage_private.test_billing_customers VALUES('{owner}','{shop}','cus_rejoin');")
 frozen=run(f"SELECT to_jsonb(c)::text FROM garage_private.test_trial_claims c WHERE attempt_id='{old}';")
