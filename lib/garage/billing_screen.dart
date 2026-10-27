@@ -9,6 +9,8 @@ import 'checkout_repository.dart';
 import 'checkout_text.dart';
 import 'trial_cancellation_repository.dart';
 import 'trial_cancellation_control.dart';
+import 'paid_renewal_repository.dart';
+import 'paid_renewal_control.dart';
 
 typedef GarageEntitlementLoader = Future<GarageEntitlementRead> Function();
 
@@ -19,13 +21,14 @@ typedef GarageEntitlementLoader = Future<GarageEntitlementRead> Function();
 class GarageBillingScreen extends StatefulWidget {
   const GarageBillingScreen({required this.workshopName,
     required this.isOwner, this.workspaceId, this.loadEntitlement,
-    this.now, this.cancellationRepository, this.checkoutRepository, this.openCheckout, super.key});
+    this.now, this.paidRenewalRepository, this.cancellationRepository, this.checkoutRepository, this.openCheckout, super.key});
 
   final String workshopName;
   final bool isOwner;
   // Keep owner-only server decisions scoped to the workshop being displayed.
   final String? workspaceId;
   final GarageEntitlementLoader? loadEntitlement;
+  final GaragePaidRenewalRepository? paidRenewalRepository;
   final GarageTrialCancellationRepository? cancellationRepository;
   final GarageCheckoutRepository? checkoutRepository;
   final GarageCheckoutLauncher? openCheckout;
@@ -205,6 +208,14 @@ class _GarageBillingScreenState extends State<GarageBillingScreen> with WidgetsB
           Text(GarageBillingScreen.text(6),
             style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12), status,
+          if (snapshot.connectionState == ConnectionState.done &&
+              snapshot.data?.allowsPaidFeaturesAt(_now()) == true &&
+              snapshot.data?.entitlement?.source == GarageEntitlementSource.paid &&
+              widget.isOwner && widget.workspaceId != null && widget.paidRenewalRepository != null)
+            GaragePaidRenewalControl(
+              key: ValueKey('renewal:${widget.workspaceId}:$_readGeneration'),
+              repository: widget.paidRenewalRepository!, workspaceId: widget.workspaceId!,
+              canManage: () => snapshot.data?.allowsPaidFeaturesAt(_now()) == true),
           if (snapshot.connectionState == ConnectionState.done &&
               snapshot.data?.allowsPaidFeaturesAt(_now()) == true &&
               snapshot.data?.entitlement?.source == GarageEntitlementSource.trial &&

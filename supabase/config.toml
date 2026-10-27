@@ -1,2 +1,5 @@
 [functions.flotaryx-garage-test-webhook]
 verify_jwt = false
+
+[functions.flotaryx-garage-test-paid-renewal]
+verify_jwt = true
