@@ -442,3 +442,50 @@ REVOKE ALL ON FUNCTION public.garage_record_test_clock_invoice_paid(
 GRANT EXECUTE ON FUNCTION public.garage_record_test_clock_invoice_paid(
   uuid,text,text,timestamptz,text,text,text,text,text,text,timestamptz,timestamptz,
   bigint,bigint,timestamptz,boolean,timestamptz) TO service_role;
+
+-- Clock-only end reconciliation. The coordinator must freshly retrieve the
+-- subscription's matching test clock; real event creation is never rewritten.
+BEGIN;
+CREATE FUNCTION public.garage_record_test_clock_subscription_ended(
+  p_attempt uuid, p_event text, p_event_created timestamptz,
+  p_subscription text, p_customer text, p_ended_at timestamptz,
+  p_livemode boolean, p_test_clock_time timestamptz
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $$
+DECLARE claim garage_private.test_trial_claims%ROWTYPE;
+BEGIN
+  IF p_livemode IS DISTINCT FROM false OR p_attempt IS NULL OR
+     p_event IS NULL OR p_event !~ '^evt_[A-Za-z0-9]+$' OR
+     p_event_created IS NULL OR NOT isfinite(p_event_created) OR
+     p_subscription IS NULL OR p_subscription !~ '^sub_[A-Za-z0-9]+$' OR
+     p_customer IS NULL OR p_customer !~ '^cus_[A-Za-z0-9]+$' OR
+     p_ended_at IS NULL OR NOT isfinite(p_ended_at) OR
+     p_test_clock_time IS NULL OR NOT isfinite(p_test_clock_time) OR
+     p_test_clock_time<p_ended_at THEN
+    RAISE EXCEPTION 'Invalid Sandbox subscription end' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO claim FROM garage_private.test_trial_claims
+    WHERE attempt_id=p_attempt FOR UPDATE;
+  IF NOT FOUND OR claim.stripe_subscription_id IS NULL THEN
+    RAISE EXCEPTION 'Unknown confirmed trial' USING ERRCODE='22023';
+  END IF;
+  IF claim.stripe_subscription_id IS DISTINCT FROM p_subscription OR
+     claim.checkout_customer_id IS DISTINCT FROM p_customer OR
+     p_ended_at<claim.trial_started_at OR
+     (claim.subscription_ended_at IS NOT NULL AND
+      claim.subscription_ended_at IS DISTINCT FROM p_ended_at) THEN
+    RAISE EXCEPTION 'Subscription end conflict' USING ERRCODE='55000';
+  END IF;
+  PERFORM garage_private.record_test_billing_event(
+    p_attempt,p_event,p_subscription,'customer.subscription.deleted','ended',p_event_created);
+  UPDATE garage_private.test_trial_claims SET subscription_ended_at=p_ended_at
+    WHERE attempt_id=p_attempt AND subscription_ended_at IS NULL;
+  RETURN true;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.garage_record_test_clock_subscription_ended(
+  uuid,text,timestamptz,text,text,timestamptz,boolean,timestamptz)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.garage_record_test_clock_subscription_ended(
+  uuid,text,timestamptz,text,text,timestamptz,boolean,timestamptz) TO service_role;
+COMMIT;

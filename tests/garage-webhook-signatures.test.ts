@@ -153,3 +153,57 @@ Deno.test('signed failed invoice retrieves current SDK invoice and subscription 
       'Write bypassed authoritative SDK retrieval');
   } finally { globalThis.fetch = originalFetch; }
 });
+
+Deno.test('signed virtual subscription end retrieves its real SDK test clock before narrow RPC', async () => {
+  const originalFetch=globalThis.fetch;
+  const attempt='11111111-1111-4111-8111-111111111111';
+  const workspace='22222222-2222-4222-8222-222222222222';
+  const wall=Math.floor(Date.now()/1000);
+  const ended=wall+30*86400;
+  const event=JSON.stringify({id:'evt_clockendfixture',type:'customer.subscription.deleted',
+    created:wall,livemode:false,data:{object:{id:'sub_fixture'}}});
+  const calls:string[]=[];
+  globalThis.fetch=async(input,init) => {
+    const url=new URL(input instanceof Request?input.url:String(input));
+    const headers=new Headers(init?.headers??(input instanceof Request?input.headers:undefined));
+    const json=(value:unknown) => new Response(JSON.stringify(value),
+      {headers:{'content-type':'application/json'}});
+    if(url.hostname==='api.stripe.com') {
+      assert(headers.get('authorization')==='Bearer rk_test_fixture','Wrong Stripe credential');
+      if(url.pathname==='/v1/subscriptions/sub_fixture') {
+        calls.push('subscription');
+        return json({id:'sub_fixture',livemode:false,status:'canceled',customer:'cus_fixture',
+          canceled_at:ended,test_clock:'clock_fixture',metadata:{product:'garage',
+            attempt_id:attempt,workspace_id:workspace,currency:'gbp',billing_interval:'month'},
+          items:{has_more:false,data:[{quantity:1,price:{id:'price_fixture',livemode:false,
+            currency:'gbp',recurring:{interval:'month',interval_count:1,usage_type:'licensed'}}}]}});
+      }
+      assert(url.pathname==='/v1/test_helpers/test_clocks/clock_fixture','Unexpected Stripe request');
+      calls.push('clock');
+      return json({id:'clock_fixture',livemode:false,status:'ready',frozen_time:ended+60});
+    }
+    assert(url.hostname==='fyestmquqvkdebxxbcky.supabase.co','Unexpected host');
+    assert(headers.get('authorization')==='Bearer disposable-fixture-service','Wrong service Auth');
+    const args=JSON.parse(String(init?.body));
+    assert(args.p_attempt===attempt,'Wrong frozen claim');
+    if(url.pathname==='/rest/v1/rpc/garage_lookup_test_trial') {
+      calls.push('lookup');
+      return json({attempt_id:attempt,workspace_id:workspace,customer_id:'cus_fixture',
+        price_id:'price_fixture',currency:'gbp',billing_interval:'month'});
+    }
+    assert(url.pathname==='/rest/v1/rpc/garage_record_test_clock_subscription_ended','Wrong end RPC');
+    assert(args.p_event_created===new Date(wall*1000).toISOString(),'Event time rewritten');
+    assert(args.p_ended_at===new Date(ended*1000).toISOString(),'Virtual end lost');
+    assert(args.p_test_clock_time===new Date((ended+60)*1000).toISOString(),'Clock validation lost');
+    assert(args.p_livemode===false && args.p_subscription==='sub_fixture' &&
+      args.p_customer==='cus_fixture','Unsafe end identity');
+    calls.push('ended');return json(true);
+  };
+  try {
+    const service=createClient(config.supabaseUrl,'disposable-fixture-service',{
+      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    const handler=createStoredGaragePaidWebhook(config,service);
+    assert((await handler(request(event,await sign(event)))).status===200,'Signed clock end rejected');
+    assert(calls.join(',')==='subscription,lookup,clock,ended','Clock end bypassed fresh SDK reads');
+  } finally {globalThis.fetch=originalFetch;}
+});

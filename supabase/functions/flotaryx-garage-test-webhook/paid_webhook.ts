@@ -132,11 +132,23 @@ export function createGaragePaidWebhook(dependencies: {
   recordPaid: (record: RecordInvoice & { amountPaid: number; paidAt: string; testClockTime?: string }) => Promise<boolean>;
   recordFailed: (record: RecordInvoice & { attemptCount: number }) => Promise<boolean>;
   recordEnded: (record: { attempt: string; event: string; eventCreated: string;
-    subscription: string; customer: string; endedAt: string }) => Promise<boolean>;
+    subscription: string; customer: string; endedAt: string; testClockTime?: string }) => Promise<boolean>;
 }) {
   const reply = (status: number) => new Response(JSON.stringify({ received: status === 200 }), {
     status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
+  async function verifiedClockTime(id: unknown, instant: number): Promise<string | null> {
+    if (typeof id !== 'string' || !/^clock_[A-Za-z0-9]+$/.test(id) ||
+        !dependencies.retrieveTestClock) return null;
+    const clock = await dependencies.retrieveTestClock(id) as {
+      id: string; livemode: boolean; status: string; frozen_time: number;
+    };
+    if (!clock || clock.id !== id || clock.livemode !== false ||
+        !['ready', 'advancing'].includes(clock.status) ||
+        !Number.isSafeInteger(clock.frozen_time) || clock.frozen_time <= 0 ||
+        clock.frozen_time < instant) return null;
+    return iso(clock.frozen_time);
+  }
   return async (request: Request) => {
     if (request.method !== 'POST') return reply(405);
     const signature = request.headers.get('stripe-signature');
@@ -177,9 +189,16 @@ export function createGaragePaidWebhook(dependencies: {
         const claim = await dependencies.lookupClaim(attempt);
         if (!claim || !validSubscription(sub, claim) || sub.status !== 'canceled' ||
             !Number.isSafeInteger(sub.canceled_at) || sub.canceled_at! <= 0) return reply(409);
+        let testClockTime: string | undefined;
+        if (sub.test_clock != null) {
+          const verified = await verifiedClockTime(sub.test_clock, sub.canceled_at!);
+          if (verified === null) return reply(409);
+          testClockTime = verified;
+        }
         const saved = await dependencies.recordEnded({ attempt, event: event.id,
           eventCreated: iso(event.created), subscription: id, customer: claim.customer_id,
-          endedAt: iso(sub.canceled_at!) });
+          endedAt: iso(sub.canceled_at!),
+          ...(testClockTime === undefined ? {} : {testClockTime}) });
         return reply(saved === true ? 200 : 503);
       }
 
@@ -210,16 +229,10 @@ export function createGaragePaidWebhook(dependencies: {
         let testClockTime: string | undefined;
         if (invoice.test_clock != null || sub.test_clock != null) {
           const clockId = invoice.test_clock;
-          if (typeof clockId !== 'string' || !/^clock_[A-Za-z0-9]+$/.test(clockId) ||
-              sub.test_clock !== clockId || !dependencies.retrieveTestClock) return reply(409);
-          const clock = await dependencies.retrieveTestClock(clockId) as {
-            id: string; livemode: boolean; status: string; frozen_time: number;
-          };
-          if (!clock || clock.id !== clockId || clock.livemode !== false ||
-              !['ready', 'advancing'].includes(clock.status) ||
-              !Number.isSafeInteger(clock.frozen_time) || clock.frozen_time <= 0 ||
-              clock.frozen_time < invoice.status_transitions!.paid_at!) return reply(409);
-          testClockTime = iso(clock.frozen_time);
+          if (sub.test_clock !== clockId) return reply(409);
+          const verified = await verifiedClockTime(clockId, invoice.status_transitions!.paid_at!);
+          if (verified === null) return reply(409);
+          testClockTime = verified;
         }
         const saved = await dependencies.recordPaid({ ...record,
           amountPaid: invoice.amount_paid, paidAt: iso(invoice.status_transitions!.paid_at!),
