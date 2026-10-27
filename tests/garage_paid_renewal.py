@@ -51,7 +51,7 @@ for kind in ['legacy','paid_rejoin']:
  run(f"UPDATE public.garage_members SET role='mechanic' WHERE workspace_id='{shop}' AND user_id='{owner}';")
  context(owner,shop,error='42501')
  run(f"UPDATE public.garage_members SET role='owner' WHERE workspace_id='{shop}' AND user_id='{owner}';")
- run(f"UPDATE garage_private.test_billing_customers SET stripe_customer_id='cus_wrong_{uuid4().hex}' WHERE workspace_id='{shop}';")
+ run(f"UPDATE garage_private.test_billing_customers SET stripe_customer_id='cus_wrong{uuid4().hex}' WHERE workspace_id='{shop}';")
  context(owner,shop,error='55000')
  run(f"UPDATE garage_private.test_billing_customers SET stripe_customer_id='{customer}' WHERE workspace_id='{shop}';")
  yes(context(owner,shop)['subscription_id']==sub)
