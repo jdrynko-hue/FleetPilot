@@ -7,7 +7,8 @@ import 'garage_ui_text.dart';
 /// Inactive tabs retain their state without making unvisited API requests.
 class GarageShell extends StatefulWidget {
   const GarageShell({required this.scopeId, required this.workshopName,
-    required this.pages, super.key}) : assert(pages.length == 5);
+    required this.pages, this.accessNotice, super.key}) : assert(pages.length == 5);
+  final Widget? accessNotice;
   final String scopeId;
   final String workshopName;
   final List<WidgetBuilder> pages;
@@ -45,9 +46,12 @@ class _GarageShellState extends State<GarageShell> {
     final labels = [tr('dashboard'), for (var i=0;i<3;i++) GarageShellText.tab(i), tr('more')];
     _visited.putIfAbsent(_index, () => Builder(
       key: ValueKey('${widget.scopeId}:$_index'), builder: widget.pages[_index]));
-    final body = IndexedStack(index: _index, children: [
+    final stack = IndexedStack(index: _index, children: [
       for (var i=0;i<5;i++) HeroMode(enabled: i==_index,
         child: _visited[i] ?? const SizedBox.shrink()),
+    ]);
+    final body = widget.accessNotice == null ? stack : Column(children: [
+      widget.accessNotice!, Expanded(child: stack),
     ]);
     return Scaffold(
       appBar: AppBar(titleSpacing: wide ? null : 8,

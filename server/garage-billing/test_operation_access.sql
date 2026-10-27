@@ -122,6 +122,7 @@ LEFT JOIN LATERAL(SELECT b.period_end FROM garage_private.test_billing_invoices 
  ORDER BY b.period_end DESC LIMIT 1) i ON true
 WHERE e.action='start_approved_repair' AND w.status IN ('in_progress','awaiting_parts','ready')
  AND (c.subscription_ended_at IS NULL OR e.occurred_at<c.subscription_ended_at)
+ AND (c.canceled_at IS NULL OR e.occurred_at<c.canceled_at)
  AND ((e.occurred_at>=c.trial_started_at AND e.occurred_at<c.trial_ends_at
    AND (c.canceled_at IS NULL OR e.occurred_at<c.canceled_at)) OR i.period_end IS NOT NULL)
 ORDER BY e.workspace_id,e.order_id,e.occurred_at;
@@ -130,16 +131,26 @@ ORDER BY e.workspace_id,e.order_id,e.occurred_at;
 -- It never changes quote lines, assignment, scope, customer or vehicle details.
 CREATE FUNCTION public.garage_finish_existing_order(p_workspace_id uuid,p_order_id uuid,p_status text)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
-AS $$ DECLARE v public.garage_work_orders%ROWTYPE; BEGIN
+AS $$ DECLARE v public.garage_work_orders%ROWTYPE; fleet_request uuid; BEGIN
  IF auth.uid() IS NULL OR NOT garage_private.has_role(p_workspace_id,ARRAY['owner','service_adviser']) THEN
    RAISE EXCEPTION 'Workshop adviser required' USING ERRCODE='42501'; END IF;
  SELECT * INTO v FROM public.garage_work_orders WHERE workspace_id=p_workspace_id AND id=p_order_id FOR UPDATE;
  IF NOT FOUND OR p_status IS NULL OR p_status NOT IN ('ready','collected') THEN
    RAISE EXCEPTION 'Invalid completion transition' USING ERRCODE='22023'; END IF;
+ SELECT r.id INTO fleet_request FROM public.garage_fleet_requests r
+ WHERE r.workspace_id=p_workspace_id AND r.garage_order_id=p_order_id;
+ IF fleet_request IS NOT NULL AND NOT EXISTS(
+   SELECT 1 FROM public.garage_fleet_requests r JOIN public.garage_fleet_connections c
+   ON c.company_id=r.company_id AND c.workspace_id=r.workspace_id
+   WHERE r.id=fleet_request AND r.status='accepted' AND c.status='active') THEN
+   RAISE EXCEPTION 'Active accepted request required' USING ERRCODE='42501'; END IF;
  IF v.status=p_status THEN RETURN p_status; END IF;
  IF NOT ((v.status IN ('in_progress','awaiting_parts') AND p_status='ready')
    OR (v.status='ready' AND p_status='collected')) THEN
    RAISE EXCEPTION 'Invalid completion transition' USING ERRCODE='22023'; END IF;
+ IF fleet_request IS NOT NULL THEN
+   RETURN public.garage_fleet_update_progress(fleet_request,p_status);
+ END IF;
  UPDATE public.garage_work_orders SET status=p_status WHERE workspace_id=p_workspace_id AND id=p_order_id;
  INSERT INTO garage_private.test_completion_events(workspace_id,order_id,actor_user_id,previous_status,next_status)
  VALUES(p_workspace_id,p_order_id,auth.uid(),v.status,p_status);

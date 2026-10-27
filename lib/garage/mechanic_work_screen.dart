@@ -20,6 +20,7 @@ class GarageMechanicWorkScreen extends StatefulWidget {
   const GarageMechanicWorkScreen({
     required this.loadJobs,
     required this.evidenceScreen,
+    this.accessNotice,
     super.key,
   });
 
@@ -27,10 +28,12 @@ class GarageMechanicWorkScreen extends StatefulWidget {
     required GarageMechanicJobsRepository jobs,
     required GarageMediaRepository media,
     required String workspaceId,
+    Widget? accessNotice,
     Key? key,
   }) {
     return GarageMechanicWorkScreen(
       key: key,
+      accessNotice: accessNotice,
       loadJobs: () => jobs.fetchMyAssignments(workspaceId),
       evidenceScreen: (orderId) => GarageOrderMediaScreen.forRepository(
         repository: media,
@@ -46,6 +49,7 @@ class GarageMechanicWorkScreen extends StatefulWidget {
 
   final GarageJobsLoader loadJobs;
   final GarageEvidenceBuilder evidenceScreen;
+  final Widget? accessNotice;
 
   @override
   State<GarageMechanicWorkScreen> createState() =>
@@ -165,7 +169,9 @@ class _GarageMechanicWorkScreenState
           ),
         ],
       ),
-      body: _busy
+      body: Column(children: [
+        if (widget.accessNotice != null) widget.accessNotice!,
+        Expanded(child: _busy
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
@@ -192,7 +198,8 @@ class _GarageMechanicWorkScreenState
               : GarageMechanicBoard(
                   assignments: _assignments,
                   onOpenAssignment: (id) => _open(id, scope, listVersion),
-                ),
+                )),
+      ]),
     );
   }
 }

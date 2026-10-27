@@ -27,6 +27,8 @@ on:
       - 'tests/garage_api_catalog_test.py'
       - 'supabase/qa_hardening/preflight/03_garage_api_catalog.sql'
       - '.github/workflows/garage-rls.yml'
+      - 'server/garage-billing/test_operation_access.sql'
+      - 'tests/garage_operation_access_e2e.mjs'
   push:
     branches: [main]
     paths:
@@ -202,6 +204,23 @@ jobs:
           qa_db_url="$(get_local_setting DB_URL)"
           echo "::add-mask::$qa_db_url"
           psql "$qa_db_url" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/tests/garage_storage_operation_compat.sql"
+      - name: Verify billing operation denials through genuine Auth and Storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          get_local_setting() {
+            sed -n "s/^$1=//p" "$RUNNER_TEMP/garage_supabase_env" | head -1 | tr -d '"'
+          }
+          export GARAGE_TEST_API_URL="$(get_local_setting API_URL)"
+          export GARAGE_TEST_ANON_KEY="$(get_local_setting ANON_KEY)"
+          export GARAGE_OPERATION_DB_URL="$(get_local_setting DB_URL)"
+          export GARAGE_OPERATION_DISPOSABLE=1
+          echo "::add-mask::$GARAGE_OPERATION_DB_URL"
+          psql "$GARAGE_OPERATION_DB_URL" -v ON_ERROR_STOP=1 \
+            -f server/garage-billing/test_trial_ledger.sql \
+            -f server/garage-billing/test_paid_lifecycle.sql \
+            -f server/garage-billing/test_operation_access.sql
+          node tests/garage_operation_access_e2e.mjs
       - name: Stop isolated Supabase services
         if: always()
         shell: bash

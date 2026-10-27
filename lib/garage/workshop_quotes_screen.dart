@@ -6,6 +6,7 @@ import 'garage_ui_text.dart';
 import 'quote_currency_picker.dart';
 import 'quote_order_repository.dart';
 import 'workshop_quote_publisher.dart';
+import 'order_actions_repository.dart';
 
 // Remove only the route owned by this flow, after widget updates finish.
 void _closeQuoteRoute(Route<dynamic>? route) {
@@ -20,7 +21,7 @@ void _closeQuoteRoute(Route<dynamic>? route) {
 class GarageWorkshopQuotesScreen extends StatefulWidget {
   const GarageWorkshopQuotesScreen({
     required this.loadOrders, required this.loadCurrency,
-    required this.publish, this.embedded = false, super.key,
+    required this.publish, this.finish, this.embedded = false, super.key,
   });
 
   factory GarageWorkshopQuotesScreen.forClient({
@@ -36,6 +37,8 @@ class GarageWorkshopQuotesScreen extends StatefulWidget {
         workspaceId: workspaceId, orderId: id, currency: currency,
         lines: lines,
       ),
+      finish: (id, target) => GarageOrderActionsRepository(client)
+        .finish(workspaceId, id, target),
     );
   }
 
@@ -43,6 +46,7 @@ class GarageWorkshopQuotesScreen extends StatefulWidget {
   final bool embedded;
   final Future<GarageQuoteCurrencySelection> Function(String) loadCurrency;
   final Future<int> Function(String, String, List<GarageQuoteDraftLine>) publish;
+  final Future<String> Function(String, String)? finish;
 
   @override
   State<GarageWorkshopQuotesScreen> createState() => _WorkshopQuotesState();
@@ -56,6 +60,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   int _scope = 0;
   bool _opening = false;
   Route<void>? _editorRoute;
+  DialogRoute<bool>? _finishRoute;
 
   String _statusLabel(String status) => switch (status) {
     'received' => GarageUiText.get('received'),
@@ -76,7 +81,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.loadOrders != widget.loadOrders ||
         oldWidget.loadCurrency != widget.loadCurrency ||
-        oldWidget.publish != widget.publish) {
+        oldWidget.publish != widget.publish || oldWidget.finish != widget.finish) {
       _scope++;
       _refresh();
     }
@@ -85,7 +90,18 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
   void dispose() {
     _version++; _scope++;
     _closeEditor();
+    _closeFinish();
     super.dispose();
+  }
+
+  void _closeFinish() {
+    final route = _finishRoute;
+    _finishRoute = null;
+    if (route != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (route.isActive) route.navigator?.removeRoute(route);
+      });
+    }
   }
 
   void _closeEditor() {
@@ -100,6 +116,7 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
     final current = ++_version;
     final loadOrders = widget.loadOrders;
     _closeEditor();
+    _closeFinish();
     setState(() { _orders = const []; _loading = true; _error = null; });
     try {
       final rows = await loadOrders();
@@ -160,6 +177,42 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
     if (mounted && scope == _scope && version == _version) await _refresh();
   }
 
+  Future<void> _finish(GarageQuoteOrder order, String target) async {
+    if (_loading || _opening || widget.finish == null || !_orders.contains(order)) return;
+    final scope = _scope, version = _version;
+    final finish = widget.finish!;
+    final load = widget.loadOrders;
+    _opening = true;
+    final route = DialogRoute<bool>(context: context, builder: (context) => AlertDialog(
+      title: Text(_statusLabel(target)),
+      content: Text(order.complaint),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false),
+          child: const Icon(Icons.close)),
+        FilledButton(key: const Key('garage_finish_confirm'),
+          onPressed: () => Navigator.pop(context, true), child: const Icon(Icons.check)),
+      ],
+    ));
+    _finishRoute = route;
+    final confirmed = await Navigator.of(context).push<bool>(route);
+    if (identical(_finishRoute, route)) _finishRoute = null;
+    if (!mounted || scope != _scope || version != _version) return;
+    if (confirmed != true) { setState(() => _opening = false); return; }
+    setState(() {});
+    try {
+      final latest = await load();
+      if (!mounted || scope != _scope || version != _version) return;
+      final matches = latest.where((row) => row.id == order.id && row.status == order.status);
+      if (matches.length != 1) { await _refresh(); return; }
+      if (await finish(order.id, target) != target) throw const FormatException('Unexpected completion');
+      if (mounted && scope == _scope && version == _version) await _refresh();
+    } catch (_) {
+      if (mounted && scope == _scope && version == _version) {
+        setState(() { _opening = false; _error = GarageUiText.get('quoteLoadError'); });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final version = _version;
@@ -183,8 +236,13 @@ class _WorkshopQuotesState extends State<GarageWorkshopQuotesScreen> {
             title: Text(order.complaint, maxLines: 3,
               overflow: TextOverflow.ellipsis),
             subtitle: Text(_statusLabel(order.status)),
-            trailing: order.canQuote
-              ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
+            trailing: widget.finish != null &&
+                const {'in_progress', 'awaiting_parts', 'ready'}.contains(order.status)
+              ? TextButton(key: Key('garage_finish_${order.id}'),
+                  onPressed: _loading || _opening ? null : () => _finish(order,
+                    order.status == 'ready' ? 'collected' : 'ready'),
+                  child: Text(_statusLabel(order.status == 'ready' ? 'collected' : 'ready')))
+              : order.canQuote ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
             onTap: order.canQuote ? () {
               if (mounted && version == _version) _open(order);
             } : null,

@@ -18,6 +18,7 @@ import '../garage/setup_guide.dart';
 import '../garage/garage_shell.dart';
 import '../garage/billing_screen.dart';
 import '../garage/entitlement_repository.dart';
+import '../garage/operation_access_notice.dart';
 import '../garage/checkout_repository.dart';
 import '../garage/trial_cancellation_repository.dart';
 import '../garage/repair_requests_screen.dart';
@@ -39,11 +40,18 @@ class EcosystemModuleHub extends StatelessWidget {
   Widget build(BuildContext context) {
     final bookings = GarageBookingRepository(client);
     final calendar = GarageResourceCalendarRepository(client);
+    Widget? accessNotice() => AppConfig.garageSandboxEntitlementEnabled &&
+        destination.workspaceId != null
+      ? GarageOperationAccessNotice(scopeId: destination.workspaceId!,
+          load: () => GarageEntitlementRepository.forClient(client)
+            .load(destination.workspaceId!))
+      : null;
     if (destination.module == EcosystemModule.mechanic) {
       return GarageMechanicWorkScreen.forRepository(
         jobs: GarageMechanicJobsRepository(client),
         media: GarageMediaRepository(client),
         workspaceId: destination.workspaceId!,
+        accessNotice: accessNotice(),
       );
     }
     final customer = destination.module == EcosystemModule.customer;
@@ -101,6 +109,7 @@ class EcosystemModuleHub extends StatelessWidget {
     };
     final tabs = ['calendarBays', 'ordersEstimates', 'customerRequests'];
     return GarageShell(scopeId: '${destination.workspaceId}:${destination.canConfigure}',
+      accessNotice: accessNotice(),
       workshopName: destination.name!, pages: [
         (context) => GarageHome(workshopName: destination.name!,
           onCalendar: () => GarageShell.selectTab(context, 1),

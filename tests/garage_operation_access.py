@@ -111,7 +111,7 @@ for actor in [owner, adviser]:
     run(f"SELECT public.garage_begin_diagnosis('{shop}','{received[2]}');", actor, error='42501')
     run(f"SELECT public.garage_start_approved_repair('{shop}','{pending[2]}');", actor, error='42501')
     run(f"SELECT public.garage_finish_existing_order('{shop}','{unproven[2]}','ready');", actor, error='42501')
-run(f"SELECT public.garage_assign_mechanic('{shop}','{received[2]}','{mechanic}');", owner, error='42501')
+run(f"SELECT public.garage_assign_mechanic('{shop}','{received[2]}',NULL);", owner, error='42501')
 run(f"SELECT public.garage_issue_staff_invite('{shop}','next@example.test','mechanic');", owner, error='42501')
 run(f"SELECT public.garage_accept_staff_invite('{token}');", stranger, error='42501')
 run(f"SELECT public.garage_booking_request({booking_args(slot)});", stranger, error='42501')
