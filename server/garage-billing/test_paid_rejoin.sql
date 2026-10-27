@@ -67,7 +67,9 @@ AS $$ SELECT garage_private.paid_rejoin_entitlement(p_workspace); $$;
 CREATE OR REPLACE FUNCTION public.garage_resolve_test_workspace_entitlement(p_actor uuid,p_workspace uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $$ BEGIN
- IF p_actor IS NULL OR NOT EXISTS(SELECT 1 FROM public.garage_members m WHERE m.workspace_id=p_workspace AND m.user_id=p_actor AND m.role IN ('owner','service_adviser','mechanic')) THEN
+ IF p_actor IS NULL THEN RAISE EXCEPTION 'Workshop member required' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM public.garage_members m WHERE m.workspace_id=p_workspace AND m.user_id=p_actor AND m.role IN ('owner','service_adviser','mechanic') FOR SHARE;
+ IF NOT FOUND THEN
   RAISE EXCEPTION 'Workshop member required' USING ERRCODE='42501'; END IF;
  RETURN garage_private.paid_rejoin_entitlement(p_workspace);
 END $$;
