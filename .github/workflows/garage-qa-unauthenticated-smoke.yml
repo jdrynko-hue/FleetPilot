@@ -1,0 +1,22 @@
+name: Garage QA unauthenticated Edge smoke
+
+on:
+  pull_request:
+    paths:
+      - 'tools/smoke_garage_qa_auth.sh'
+      - '.github/workflows/garage-qa-unauthenticated-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-auth-denial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell syntax without contacting a server
+        run: bash -n tools/smoke_garage_qa_auth.sh
+      - name: Confirm hosted QA endpoint rejects missing JWT
+        run: bash tools/smoke_garage_qa_auth.sh
