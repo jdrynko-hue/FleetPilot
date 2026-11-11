@@ -82,6 +82,34 @@ Build and test phases sequentially **without releasing either module commerciall
 
 A separate **garage subscription** paid by the workshop; private vehicle customers are *not* required to subscribe. Test tiers based on **workshop branches, staff seats, monthly jobs and private storage**, not fleet vehicle counts. GBP for UK, EUR for euro markets and PLN for Poland, with tax treatment reviewed before live charges. Do NOT create Stripe Live prices yet; research willingness to pay and support costs during G1.
 
+## Private-customer mechanic bookings — subscription-first commercial proposal (2026-10-14)
+
+**Proposal, pending a workshop pilot and final approval:** let people book any participating independent workshop or mobile mechanic through Flotaryx Garage at **no Flotaryx booking fee to the consumer**. Garages pay the existing, tiered Garage SaaS subscription; **no percentage commission or per-completed-booking surcharge at launch**. Do not change Stripe Live pricing or publish an availability promise until the feature is tested. This is distinct from RepairBridge's Fleet-to-Garage business workflow.
+
+### Booking experience and ownership
+
+- Customers search eligible workshops by location, work type, vehicle type, availability and workshop-provided price/range; workshop profiles must not imply third-party verification without a real check.
+- A customer can submit a requested slot and vehicle/job details; status remains **requested** until the workshop explicitly accepts or a genuinely synchronized slot is atomically reserved. No invented availability. Offer rescheduling/cancellation and privacy-safe notifications.
+- Garage sets accepted job types, opening hours, lead time, slots, cancellation policy, and whether deposits are required. Never share a customer's identity or full vehicle history with unrelated workshops.
+- A confirmed appointment creates a Garage booking linked to its eventual independent work order and private customer history; only consented records become visible to that customer. A booking is **not** automatic permission to perform paid repairs.
+- Fixed-price jobs and diagnostics can disclose prices upfront. Jobs needing inspection should be labelled **estimate after diagnosis**; versioned quotes and explicit customer approval remain mandatory before repair.
+- No compulsory Flotaryx platform fee to private customers; no surprise fees added at checkout. Any workshop-set deposit must be clearly identified, refundable/cancellable under disclosed terms, and paid to the appropriate merchant once payments are enabled.
+- For launch, a read-only enquiry/slot-request flow may precede direct card payments. Stripe Connect, refunds, merchant-of-record, disputes, cancellation/deposit treatment and UK/EU tax obligations require a separate legal/finance review and sandbox E2E before enabling money movement.
+
+### Fair garage subscriptions and validation
+
+- First validate Garage subscription tiers against **number of active branches/seats, practical booking volume, reminders and storage**, with clear published limits, not a hidden percentage of the customer's repair invoice.
+- Do not charge a garage again for bookings generated through its own existing customer base, private link, QR code or website widget.
+- Separately attribute *new* customers discovered through Flotaryx search so acquisition spend and support effort can be measured. If external advertising later proves uneconomic, consider an **opt-in** marketplace marketing add-on/lead package; never silently add commissions to subscriptions.
+- Monitor active paying garages, conversion from requested to accepted to attended appointments, no-shows/cancellations, cost per newly acquired workshop/customer, support load, payment processing costs and net subscription revenue. Run a small pilot before changing fees.
+- Do not assume subscription revenue is sufficient at all scales: the economics depend on garage retention and consumer acquisition/marketing costs. Revisit pricing with pilot evidence, not a universal fixed rate.
+
+### Required booking QA and security
+
+- Garage A cannot view/accept Garage B booking; unverified customers cannot read another customer's vehicle, price quote or private documents.
+- Test double-bookings, concurrent slot holds, timezone/DST, reschedule/cancel/rebook, workshop downtime, no-shows, revoked staff permissions, price revisions, spam/rate limiting, email verification and consent retention.
+- Confirm mobile booking at narrow viewport, PL/EN localization and correct market/timezone; no card charges, Stripe Live or paid services without explicit owner authorization.
+
 ## Acceptance test examples
 
 - A workshop with no Fleet membership can register, invite a mechanic, add a passenger car and finish a work order.
