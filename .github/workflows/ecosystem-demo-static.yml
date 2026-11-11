@@ -1,0 +1,50 @@
+name: Flotaryx offline ecosystem demo checks
+
+on:
+  push:
+    branches:
+      - feat/staging-ecosystem-demo-mobile-20261014
+    paths:
+      - 'web/demo/**'
+      - 'tests/ecosystem_demo_ui_test.mjs'
+      - '.github/workflows/ecosystem-demo-static.yml'
+  pull_request:
+    paths:
+      - 'web/demo/**'
+      - 'tests/ecosystem_demo_ui_test.mjs'
+      - '.github/workflows/ecosystem-demo-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  demo-ui:
+    name: Verify isolated mobile Fleet/Garage demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check demo JavaScript syntax and offline cross-role scenario
+        run: |
+          set -euo pipefail
+          node --check tests/ecosystem_demo_ui_test.mjs
+          node tests/ecosystem_demo_ui_test.mjs
+      - name: Assert no live endpoints, scripts or deployment changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('web/demo/index.html').read_text(encoding='utf-8')
+          assert '<meta name="robots" content="noindex,nofollow">' in s
+          assert '<form' not in s.lower()
+          assert 'supabase.co' not in s.lower()
+          assert 'stripe.com' not in s.lower()
+          assert 'fetch(' not in s
+          assert 'XMLHttpRequest' not in s
+          assert 'localStorage' not in s
+          assert 'sessionStorage' not in s
+          assert all(f'href="#{r}"' in s for r in ('fleet','garage','mechanic','customer'))
+          print('PASS: all demo state and interactions stay in browser memory')
+          PY
