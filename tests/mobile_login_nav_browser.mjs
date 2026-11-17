@@ -38,6 +38,14 @@ try {
         for (const width of [320, 375, 412, 760, 761, 1050, 1051, 1280]) {
           await page.setViewportSize({width, height: 900});
           await page.goto(origin + route, {waitUntil: 'load'});
+          // The first Tab must bypass repeated navigation on both routes.
+          await page.keyboard.press('Tab');
+          const skip = page.locator('.skip-link');
+          assert.equal(await skip.evaluate(el => el === document.activeElement), true);
+          const skipBox = await skip.boundingBox();
+          assert.ok(skipBox && skipBox.y >= 0 && skipBox.x >= 0 && skipBox.x + skipBox.width <= width);
+          await skip.press('Enter');
+          assert.equal(await page.locator('#main-content').evaluate(el => el === document.activeElement), true);
           for (const locale of locales) {
             await page.locator('#site-language').selectOption(locale);
             const link = page.locator('.nav-compact-login');

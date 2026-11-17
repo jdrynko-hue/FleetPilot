@@ -88,6 +88,22 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
             self.assertIn("Garage (coming soon)", content)
             self.assertIn('data-pl="Znajdź mechanika"', content)
 
+    def test_skip_link_precedes_navigation_and_targets_focusable_main(self):
+        for name in ("web/index.html", "web/start/index.html"):
+            with self.subTest(name=name):
+                html = (ROOT / name).read_text()
+                parsed = Elements()
+                parsed.feed(html)
+                links = [a for t, a in parsed.nodes if t == 'a']
+                self.assertEqual(links[0].get('class'), 'skip-link')
+                self.assertEqual(links[0].get('href'), '#main-content')
+                mains = [a for t, a in parsed.nodes if t == 'main']
+                self.assertEqual(len(mains), 1)
+                self.assertEqual(mains[0].get('id'), 'main-content')
+                self.assertEqual(mains[0].get('tabindex'), '-1')
+                for language in LANGUAGES:
+                    self.assertTrue(links[0].get('data-' + language))
+
     def test_both_routes_ship_the_same_design(self):
         root = (ROOT / "web/index.html").read_text()
         start = (ROOT / "web/start/index.html").read_text()
