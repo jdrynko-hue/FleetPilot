@@ -23,7 +23,8 @@ permissions:
 
 jobs:
   landing-mobile:
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 supports this image; ubuntu-latest moved to 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

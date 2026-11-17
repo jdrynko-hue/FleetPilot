@@ -74,6 +74,17 @@ try {
             const selector = await page.locator('#site-language').boundingBox();
             assert.ok(selector && selector.x >= 0 && selector.x + selector.width <= width + 1,
               `Language selector must remain in viewport: ${browserName} ${route} ${width} ${locale} ${JSON.stringify(selector)}`);
+            if (width === 320 && locale === 'pl') {
+              for (const name of ['garage', 'driver', 'fleet']) {
+                const button = page.locator(`[data-preview="${name}"]`);
+                await button.focus();
+                await button.press('Enter');
+                assert.equal(await button.getAttribute('aria-pressed'), 'true');
+                assert.equal(await page.locator('[data-preview][aria-pressed="true"]').count(), 1);
+                assert.equal(await page.locator(`[data-preview-panel="${name}"]`).isVisible(), true);
+                assert.equal(await page.locator('[data-preview-panel]:visible').count(), 1);
+              }
+            }
             if (screenshots && width === 320 && ['pl', 'de'].includes(locale)) {
               await page.screenshot({path: path.join(screenshots,
                 `${browserName}-${route === '/' ? 'root' : 'start'}-${locale}-320.png`)});

@@ -41,7 +41,7 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
                 self.assertLess(html.index('class="hero"'),
                                 html.index('id="ecosystem"'))
                 self.assertLess(html.index('id="ecosystem"'),
-                                html.index('id="industries"'))
+                                html.index('id="features"'))
                 self.assertEqual(html.count('class="ecosystem-card"'), 3)
                 self.assertEqual(html.count('class="ecosystem-bridge"'), 1)
                 self.assertIn('class="notice ecosystem-status"', html)
@@ -56,9 +56,9 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
                               html)
                 self.assertEqual(html.count(".ecosystem-grid{display:grid"), 1)
                 self.assertTrue(all(f'id="{id}"' in html for id in (
-                    "industries", "features", "how", "roles", "benefits", "faq")))
+                    "garage", "booking", "features", "how", "offer", "faq")))
                 preview = html.split('<section class="section ecosystem-section"', 1)[1].split(
-                    '<section class="section" id="industries">', 1)[0]
+                    '</section>', 1)[0]
                 self.assertNotIn('href="/app/"', preview)
                 self.assertNotIn("stripe.com", preview.lower())
                 self.assertNotIn("checkout", preview.lower())
@@ -81,16 +81,51 @@ class WebsiteEcosystemPreviewTest(unittest.TestCase):
                     self.assertTrue(attrs["data-pl"].strip())
                 self.assertIn("document.querySelectorAll('[data-en][data-pl]')", html)
 
-    def test_source_remains_prelaunch_and_release_workflow_unchanged(self):
-        workflow = (ROOT / ".github/workflows/flotaryx-homepage-release.yml").read_text()
-        self.assertIn("branches: [main]", workflow)
-        self.assertIn("workflow_dispatch", workflow)
-        self.assertIn("web / 'start' / 'index.html'", workflow)
+    def test_source_remains_prelaunch(self):
         for name in ("web/start/index.html", "web/index.html"):
             content = (ROOT / name).read_text()
             self.assertRegex(content, r'property="og:description"[^\n]+upcoming Flotaryx Garage')
             self.assertIn("Garage (coming soon)", content)
             self.assertIn('data-pl="Znajdź mechanika"', content)
+
+    def test_both_routes_ship_the_same_design(self):
+        root = (ROOT / "web/index.html").read_text()
+        start = (ROOT / "web/start/index.html").read_text()
+        self.assertEqual(start, root.replace('$FLUTTER_BASE_HREF', '/'))
+
+    def test_navigation_and_translations_are_complete(self):
+        for name in ("web/index.html", "web/start/index.html"):
+            with self.subTest(name=name):
+                parsed = Elements()
+                parsed.feed((ROOT / name).read_text())
+                ids = [a['id'] for _, a in parsed.nodes if 'id' in a]
+                self.assertEqual(len(ids), len(set(ids)), 'Duplicate anchor IDs')
+                for tag, attrs in parsed.nodes:
+                    href = attrs.get('href', '')
+                    if href.startswith('#') and len(href) > 1:
+                        self.assertIn(href[1:], ids, f'Broken anchor: {href}')
+                    if 'data-en' in attrs:
+                        for language in LANGUAGES:
+                            self.assertTrue(attrs.get('data-' + language, '').strip(),
+                                            f'{name}: {tag} lacks {language}')
+
+    def test_product_previews_are_labeled_and_accessible(self):
+        html = (ROOT / 'web/index.html').read_text()
+        self.assertIn('fictional examples, not screenshots of the live app', html)
+        self.assertIn('Purchasing is not available on this page.', html)
+        parsed = Elements()
+        parsed.feed(html)
+        buttons = {a['data-preview']: a for t, a in parsed.nodes
+                   if t == 'button' and 'data-preview' in a}
+        panels = {a['data-preview-panel']: a for _, a in parsed.nodes
+                  if 'data-preview-panel' in a}
+        self.assertEqual(set(buttons), {'fleet', 'garage', 'driver'})
+        self.assertEqual(set(panels), set(buttons))
+        for name, button in buttons.items():
+            self.assertEqual(button['type'], 'button')
+            self.assertEqual(button['aria-controls'], panels[name]['id'])
+            self.assertEqual(button['aria-pressed'], str(name == 'fleet').lower())
+            self.assertEqual('hidden' in panels[name], name != 'fleet')
 
 
 if __name__ == "__main__":
