@@ -18,7 +18,10 @@ const server = createServer(async (req, res) => {
     if (!file.startsWith(root) || !/\.(html|png)$/.test(file)) {
       res.writeHead(404).end(); return;
     }
-    const body = await readFile(file);
+    const source = await readFile(file);
+    // Serve the assembled landing base, as the release workflow does.
+    const body = file.endsWith('.html') ? source.toString('utf8').replace(
+      '<base href="$FLUTTER_BASE_HREF">', '<base href="/">') : source;
     res.writeHead(200, {'content-type': file.endsWith('.html')
       ? 'text/html; charset=utf-8' : 'image/png'}).end(body);
   } catch { res.writeHead(404).end(); }
@@ -38,6 +41,16 @@ try {
         for (const width of [320, 375, 412, 760, 761, 1050, 1051, 1280]) {
           await page.setViewportSize({width, height: 900});
           await page.goto(origin + route, {waitUntil: 'load'});
+          // Reset focus even when the previous case ended on a fragment.
+          await page.reload({waitUntil: 'load'});
+          // The first Tab must bypass repeated navigation on both routes.
+          await page.keyboard.press('Tab');
+          const skip = page.locator('.skip-link');
+          assert.equal(await skip.evaluate(el => el === document.activeElement), true);
+          const skipBox = await skip.boundingBox();
+          assert.ok(skipBox && skipBox.y >= 0 && skipBox.x >= 0 && skipBox.x + skipBox.width <= width);
+          await skip.press('Enter');
+          assert.equal(await page.locator('#main-content').evaluate(el => el === document.activeElement), true);
           for (const locale of locales) {
             await page.locator('#site-language').selectOption(locale);
             const link = page.locator('.nav-compact-login');
