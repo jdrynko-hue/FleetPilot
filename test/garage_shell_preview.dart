@@ -9,6 +9,9 @@ import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/core/theme.dart';
 import 'package:fleetpilot/garage/garage_shell.dart';
 import 'package:fleetpilot/garage/setup_guide.dart';
+import 'package:fleetpilot/garage/booking_recovery_journal.dart';
+import 'package:fleetpilot/garage/consumer_booking_repository.dart';
+import 'package:fleetpilot/garage/consumer_booking_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +50,41 @@ void main() {
       expect(tester.takeException(), isNull);
       await expectLater(find.byType(GarageShell), matchesGoldenFile(
         '../build/garage-preview/garage_pl_${size.width.toInt()}.png'));
+    });
+  }
+  for (final resolved in [false, true]) {
+    testWidgets('render Polish Booking recovery, resolved=$resolved', (tester) async {
+      AppLocale.language.value = 'pl';
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      var pending = true;
+      final marker = PendingBookingRequest(
+        actorId: '00000000-0000-4000-8000-000000000001',
+        workspaceId: '00000000-0000-4000-8000-000000000101',
+        requestKey: '00000000-0000-4000-8000-000000000201', createdAt: DateTime.utc(2026));
+      await tester.pumpWidget(MaterialApp(theme: buildFleetPilotTheme(), home:
+        GarageBookingSearchScreen(search: ({city}) async => [],
+          submit: ({required workspaceId, required customerName, required vehicleMake,
+            required vehicleModel, required service, required concern,
+            required desiredStart, required requestKey, registration}) async =>
+              throw StateError('Visual review cannot submit a request'),
+          pendingRequests: () => pending ? [marker] : [],
+          resolveRequest: (_) async {
+            pending = false;
+            return const BookingRecoveryOutcome(
+              bookingId: '00000000-0000-4000-8000-000000000301',
+              status: GarageBookingStatus.withdrawn);
+          }, onViewBookings: () {})));
+      await tester.pumpAndSettle();
+      if (resolved) {
+        await tester.tap(find.byKey(const Key('booking_recovery_resolve')));
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+      await expectLater(find.byType(GarageBookingSearchScreen), matchesGoldenFile(
+        '../build/garage-preview/booking_recovery_pl_${resolved ? 'resolved' : 'pending'}_390.png'));
     });
   }
 }

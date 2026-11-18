@@ -137,4 +137,51 @@ void main() {
     await fields.tap(tester, 'booking_open_${fixture.shop.workspaceId}');
     expect(find.byType(GarageBookingRequestScreen), findsOneWidget);
   });
+
+  testWidgets('leaving an in-flight form and reconstructing the screen retains recovery without replay', (tester) async {
+    final storage = journal.TestRecoveryStorage();
+    final firstJournal = BookingRecoveryJournal(storage);
+    final response = Completer<String>();
+    var sends = 0, resolutions = 0;
+    final BookingSubmit submit = ({required workspaceId, required customerName,
+      required vehicleMake, required vehicleModel, required service, required concern,
+      required desiredStart, required requestKey, registration}) {
+      sends++;
+      firstJournal.begin(actor: journal.actor, workspace: workspaceId, requestKey: requestKey);
+      return response.future;
+    };
+    await fixture.render(tester, GarageBookingSearchScreen(search: search, submit: submit,
+      pickTime: (_) async => DateTime.now().add(const Duration(days: 2)),
+      pendingRequests: () => firstJournal.pending(journal.actor),
+      resolveRequest: (_) async => const BookingRecoveryOutcome()));
+    await fields.tap(tester, 'booking_search_submit');
+    await fields.tap(tester, 'booking_open_${fixture.shop.workspaceId}');
+    await fields.completeRequest(tester);
+    await fields.tap(tester, 'booking_send');
+    expect(sends, 1);
+    Navigator.of(tester.element(find.byType(GarageBookingRequestScreen))).pop();
+    await tester.pumpAndSettle();
+    await fields.reveal(tester, 'booking_pending_recovery');
+    expect(find.byKey(const Key('booking_pending_recovery')), findsOneWidget);
+    response.completeError(TimeoutException('Synthetic lost response after leaving'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    final restored = BookingRecoveryJournal(storage);
+    await fixture.render(tester, GarageBookingSearchScreen(search: search, submit: neverSubmit,
+      pendingRequests: () => restored.pending(journal.actor), resolveRequest: (request) async {
+        resolutions++;
+        restored.complete(request);
+        return const BookingRecoveryOutcome(bookingId: fixture.bookingId,
+          status: GarageBookingStatus.requested);
+      }));
+    expect(find.byKey(const Key('booking_pending_recovery')), findsOneWidget);
+    expect(resolutions, 0);
+    expect(find.byKey(const Key('booking_name')), findsNothing);
+    await fields.tap(tester, 'booking_recovery_resolve');
+    expect(resolutions, 1);
+    expect(sends, 1);
+    expect(restored.pending(journal.actor), isEmpty);
+    expect(find.byKey(const Key('booking_recovery_outcome')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
