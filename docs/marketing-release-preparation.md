@@ -13,11 +13,18 @@ not the publication path for this prepared folder.
 
 ## Required baseline
 
-Supply a complete retained artifact of the currently deployed production site,
+For the original-artifact route, supply a complete retained production artifact,
 its independently retained file inventory and the trusted SHA-256 of that
 inventory. Record the original archive checksum, successful deployment run,
 artifact ID and deployed source commit. Verify those facts against the actual
 deployment before using this command. Keep the original archive for rollback.
+
+When that archive has expired but its complete independent file list survives,
+the separately verified [recovery route](recovered-production-baseline.md) can
+qualify a version-2 baseline. It requires all original paths, two matching public
+reads, pinned source checks and a verified capture archive. It does not claim to
+recreate the expired original ZIP. Both routes preserve the same complete file
+inventory and app bytes.
 
 A new checksum made from a partial download does not prove completeness. A
 manifest created after losing files cannot qualify that partial download. A

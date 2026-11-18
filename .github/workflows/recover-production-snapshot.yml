@@ -4,7 +4,12 @@ on:
   pull_request:
     paths:
       - 'tools/recover_marketing_baseline.py'
+      - 'tools/qualify_recovered_baseline.py'
+      - 'tools/prepare_marketing_release.py'
       - 'tests/recovery_snapshot_test.py'
+      - 'tests/recovery_qualification_test.py'
+      - 'tests/marketing_release_test.py'
+      - 'tests/fixtures/flutter_3_47_7_unregister_worker.js'
       - 'docs/releases/2026-10-17-production-inventory.json'
       - '.github/workflows/recover-production-snapshot.yml'
 
@@ -26,6 +31,10 @@ jobs:
           persist-credentials: false
       - name: Verify bounded read-only recovery
         run: python3 -B tests/recovery_snapshot_test.py -v
+      - name: Verify recovered provenance and unchanged app bytes
+        run: |
+          python3 -B tests/recovery_qualification_test.py -v
+          python3 -B tests/marketing_release_test.py -v
       - name: Capture the exact published file inventory twice
         run: >-
           python3 -B tools/recover_marketing_baseline.py
