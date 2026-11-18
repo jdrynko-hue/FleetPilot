@@ -235,8 +235,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #14
     document.querySelectorAll('.step > b').forEach((el,i)=>{el.textContent=stepWords[lang]+' '+String(i+1).padStart(2,'0');});
     selector.value=lang;
     document.querySelectorAll('a[href]').forEach(link=>{
-      const target=new URL(link.getAttribute('href'),window.location.href);
-      if(target.origin===window.location.origin&&target.pathname==='/app/'){
+      const href=link.getAttribute('href');
+      if(href.startsWith('#'))return;
+      const target=new URL(href,window.location.href);
+      if(target.origin===window.location.origin&&['/','/start/','/install/','/app/'].includes(target.pathname)){
         target.searchParams.set('lang',lang);
         link.setAttribute('href',target.pathname+target.search+target.hash);
       }
@@ -247,7 +249,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #14
   selector.addEventListener('change',()=>translate(selector.value));
   let saved=null;
   try{saved=window.localStorage.getItem('fleetpilot_site_lang');}catch(error){}
-  let pref=canonical(saved);
+  let pref=canonical(new URL(window.location.href).searchParams.get('lang'))||canonical(saved);
   if(!pref){for(const candidate of (navigator.languages||[navigator.language])){pref=canonical(candidate);if(pref)break;}}
   translate(pref||'en');
   document.querySelectorAll('[data-preview]').forEach(button=>button.addEventListener('click',()=>{
