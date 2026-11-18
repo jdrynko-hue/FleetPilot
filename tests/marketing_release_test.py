@@ -191,5 +191,59 @@ class MarketingReleaseTest(unittest.TestCase):
         self.assertFalse(self.output.exists())
 
 
+
+    def recovery_manifest(self, change=None):
+        def mutate(value):
+            value['version'] = 2
+            value['kind'] = 'flotaryx-recovered-production-baseline'
+            provenance = value['provenance']
+            provenance['original_archive_sha256'] = provenance.pop('archive_sha256')
+            provenance.update({
+                'original_archive_available': False, 'original_archive_recreated': False,
+                'same_bytes_in_two_complete_passes': True,
+                'capture_artifact_sha256': 'c' * 64, 'source_inventory_sha256': 'd' * 64,
+                'capture_manifest_sha256': 'e' * 64, 'capture_run_id': 789,
+                'capture_artifact_id': 987, 'archive_file_count': len(value['files']),
+                'source_verified_file_count': 3,
+            })
+            if change:
+                change(provenance)
+        self.write_manifest(mutate)
+
+    def test_exact_upstream_unregister_worker_is_preserved(self):
+        worker = Path(__file__).parent / 'fixtures/flutter_3_47_7_unregister_worker.js'
+        (self.baseline / 'app/flutter_service_worker.js').write_bytes(worker.read_bytes())
+        self.write_manifest()
+        review = self.prepare()
+        self.assertTrue(review['portal_bytes_identical'])
+        self.assertEqual((self.output / 'site/app/flutter_service_worker.js').read_bytes(),
+                         worker.read_bytes())
+
+    def test_changed_unregister_worker_is_rejected(self):
+        worker = Path(__file__).parent / 'fixtures/flutter_3_47_7_unregister_worker.js'
+        (self.baseline / 'app/flutter_service_worker.js').write_bytes(
+            worker.read_bytes() + b'\n/* unknown worker change */\n')
+        self.write_manifest()
+        self.assert_hold()
+
+    def test_recovered_contract_keeps_original_archive_unavailable(self):
+        self.recovery_manifest()
+        review = self.prepare()
+        self.assertFalse(review['baseline_provenance']['original_archive_recreated'])
+        self.assertIn('expired original archive was not recreated', review['provenance_note'])
+
+    def test_recovered_contract_cannot_claim_original_archive_bytes(self):
+        self.recovery_manifest(lambda p: p.update(original_archive_recreated=True))
+        self.assert_hold()
+
+    def test_incomplete_recovery_evidence_is_rejected(self):
+        self.recovery_manifest(lambda p: p.pop('capture_artifact_sha256'))
+        self.assert_hold()
+
+    def test_recovered_original_file_count_must_match(self):
+        self.recovery_manifest(lambda p: p.update(archive_file_count=1))
+        self.assert_hold()
+
+
 if __name__ == '__main__':
     unittest.main()

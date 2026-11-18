@@ -1,0 +1,506 @@
+{
+  "version": 1,
+  "kind": "flotaryx-deployment-archive-inventory",
+  "repository": "jdrynko-hue/FleetPilot",
+  "origin": "https://flotaryx.com",
+  "source_commit": "fd25fa292127d49d43b49e7feab1f6ed0b237fe8",
+  "deployment_run_id": 39055761836,
+  "build_job_id": 117463287709,
+  "artifact_id": 12109517167,
+  "original_archive_sha256": "b03533b2cc298412c787b4df1e94c01cb9fd9c3e81273cfbd7772e0469a01717",
+  "deployment_status": "success",
+  "public_last_modified": "Sat, 17 Oct 2026 17:55:57 GMT",
+  "inventory_evidence_url": "https://github.com/jdrynko-hue/FleetPilot/actions/runs/39055761836/job/117463287709",
+  "inventory_evidence": "Complete verbose tar listing between Archive artifact group markers in the successful build log; 161 regular files.",
+  "original_archive_available": false,
+  "files": [
+    "CNAME",
+    "app/.last_build_id",
+    "app/CNAME",
+    "app/app/index.html",
+    "app/assets/AssetManifest.bin",
+    "app/assets/AssetManifest.bin.json",
+    "app/assets/FontManifest.json",
+    "app/assets/NOTICES",
+    "app/assets/assets/branding/flotaryx_mark.png",
+    "app/assets/fonts/MaterialIcons-Regular.otf",
+    "app/assets/shaders/ink_sparkle.frag",
+    "app/assets/shaders/stretch_effect.frag",
+    "app/canvaskit/canvaskit.js",
+    "app/canvaskit/canvaskit.js.symbols",
+    "app/canvaskit/canvaskit.wasm",
+    "app/canvaskit/chromium/canvaskit.js",
+    "app/canvaskit/chromium/canvaskit.js.symbols",
+    "app/canvaskit/chromium/canvaskit.wasm",
+    "app/canvaskit/skwasm.js",
+    "app/canvaskit/skwasm.js.symbols",
+    "app/canvaskit/skwasm.wasm",
+    "app/canvaskit/skwasm_heavy.js",
+    "app/canvaskit/skwasm_heavy.js.symbols",
+    "app/canvaskit/skwasm_heavy.wasm",
+    "app/canvaskit/webparagraph/canvaskit.js",
+    "app/canvaskit/webparagraph/canvaskit.js.symbols",
+    "app/canvaskit/webparagraph/canvaskit.wasm",
+    "app/canvaskit/wimp.js",
+    "app/canvaskit/wimp.js.symbols",
+    "app/canvaskit/wimp.wasm",
+    "app/cookies/index.html",
+    "app/demo/connected/index.html",
+    "app/demo/session/index.html",
+    "app/dpa/index.html",
+    "app/favicon.png",
+    "app/flutter.js",
+    "app/flutter_bootstrap.js",
+    "app/flutter_service_worker.js",
+    "app/icons/Icon-192.png",
+    "app/icons/Icon-512.png",
+    "app/icons/Icon-maskable-192.png",
+    "app/icons/Icon-maskable-512.png",
+    "app/index.html",
+    "app/install/index.html",
+    "app/legal/cs/cookies/index.html",
+    "app/legal/cs/dpa/index.html",
+    "app/legal/cs/privacy/index.html",
+    "app/legal/cs/terms/index.html",
+    "app/legal/de/cookies/index.html",
+    "app/legal/de/dpa/index.html",
+    "app/legal/de/privacy/index.html",
+    "app/legal/de/terms/index.html",
+    "app/legal/en/cookies/index.html",
+    "app/legal/en/dpa/index.html",
+    "app/legal/en/privacy/index.html",
+    "app/legal/en/terms/index.html",
+    "app/legal/es/cookies/index.html",
+    "app/legal/es/dpa/index.html",
+    "app/legal/es/privacy/index.html",
+    "app/legal/es/terms/index.html",
+    "app/legal/fr/cookies/index.html",
+    "app/legal/fr/dpa/index.html",
+    "app/legal/fr/privacy/index.html",
+    "app/legal/fr/terms/index.html",
+    "app/legal/hu/cookies/index.html",
+    "app/legal/hu/dpa/index.html",
+    "app/legal/hu/privacy/index.html",
+    "app/legal/hu/terms/index.html",
+    "app/legal/it/cookies/index.html",
+    "app/legal/it/dpa/index.html",
+    "app/legal/it/privacy/index.html",
+    "app/legal/it/terms/index.html",
+    "app/legal/pl/cookies/index.html",
+    "app/legal/pl/dpa/index.html",
+    "app/legal/pl/privacy/index.html",
+    "app/legal/pl/terms/index.html",
+    "app/legal/pt/cookies/index.html",
+    "app/legal/pt/dpa/index.html",
+    "app/legal/pt/privacy/index.html",
+    "app/legal/pt/terms/index.html",
+    "app/legal/ro/cookies/index.html",
+    "app/legal/ro/dpa/index.html",
+    "app/legal/ro/privacy/index.html",
+    "app/legal/ro/terms/index.html",
+    "app/legal/sk/cookies/index.html",
+    "app/legal/sk/dpa/index.html",
+    "app/legal/sk/privacy/index.html",
+    "app/legal/sk/terms/index.html",
+    "app/legal/uk/cookies/index.html",
+    "app/legal/uk/dpa/index.html",
+    "app/legal/uk/privacy/index.html",
+    "app/legal/uk/terms/index.html",
+    "app/main.dart.js",
+    "app/manifest.json",
+    "app/privacy/index.html",
+    "app/start/index.html",
+    "app/terms/index.html",
+    "app/version.json",
+    "cookies/index.html",
+    "demo/connected/index.html",
+    "demo/session/index.html",
+    "dpa/index.html",
+    "favicon.png",
+    "icons/Icon-192.png",
+    "icons/Icon-512.png",
+    "icons/Icon-maskable-192.png",
+    "icons/Icon-maskable-512.png",
+    "index.html",
+    "install/index.html",
+    "legal/cs/cookies/index.html",
+    "legal/cs/dpa/index.html",
+    "legal/cs/privacy/index.html",
+    "legal/cs/terms/index.html",
+    "legal/de/cookies/index.html",
+    "legal/de/dpa/index.html",
+    "legal/de/privacy/index.html",
+    "legal/de/terms/index.html",
+    "legal/en/cookies/index.html",
+    "legal/en/dpa/index.html",
+    "legal/en/privacy/index.html",
+    "legal/en/terms/index.html",
+    "legal/es/cookies/index.html",
+    "legal/es/dpa/index.html",
+    "legal/es/privacy/index.html",
+    "legal/es/terms/index.html",
+    "legal/fr/cookies/index.html",
+    "legal/fr/dpa/index.html",
+    "legal/fr/privacy/index.html",
+    "legal/fr/terms/index.html",
+    "legal/hu/cookies/index.html",
+    "legal/hu/dpa/index.html",
+    "legal/hu/privacy/index.html",
+    "legal/hu/terms/index.html",
+    "legal/it/cookies/index.html",
+    "legal/it/dpa/index.html",
+    "legal/it/privacy/index.html",
+    "legal/it/terms/index.html",
+    "legal/pl/cookies/index.html",
+    "legal/pl/dpa/index.html",
+    "legal/pl/privacy/index.html",
+    "legal/pl/terms/index.html",
+    "legal/pt/cookies/index.html",
+    "legal/pt/dpa/index.html",
+    "legal/pt/privacy/index.html",
+    "legal/pt/terms/index.html",
+    "legal/ro/cookies/index.html",
+    "legal/ro/dpa/index.html",
+    "legal/ro/privacy/index.html",
+    "legal/ro/terms/index.html",
+    "legal/sk/cookies/index.html",
+    "legal/sk/dpa/index.html",
+    "legal/sk/privacy/index.html",
+    "legal/sk/terms/index.html",
+    "legal/uk/cookies/index.html",
+    "legal/uk/dpa/index.html",
+    "legal/uk/privacy/index.html",
+    "legal/uk/terms/index.html",
+    "manifest.json",
+    "privacy/index.html",
+    "start/index.html",
+    "terms/index.html"
+  ],
+  "source_web": [
+    {
+      "path": "web/CNAME",
+      "git_blob": "a2394fd577ccc1fa6d1e0746fd53e6b163cba691",
+      "size_bytes": 13
+    },
+    {
+      "path": "web/app/index.html",
+      "git_blob": "dd4ed0ffed24b0fde6b9b2393c085e673c33bc11",
+      "size_bytes": 1719
+    },
+    {
+      "path": "web/cookies/index.html",
+      "git_blob": "ee1d9a077e91bb494fca89fbbb90d7869ca03bb7",
+      "size_bytes": 635
+    },
+    {
+      "path": "web/demo/connected/index.html",
+      "git_blob": "158f3bb30175fa5cb57921fa0d13c67138855949",
+      "size_bytes": 11553
+    },
+    {
+      "path": "web/demo/session/index.html",
+      "git_blob": "f370796203fe6d8fe789646ee5e42570e00f5d2a",
+      "size_bytes": 23416
+    },
+    {
+      "path": "web/dpa/index.html",
+      "git_blob": "8f88f8801ab57f08024cce175817f0c7b335c368",
+      "size_bytes": 623
+    },
+    {
+      "path": "web/favicon.png",
+      "git_blob": "14d38459fbc2c7dd1b82d02c10a7e3fe70648c14",
+      "size_bytes": 2004
+    },
+    {
+      "path": "web/icons/Icon-192.png",
+      "git_blob": "ac079a37634141facf9cb21b7fd9f51826432882",
+      "size_bytes": 7793
+    },
+    {
+      "path": "web/icons/Icon-512.png",
+      "git_blob": "fed41bbb06197c144770acf6118cde8f0482945c",
+      "size_bytes": 31293
+    },
+    {
+      "path": "web/icons/Icon-maskable-192.png",
+      "git_blob": "30e562022b529cc04bbf5b6d2137f4742e216d12",
+      "size_bytes": 9555
+    },
+    {
+      "path": "web/icons/Icon-maskable-512.png",
+      "git_blob": "b8fe3ddd2f4262ce55fa844c178e3e707dba34e2",
+      "size_bytes": 36339
+    },
+    {
+      "path": "web/index.html",
+      "git_blob": "1e446a06d7fdac30aeaa161e7a4a7c179dab6118",
+      "size_bytes": 181121
+    },
+    {
+      "path": "web/install/index.html",
+      "git_blob": "cf2dd6da95dc32e5ae97f55a140fe14db5d2c722",
+      "size_bytes": 8636
+    },
+    {
+      "path": "web/legal/cs/cookies/index.html",
+      "git_blob": "b6799ec0663b2ca38ac89a5ec2dc9d54ae96a1d9",
+      "size_bytes": 5335
+    },
+    {
+      "path": "web/legal/cs/dpa/index.html",
+      "git_blob": "2b0e402a3540c67cafb81a4be68d3041a3225e36",
+      "size_bytes": 7363
+    },
+    {
+      "path": "web/legal/cs/privacy/index.html",
+      "git_blob": "7bf0be92bd0caae46fd022ca173c4fc5318f3337",
+      "size_bytes": 7459
+    },
+    {
+      "path": "web/legal/cs/terms/index.html",
+      "git_blob": "d2e3a79c94d4c42770e399705708f9a93e1e7c0f",
+      "size_bytes": 7717
+    },
+    {
+      "path": "web/legal/de/cookies/index.html",
+      "git_blob": "f1c0c292c46afdf1c0719365c9dd464baf42bee4",
+      "size_bytes": 5502
+    },
+    {
+      "path": "web/legal/de/dpa/index.html",
+      "git_blob": "a0d85eb7fffe51f0e3485929fd0ee5303b4b575e",
+      "size_bytes": 8086
+    },
+    {
+      "path": "web/legal/de/privacy/index.html",
+      "git_blob": "9ceab1e7a04619be7e77c50b71419a2a8b473947",
+      "size_bytes": 8010
+    },
+    {
+      "path": "web/legal/de/terms/index.html",
+      "git_blob": "f8b03ec42683ad2ea24c3a6e7e1f8c6d47bb26d7",
+      "size_bytes": 8416
+    },
+    {
+      "path": "web/legal/en/cookies/index.html",
+      "git_blob": "8a63b7706774e7abf6478e50a7eb3342988037a0",
+      "size_bytes": 6075
+    },
+    {
+      "path": "web/legal/en/dpa/index.html",
+      "git_blob": "262f2f7fedb8337f15b2abfdc75c10f33f92b482",
+      "size_bytes": 9754
+    },
+    {
+      "path": "web/legal/en/privacy/index.html",
+      "git_blob": "5da34c7832d8489d142541ae87d80927ab786b4b",
+      "size_bytes": 9067
+    },
+    {
+      "path": "web/legal/en/terms/index.html",
+      "git_blob": "98698b9882655ae6deaad88170ddc98c2a3d1262",
+      "size_bytes": 9180
+    },
+    {
+      "path": "web/legal/es/cookies/index.html",
+      "git_blob": "69e80f4ed7c197d134e6956290eb2ddee5fca596",
+      "size_bytes": 5439
+    },
+    {
+      "path": "web/legal/es/dpa/index.html",
+      "git_blob": "908f0f3c6f5d962b77eb758158626507733000c8",
+      "size_bytes": 7835
+    },
+    {
+      "path": "web/legal/es/privacy/index.html",
+      "git_blob": "c27fcdf4be7a8020017e8995c2a9cd7c09154877",
+      "size_bytes": 7881
+    },
+    {
+      "path": "web/legal/es/terms/index.html",
+      "git_blob": "3232954e07fcce23bcf1faad952ca443c05bd50c",
+      "size_bytes": 8067
+    },
+    {
+      "path": "web/legal/fr/cookies/index.html",
+      "git_blob": "d0ae332a038766b57cf25f24085d20b17133e215",
+      "size_bytes": 5457
+    },
+    {
+      "path": "web/legal/fr/dpa/index.html",
+      "git_blob": "ab334d99174b51e89e40606e773cc1a363b38fec",
+      "size_bytes": 7931
+    },
+    {
+      "path": "web/legal/fr/privacy/index.html",
+      "git_blob": "01c3e188427becbc12472be991996fd2dc481f4e",
+      "size_bytes": 7985
+    },
+    {
+      "path": "web/legal/fr/terms/index.html",
+      "git_blob": "42d6f8743b76a91327ccdac1a656d1d17d342044",
+      "size_bytes": 8347
+    },
+    {
+      "path": "web/legal/hu/cookies/index.html",
+      "git_blob": "63933d49e1030c4001a38dce02bc88b51717f2f8",
+      "size_bytes": 5431
+    },
+    {
+      "path": "web/legal/hu/dpa/index.html",
+      "git_blob": "70ef1b42c87c23b631160627f8178e044d049ed1",
+      "size_bytes": 7704
+    },
+    {
+      "path": "web/legal/hu/privacy/index.html",
+      "git_blob": "c304edf0b30614b9ee5d39ef74844fa10d3724fe",
+      "size_bytes": 7896
+    },
+    {
+      "path": "web/legal/hu/terms/index.html",
+      "git_blob": "02029349c2f7e5b3e10048eab2dd8b0846d19435",
+      "size_bytes": 8225
+    },
+    {
+      "path": "web/legal/it/cookies/index.html",
+      "git_blob": "46d17cd58d759b383224ce9f9db159a8469c9560",
+      "size_bytes": 5321
+    },
+    {
+      "path": "web/legal/it/dpa/index.html",
+      "git_blob": "887f294f268a88c1a395fbfe5800728eb166040e",
+      "size_bytes": 7553
+    },
+    {
+      "path": "web/legal/it/privacy/index.html",
+      "git_blob": "0bc22963e2ca8f66135db7f762e6eabc19bfdbbb",
+      "size_bytes": 7587
+    },
+    {
+      "path": "web/legal/it/terms/index.html",
+      "git_blob": "8a59118ec9288f692b8acd137f67e52d716655bd",
+      "size_bytes": 7949
+    },
+    {
+      "path": "web/legal/pl/cookies/index.html",
+      "git_blob": "90b2372ec92526da730563a436b066fe355368c0",
+      "size_bytes": 6080
+    },
+    {
+      "path": "web/legal/pl/dpa/index.html",
+      "git_blob": "c2c11fa9d6782e88de82d48a06671af21946a7d8",
+      "size_bytes": 9274
+    },
+    {
+      "path": "web/legal/pl/privacy/index.html",
+      "git_blob": "127eecd950ff2af5a9897a8e00a4fa0f327fb8cb",
+      "size_bytes": 8984
+    },
+    {
+      "path": "web/legal/pl/terms/index.html",
+      "git_blob": "16cdffdb4c6be91f5ea32e453833e1b2dc67bcaf",
+      "size_bytes": 9422
+    },
+    {
+      "path": "web/legal/pt/cookies/index.html",
+      "git_blob": "0cd9324fbcd0248a7bb0a11b19a538c22c38bdcc",
+      "size_bytes": 5333
+    },
+    {
+      "path": "web/legal/pt/dpa/index.html",
+      "git_blob": "6060366dfd3cb37aaf1f70c3e6d2c14136a33e96",
+      "size_bytes": 7604
+    },
+    {
+      "path": "web/legal/pt/privacy/index.html",
+      "git_blob": "ec17085f6865f2c6a07ccf18434e23be6ed35acc",
+      "size_bytes": 7741
+    },
+    {
+      "path": "web/legal/pt/terms/index.html",
+      "git_blob": "12cbb58defc866a48b25a1987c9e0cc89f1f98b8",
+      "size_bytes": 7951
+    },
+    {
+      "path": "web/legal/ro/cookies/index.html",
+      "git_blob": "cee9bf1e7fcc367bdd5e79133ca6eec9d0a0ab57",
+      "size_bytes": 5325
+    },
+    {
+      "path": "web/legal/ro/dpa/index.html",
+      "git_blob": "d89eaf8df59c3a6dab81f18318c999355530a0fd",
+      "size_bytes": 7563
+    },
+    {
+      "path": "web/legal/ro/privacy/index.html",
+      "git_blob": "e9887bdacc6ff258025a1b4a99d3a95fea4165ed",
+      "size_bytes": 7686
+    },
+    {
+      "path": "web/legal/ro/terms/index.html",
+      "git_blob": "d3afc6806a2925dd1d660ad48a883ea4db71dab8",
+      "size_bytes": 7945
+    },
+    {
+      "path": "web/legal/sk/cookies/index.html",
+      "git_blob": "bf30da8c0206843e2a0cce9dca784f245f0ff3de",
+      "size_bytes": 5308
+    },
+    {
+      "path": "web/legal/sk/dpa/index.html",
+      "git_blob": "8fafe48ac6aa482ce1b8f16c31a97ce0c688baf2",
+      "size_bytes": 7279
+    },
+    {
+      "path": "web/legal/sk/privacy/index.html",
+      "git_blob": "cdd0292359c03e98c9ddbbc8c83f28f6d8125545",
+      "size_bytes": 7575
+    },
+    {
+      "path": "web/legal/sk/terms/index.html",
+      "git_blob": "aaedc4fff2bd16ba31d04502b102d03c568534e8",
+      "size_bytes": 7817
+    },
+    {
+      "path": "web/legal/uk/cookies/index.html",
+      "git_blob": "723f6488b41a83e5bc78e969c4b4e7a93021320e",
+      "size_bytes": 6124
+    },
+    {
+      "path": "web/legal/uk/dpa/index.html",
+      "git_blob": "42f58e50ece08300bdb0bf529b37633d8e474429",
+      "size_bytes": 9827
+    },
+    {
+      "path": "web/legal/uk/privacy/index.html",
+      "git_blob": "3d10ba1d6ce28c8adfe8a2518ab386ce641b87b7",
+      "size_bytes": 9869
+    },
+    {
+      "path": "web/legal/uk/terms/index.html",
+      "git_blob": "c3e75461cc8933a053d7c74ced8372d894812ccb",
+      "size_bytes": 10571
+    },
+    {
+      "path": "web/manifest.json",
+      "git_blob": "4a4dd61d4a9b90db5e07bec968cd475f8194c0fc",
+      "size_bytes": 901
+    },
+    {
+      "path": "web/privacy/index.html",
+      "git_blob": "c01775dddc57a4888ac1a7795c161d8cfaef5d7e",
+      "size_bytes": 635
+    },
+    {
+      "path": "web/start/index.html",
+      "git_blob": "b450e5f1e67f4ceb8524988deaf56c2df88e923a",
+      "size_bytes": 179494
+    },
+    {
+      "path": "web/terms/index.html",
+      "git_blob": "3d9e29b763cea058ec0dc8ddd0458b6a743c2041",
+      "size_bytes": 629
+    }
+  ]
+}

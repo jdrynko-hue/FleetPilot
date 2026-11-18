@@ -23,6 +23,10 @@ REQUIRED = (*OVERLAY, 'CNAME', 'app/index.html',
             'app/flutter_bootstrap.js', 'app/main.dart.js', 'app/manifest.json')
 SHA256 = re.compile(r'^[0-9a-f]{64}$')
 COMMIT = re.compile(r'^[0-9a-f]{40}$')
+# Exact upstream Flutter 3.47.7 unregister-only worker. No arbitrary worker
+# without a resource inventory is accepted. It is preserved, never installed.
+# https://github.com/flutter/flutter/blob/3.47.7/packages/flutter_tools/lib/src/web/file_generators/js/flutter_service_worker.js
+UNREGISTER_WORKER_SHA256 = 'a131df5ca46154cc4eb79044f7f5a14029c2f8bfccf8cef34e3ec3b5a9f5a88c'
 
 
 class PreparationError(ValueError):
@@ -79,8 +83,10 @@ def read_manifest(path, trusted_digest):
     manifest = json.loads(path.read_text(), object_pairs_hook=unique_object)
     if not isinstance(manifest, dict):
         raise PreparationError('Invalid baseline manifest')
-    if (manifest.get('version') != 1 or manifest.get('kind') != 'flotaryx-production-baseline'
-            or manifest.get('origin') != ORIGIN or manifest.get('repository') != REPOSITORY):
+    original = manifest.get('version') == 1 and manifest.get('kind') == 'flotaryx-production-baseline'
+    recovered = manifest.get('version') == 2 and manifest.get('kind') == 'flotaryx-recovered-production-baseline'
+    if (not (original or recovered) or manifest.get('origin') != ORIGIN
+            or manifest.get('repository') != REPOSITORY):
         raise PreparationError('Baseline is not the expected production artifact contract')
     provenance = manifest.get('provenance')
     if (not isinstance(provenance, dict) or provenance.get('deployment_status') != 'success'
@@ -88,13 +94,30 @@ def read_manifest(path, trusted_digest):
             or not COMMIT.fullmatch(provenance['source_commit'])
             or type(provenance.get('deployment_run_id')) is not int
             or provenance['deployment_run_id'] <= 0
-            or type(provenance.get('artifact_id')) is not int or provenance['artifact_id'] <= 0
-            or not isinstance(provenance.get('archive_sha256'), str)
-            or not SHA256.fullmatch(provenance['archive_sha256'])):
+            or type(provenance.get('artifact_id')) is not int or provenance['artifact_id'] <= 0):
         raise PreparationError('Complete reviewed deployment provenance is required')
+    if original and (not isinstance(provenance.get('archive_sha256'), str)
+                     or not SHA256.fullmatch(provenance['archive_sha256'])):
+        raise PreparationError('Original archive digest is required')
+    if recovered:
+        if (provenance.get('original_archive_available') is not False
+                or provenance.get('original_archive_recreated') is not False
+                or provenance.get('same_bytes_in_two_complete_passes') is not True):
+            raise PreparationError('Complete recovered-snapshot evidence is required')
+        for key in ('original_archive_sha256', 'capture_artifact_sha256',
+                    'source_inventory_sha256', 'capture_manifest_sha256'):
+            if not isinstance(provenance.get(key), str) or not SHA256.fullmatch(provenance[key]):
+                raise PreparationError('Missing recovered-snapshot checksum')
+        for key in ('capture_run_id', 'capture_artifact_id', 'archive_file_count',
+                    'source_verified_file_count'):
+            if type(provenance.get(key)) is not int or provenance[key] <= 0:
+                raise PreparationError('Missing recovered-snapshot evidence')
     files = manifest.get('files')
     if not isinstance(files, dict) or not files:
         raise PreparationError('Complete baseline file inventory is required')
+    if recovered and (provenance['archive_file_count'] != len(files)
+                      or provenance['source_verified_file_count'] > len(files)):
+        raise PreparationError('Recovered-snapshot inventory count mismatch')
     for name, item in files.items():
         checked_path(name)
         if (not isinstance(item, dict) or set(item) != {'sha256', 'size_bytes'}
@@ -162,6 +185,8 @@ def check_portal(root, files):
     check_references(root, 'app/index.html')
     worker = root / 'app/flutter_service_worker.js'
     if worker.is_file():
+        if digest(worker) == UNREGISTER_WORKER_SHA256:
+            return
         match = re.search(r'const RESOURCES\s*=\s*(\{.*?\});', worker.read_text(), re.S)
         if not match:
             raise PreparationError('Cannot verify retained Flutter service worker inventory')
@@ -251,7 +276,11 @@ def prepare(*, baseline, baseline_manifest, baseline_manifest_sha256,
             'changed_paths': changed, 'protected_file_count': len(before) - len(OVERLAY),
             'portal_file_count': len(app_before), 'portal_bytes_identical': True,
             'publication_authorized': False,
-            'provenance_note': 'Checks bind the supplied trusted manifest; no remote deployment was independently queried.',
+            'provenance_note': (
+                'Recovered current production: complete original filename inventory, pinned source checks '
+                'and two matching public reads; the expired original archive was not recreated.'
+                if manifest['version'] == 2 else
+                'Checks bind the supplied trusted manifest; no remote deployment was independently queried.'),
         }
         shutil.copyfile(baseline_manifest, release / 'baseline-manifest.json')
         write_json(release / 'release-manifest.json', {'version': 1, 'files': after})
