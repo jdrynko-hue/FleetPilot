@@ -144,6 +144,58 @@ const durableOther=await signup('durable-other');
 const otherId=good(await rpc(durableOther,'garage_booking_request_once',durableArgs),'same key scoped to another customer');
 assert.notEqual(otherId,durableId);
 good(await rpc(durableOther,'garage_booking_cancel',{p_booking:otherId}),'withdraw other scope fixture');
+// Explicit recovery never resubmits the original form. A missing key is closed
+// under the same per-customer lock as request_once, including concurrent HTTP.
+denied(await rpc(null,'garage_booking_resolve_request',{p_request_key:durableKey}),
+ 'anonymous recovery');
+denied(await rpc(durable,'garage_booking_resolve_request',{p_request_key:null}),
+ 'missing recovery key');
+assert.deepEqual(good(await rpc(durable,'garage_booking_resolve_request',{
+ p_request_key:durableKey}),'recover terminal request'),{
+ state:'recorded',request_key:durableKey,booking_id:durableId,
+ workspace_id:shopA,status:'withdrawn'});
+const recoverer=await signup('recoverer');
+const closedKey=randomUUID();
+const closed={state:'not_received',request_key:closedKey,
+ booking_id:null,workspace_id:null,status:null};
+for(const result of await Promise.all(Array.from({length:6},()=>rpc(recoverer,
+ 'garage_booking_resolve_request',{p_request_key:closedKey})))) {
+ assert.deepEqual(good(result,'parallel recovery of absent attempt'),closed);
+}
+denied(await rpc(recoverer,'garage_booking_request_once',{
+ ...durableArgs,p_request_key:closedKey}),'late POST after closed resolution');
+assert.equal(good(await rpc(recoverer,'garage_booking_my_requests'),
+ 'closed attempts did not create bookings').length,0);
+const recordedKey=randomUUID();
+const recoveryArgs={...durableArgs,p_request_key:recordedKey,
+ p_start_at:new Date(Date.now()+10*86400000).toISOString()};
+const recordedId=good(await rpc(recoverer,'garage_booking_request_once',recoveryArgs),
+ 'request before a lost response');
+const recorded=good(await rpc(recoverer,'garage_booking_resolve_request',{
+ p_request_key:recordedKey}),'recover after accepted response was lost');
+assert.equal(recorded.booking_id,recordedId);
+assert.equal(recorded.status,'requested');
+const outsider=await signup('recovery-outsider');
+assert.equal(good(await rpc(outsider,'garage_booking_resolve_request',{
+ p_request_key:recordedKey}),'other customer sees no booking').state,'not_received');
+assert.equal(good(await rpc(recoverer,'garage_booking_resolve_request',{
+ p_request_key:recordedKey}),'original owner remains recorded').booking_id,recordedId);
+const raceKey=randomUUID();
+const [writeRace,resolveRace]=await Promise.all([
+ rpc(recoverer,'garage_booking_request_once',{...recoveryArgs,p_request_key:raceKey,
+  p_start_at:new Date(Date.now()+12*86400000).toISOString()}),
+ rpc(recoverer,'garage_booking_resolve_request',{p_request_key:raceKey}),
+]);
+const resolvedRace=good(resolveRace,'concurrent request resolution');
+if(resolvedRace.state==='recorded') {
+ assert.equal(good(writeRace,'write won the recovery race'),resolvedRace.booking_id);
+} else {
+ assert.equal(resolvedRace.state,'not_received');
+ denied(writeRace,'resolution won and prevented late write');
+}
+assert.deepEqual(good(await rpc(recoverer,'garage_booking_resolve_request',{
+ p_request_key:raceKey}),'race remains resolved'),resolvedRace);
+console.log('PASS booking recovery HTTP: lost response, absent closure, late write, race, account isolation');
 // Explicit new intent uses a new key; identical active legacy requests are reused.
 const nextKey=randomUUID();
 const nextId=good(await rpc(durable,'garage_booking_request_once',{...durableArgs,p_request_key:nextKey}),'new intent after withdrawal');

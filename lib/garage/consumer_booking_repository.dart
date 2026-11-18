@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'booking_recovery_journal.dart';
 
 /// One random key per form intent; never reused across account/workshop scopes.
 String newBookingRequestKey() {
@@ -119,12 +120,20 @@ class GarageBookingInboxItem {
   final GarageBookingStatus status;
 }
 
+class BookingRecoveryOutcome {
+  const BookingRecoveryOutcome({this.bookingId, this.status});
+  final String? bookingId;
+  final GarageBookingStatus? status;
+  bool get wasRecorded => bookingId != null;
+}
+
 /// Every privileged API independently checks auth.uid and workspace roles.
 /// Raw Garage booking tables cannot be read or written by client credentials.
 class GarageBookingRepository {
-  const GarageBookingRepository(this.client);
+  const GarageBookingRepository(this.client, {this.recoveryJournal});
 
   final SupabaseClient client;
+  final BookingRecoveryJournal? recoveryJournal;
 
   static final _uuid = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
@@ -376,7 +385,16 @@ class GarageBookingRepository {
         desiredStart.isAfter(DateTime.now().add(const Duration(days:90)))) {
       throw ArgumentError('Invalid booking preference');
     }
-    final raw = await _sessionBoundRpc(() => client.rpc(requestKey == null
+    if (recoveryJournal != null && requestKey == null) {
+      throw ArgumentError('Recovery requires an explicit request key');
+    }
+    PendingBookingRequest? marker;
+    final raw = await _sessionBoundRpc(() {
+      // Persist before POST. A failed/late/replaced-session response leaves this
+      // marker intact across navigation and reload; it is never auto-replayed.
+      marker = recoveryJournal?.begin(actor: client.auth.currentUser!.id,
+        workspace: workspaceId, requestKey: requestKey!);
+      return client.rpc(requestKey == null
         ? 'garage_booking_request' : 'garage_booking_request_once', params: {
       if (requestKey != null) 'p_request_key': requestKey,
       'p_workspace': workspaceId,
@@ -387,8 +405,46 @@ class GarageBookingRepository {
       'p_service': service,
       'p_concern': concern.trim(),
       'p_start_at': desiredStart.toUtc().toIso8601String(),
-    }));
-    return _uuidResult(raw);
+      });
+    });
+    final id = _uuidResult(raw);
+    if (marker != null) recoveryJournal!.complete(marker!);
+    return id;
+  }
+
+  List<PendingBookingRequest> pendingRequests() {
+    _requireSignIn();
+    return recoveryJournal?.pending(client.auth.currentUser!.id) ?? const [];
+  }
+
+  /// Explicit resolution closes an unreceived attempt on the server, preventing
+  /// a delayed original request from creating a booking after this response.
+  Future<BookingRecoveryOutcome> resolvePendingRequest(PendingBookingRequest marker) async {
+    _requireSignIn();
+    if (recoveryJournal == null || marker.actorId != client.auth.currentUser!.id) {
+      throw StateError('Booking recovery account changed');
+    }
+    _id(marker.requestKey);
+    final raw = await _sessionBoundRpc(() => client.rpc('garage_booking_resolve_request',
+      params: {'p_request_key': marker.requestKey}));
+    if (raw is! Map || raw.length != 5 || raw['request_key'] != marker.requestKey) {
+      throw const FormatException('Invalid booking recovery identity');
+    }
+    final BookingRecoveryOutcome outcome;
+    if (raw['state'] == 'recorded') {
+      if (_uid(raw, 'workspace_id') != marker.workspaceId) {
+        throw const FormatException('Invalid booking recovery workspace');
+      }
+      outcome = BookingRecoveryOutcome(bookingId: _uid(raw, 'booking_id'),
+        status: _status(raw['status']));
+    } else if (raw['state'] == 'not_received' && raw['booking_id'] == null &&
+        raw['workspace_id'] == null && raw['status'] == null) {
+      outcome = const BookingRecoveryOutcome();
+    } else {
+      throw const FormatException('Invalid booking recovery result');
+    }
+    recoveryJournal!.complete(marker);
+    return outcome;
   }
 
   Future<List<GarageBookingSummary>> myRequests() async {

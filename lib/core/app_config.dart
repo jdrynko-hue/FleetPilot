@@ -12,6 +12,14 @@ class AppConfig {
   static bool get ecosystemQaEnabled =>
       _ecosystemRequested && isEcosystemQaBackend(supabaseUrl);
 
+  // Depends on the reviewed recovery SQL proposal. No production opt-in yet.
+  static const _bookingRecoveryRequested =
+      bool.fromEnvironment('FLOTARYX_BOOKING_RECOVERY_QA');
+  static bool bookingRecoveryEnabledFor(String url, {bool qa = false,
+      bool recovery = false}) => qa && recovery && isEcosystemQaBackend(url);
+  static bool get bookingRecoveryQaEnabled => bookingRecoveryEnabledFor(supabaseUrl,
+      qa: _ecosystemRequested, recovery: _bookingRecoveryRequested);
+
   // Production is a separate explicit build opt-in after backend installation.
   // Neither flag can connect the ecosystem to an arbitrary backend.
   static const _productionRequested =

@@ -99,6 +99,18 @@ DO $$ DECLARE actual uuid; BEGIN
 END $$;
 COMMIT;
 
+-- Install recovery only after an existing durable identity has real data.
+CREATE TEMP TABLE recovery_key_snapshot AS SELECT jsonb_agg(to_jsonb(k) ORDER BY request_key) AS rows
+ FROM garage_private.booking_request_keys k;
+\ir ../supabase/garage_staging/proposals/booking_request_recovery.sql
+DO $$ BEGIN
+ IF (SELECT rows FROM recovery_key_snapshot) IS DISTINCT FROM
+  (SELECT jsonb_agg(to_jsonb(k) ORDER BY request_key) FROM garage_private.booking_request_keys k)
+ OR (SELECT rows FROM upgrade_snapshot) IS DISTINCT FROM pg_temp.garage_rows()
+ OR EXISTS(SELECT 1 FROM garage_private.booking_closed_request_keys) THEN
+  RAISE EXCEPTION 'Recovery proposal changed existing bookings or durable identities'; END IF;
+END $$;
+
 -- Both existing and newly confirmed requests replay without creating new jobs.
 BEGIN;
 SET LOCAL ROLE authenticated;

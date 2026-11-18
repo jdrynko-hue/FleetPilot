@@ -9,6 +9,7 @@ import 'booking_time_text.dart';
 import 'booking_local_start.dart';
 import 'garage_ui_text.dart';
 import 'booking_request_review.dart';
+import 'booking_recovery_journal.dart';
 
 typedef BookingSearch = Future<List<GarageBookingWorkshop>> Function({String? city});
 typedef BookingSubmit = Future<String> Function({
@@ -18,6 +19,8 @@ typedef BookingSubmit = Future<String> Function({
   required DateTime desiredStart, required String requestKey, String? registration,
 });
 typedef BookingTimePicker = Future<DateTime?> Function(BuildContext context);
+typedef BookingPendingRead = List<PendingBookingRequest> Function();
+typedef BookingResolve = Future<BookingRecoveryOutcome> Function(PendingBookingRequest request);
 enum BookingRequestExit { bookings }
 
 /// Staging only. No production Fleet navigation or guaranteed availability.
@@ -26,6 +29,7 @@ class GarageBookingSearchScreen extends StatefulWidget {
     required this.search, required this.submit,
     this.pickTime = pickBookingTime, this.beforeRequest, this.onWorkshopSelected,
     this.initialCity, this.initialWorkshopId, this.onViewBookings, super.key,
+    this.pendingRequests, this.resolveRequest,
   });
 
   factory GarageBookingSearchScreen.forRepository(
@@ -34,7 +38,9 @@ class GarageBookingSearchScreen extends StatefulWidget {
       GarageBookingSearchScreen(
         key: key, initialCity: initialCity, initialWorkshopId: initialWorkshopId,
         onViewBookings: onViewBookings, search: repository.findWorkshops,
-        submit: repository.request);
+        submit: repository.request,
+        pendingRequests: repository.recoveryJournal == null ? null : repository.pendingRequests,
+        resolveRequest: repository.recoveryJournal == null ? null : repository.resolvePendingRequest);
 
   final BookingSearch search;
   final BookingSubmit submit;
@@ -44,6 +50,8 @@ class GarageBookingSearchScreen extends StatefulWidget {
   final String? initialCity;
   final String? initialWorkshopId;
   final VoidCallback? onViewBookings;
+  final BookingPendingRead? pendingRequests;
+  final BookingResolve? resolveRequest;
 
   @override
   State<GarageBookingSearchScreen> createState() => _GarageBookingSearchState();
@@ -60,6 +68,22 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   bool _opening = false;
   String? _error;
   int _generation = 0;
+  List<PendingBookingRequest> _pending = const [];
+  bool _recoveryUnavailable = false;
+  bool _resolving = false;
+  bool _resolutionFailed = false;
+  BookingRecoveryOutcome? _recovered;
+  bool get _recoveryBlocked => _recoveryUnavailable || _pending.isNotEmpty;
+
+  void _loadPending() {
+    try {
+      _pending = widget.pendingRequests?.call() ?? const [];
+      _recoveryUnavailable = false;
+    } catch (_) {
+      _pending = const [];
+      _recoveryUnavailable = true;
+    }
+  }
 
   List<String> get _countries => _shops.map((shop) => shop.country.trim().toUpperCase())
       .toSet().toList()..sort();
@@ -70,6 +94,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   @override
   void initState() {
     super.initState();
+    _loadPending();
     _restoreInitialIntent();
   }
 
@@ -93,6 +118,8 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         oldWidget.beforeRequest != widget.beforeRequest ||
         oldWidget.onWorkshopSelected != widget.onWorkshopSelected ||
         oldWidget.onViewBookings != widget.onViewBookings ||
+        oldWidget.pendingRequests != widget.pendingRequests ||
+        oldWidget.resolveRequest != widget.resolveRequest ||
         oldWidget.initialCity != widget.initialCity ||
         oldWidget.initialWorkshopId != widget.initialWorkshopId) {
       // Repository callbacks define the authenticated directory scope.
@@ -107,6 +134,10 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       _error = null;
       _busy = false;
       _opening = false;
+      _resolving = false;
+      _resolutionFailed = false;
+      _recovered = null;
+      _loadPending();
       _restoreInitialIntent();
     }
   }
@@ -119,7 +150,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _search() async {
-    if (!mounted || _busy) return;
+    if (!mounted || _busy || _resolving) return;
     final city = _city.text.trim();
     if (city.isNotEmpty && city.length < 2) {
       setState(() {
@@ -161,7 +192,9 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   }
 
   Future<void> _open(GarageBookingWorkshop shop) async {
-    if (_busy || _opening) return;
+    if (_busy || _opening || _resolving) return;
+    _loadPending();
+    if (_recoveryBlocked) { setState(() {}); return; }
     final generation = _generation;
     var handedOff = false;
     setState(() => _opening = true);
@@ -179,9 +212,11 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       final result = await Navigator.of(context).push<BookingRequestExit>(MaterialPageRoute(
         builder: (_) => GarageBookingRequestScreen(
           shop: shop, submit: widget.submit, pickTime: widget.pickTime,
-          canViewBookings: viewBookings != null),
+          canViewBookings: viewBookings != null,
+          canRecover: widget.resolveRequest != null),
       ));
       if (!mounted || generation != _generation) return;
+      _loadPending();
       if (result == BookingRequestExit.bookings && viewBookings != null) {
         viewBookings();
       } else {
@@ -198,11 +233,69 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
     }
   }
 
+  Future<void> _resolve() async {
+    final resolve = widget.resolveRequest;
+    if (_resolving || _busy || _opening || _pending.isEmpty || resolve == null) return;
+    final generation = _generation;
+    final marker = _pending.first;
+    setState(() { _resolving = true; _resolutionFailed = false; _recovered = null; });
+    try {
+      final outcome = await resolve(marker);
+      if (!mounted || generation != _generation) return;
+      setState(() { _recovered = outcome; _loadPending(); });
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _resolutionFailed = true);
+      }
+    } finally {
+      if (mounted && generation == _generation) setState(() => _resolving = false);
+    }
+  }
+
+  List<Widget> _recoveryWidgets() => [
+    if (_recoveryUnavailable) ...[
+      Text(GarageUiText.get('bookingRecoveryStorage'), key: const Key('booking_recovery_storage')),
+      OutlinedButton(key: const Key('booking_recovery_refresh'),
+        onPressed: _resolving ? null : () => setState(_loadPending),
+        child: Text(GarageUiText.get('retry'))),
+    ],
+    if (_pending.isNotEmpty) Card(key: const Key('booking_pending_recovery'),
+      child: Padding(padding: const EdgeInsets.all(16), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(GarageUiText.get('bookingRecoveryNeeded')),
+          if (_resolutionFailed) Text(GarageUiText.get('bookingRecoveryFailed'),
+            key: const Key('booking_recovery_error')),
+          FilledButton(key: const Key('booking_recovery_resolve'),
+            onPressed: _resolving || _busy || _opening ? null : _resolve,
+            child: Text(GarageUiText.get(_resolving ? 'bookingRecoveryChecking' : 'bookingRecoveryCheck'))),
+        ]))),
+    if (_recovered case final BookingRecoveryOutcome outcome) ...[
+      Text(outcome.wasRecorded
+        ? GarageUiText.format('bookingRecoveryRecorded', {'status': bookingStatusLabel(outcome.status!)})
+        : GarageUiText.get('bookingRecoveryNotReceived'), key: const Key('booking_recovery_outcome')),
+      if (outcome.wasRecorded && widget.onViewBookings != null)
+        _recoveryHistoryButton(),
+    ],
+  ];
+
+  Widget _recoveryHistoryButton() {
+    final generation = _generation;
+    final show = widget.onViewBookings;
+    return OutlinedButton(key: const Key('booking_recovery_history'),
+      onPressed: _resolving || _opening ? null : () {
+        if (!mounted || generation != _generation || _opening || show == null) return;
+        setState(() => _opening = true);
+        show();
+      },
+      child: Text(GarageUiText.get('myBookings')));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(GarageUiText.get('findWorkshop'))),
     body: SafeArea(child: ListView(padding: const EdgeInsets.all(16),
       children: [
+        ..._recoveryWidgets(),
         Text(GarageUiText.get('bookingSearchHint'),
             key: const Key('booking_not_guaranteed')),
         const SizedBox(height: 16),
@@ -229,7 +322,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
         )),
         const SizedBox(height: 12),
         FilledButton(key: const Key('booking_search_submit'),
-          onPressed: _busy ? null : _search,
+          onPressed: _busy || _resolving ? null : _search,
           child: Text(GarageUiText.get('bookingSearchAction'))),
         if (_busy) const Center(child: CircularProgressIndicator()),
         if (_error != null) Text(GarageUiText.get(_error!),
@@ -275,7 +368,8 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
                 Text(shop.services.map((service) => bookingServiceLabel(service)).join(', ')),
                 Text(GarageUiText.format('bookingWorkshopZone', {'zone': shop.timeZone})),
                 OutlinedButton(key: Key('booking_open_${shop.workspaceId}'),
-                  onPressed: _busy || _opening ? null : () => _open(shop),
+                  onPressed: _busy || _opening || _resolving || _recoveryBlocked
+                    ? null : () => _open(shop),
                   child: Text(GarageUiText.get('bookingRequestTime'))),
               ]),
           ),
@@ -311,11 +405,13 @@ class GarageBookingRequestScreen extends StatefulWidget {
   const GarageBookingRequestScreen({
     required this.shop, required this.submit,
     this.pickTime = pickBookingTime, this.canViewBookings = false, super.key,
+    this.canRecover = false,
   });
   final GarageBookingWorkshop shop;
   final BookingSubmit submit;
   final BookingTimePicker pickTime;
   final bool canViewBookings;
+  final bool canRecover;
 
   @override
   State<GarageBookingRequestScreen> createState() => _GarageBookingRequestState();
@@ -449,6 +545,11 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
         desiredStart: when,
       );
       if (mounted && gen == _generation) setState(() => _sent = true);
+    } on BookingRecoveryUnavailable {
+      // Persistence failed before POST, so the user may retry saving locally.
+      if (mounted && gen == _generation) {
+        setState(() => _error = 'bookingRecoveryStorage');
+      }
     } catch (_) {
       // A timeout can happen after the server accepted a request.
       // Keep the same key and fail closed; recovery must check current status.
@@ -531,6 +632,10 @@ class _GarageBookingRequestState extends State<GarageBookingRequestScreen> {
             : bookingLocalTimeLabel(_when!))),
         if (_error != null) Text(GarageUiText.get(_error!), key: const Key('booking_request_error')),
         if (_uncertain && widget.canViewBookings) _viewBookingsButton(),
+        if (_uncertain && widget.canRecover) OutlinedButton(
+          key: const Key('booking_recovery_back'),
+          onPressed: _leaving ? null : () => _leave(null, requestGeneration),
+          child: Text(GarageUiText.get('bookingRecoveryCheck'))),
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_service != null && _when != null)
             BookingRequestReview(service: _service!, when: _when!,

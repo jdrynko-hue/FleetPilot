@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/app_config.dart';
+import '../garage/booking_recovery_storage.dart';
 
 import '../garage/booking_management_screens.dart';
 import '../garage/booking_profile_screen.dart';
@@ -32,7 +34,8 @@ class EcosystemModuleHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bookings = GarageBookingRepository(client);
+    final bookings = GarageBookingRepository(client, recoveryJournal:
+      AppConfig.bookingRecoveryQaEnabled ? createBookingRecoveryJournal() : null);
     final calendar = GarageResourceCalendarRepository(client);
     if (destination.module == EcosystemModule.mechanic) {
       return GarageMechanicWorkScreen.forRepository(
