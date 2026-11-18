@@ -4,7 +4,7 @@ This is a **release gate**, not evidence that Fleet, Garage or Booking is ready 
 
 ## Authorization
 
-QA approval does not authorize production deployment or Stripe Live. Production web publishing requires explicit separate owner approval. The Deploy Flotaryx workflow must be manually triggered from main with the exact confirm_release input PUBLISH-FLOTARYX. A merge to main should not publish the site automatically.
+QA approval does not authorize production deployment or Stripe Live. Production web publishing requires explicit separate owner approval. Full application releases use Deploy Flotaryx, manually triggered from main with the exact confirm_release input PUBLISH-FLOTARYX. The separately approved marketing-only package uses [the checksum-pinned manual publisher](publish-approved-marketing.md). A merge to main must not publish the site automatically.
 
 ## Archived billing installer safety
 

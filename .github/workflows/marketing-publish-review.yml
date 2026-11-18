@@ -1,0 +1,67 @@
+name: Verify approved marketing publication
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/publish-approved-marketing.yml'
+      - '.github/workflows/marketing-publish-review.yml'
+      - 'tools/publish_approved_marketing.py'
+      - 'tools/prepare_marketing_release.py'
+      - 'tests/marketing_publish_test.py'
+      - 'tests/marketing_publish_gate.test.mjs'
+      - 'docs/releases/2026-11-18-approved-marketing.json'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  exact-approved-payload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APPROVAL_MANIFEST: docs/releases/2026-11-18-approved-marketing.json
+      APPROVAL_SHA256: bd4c33351ee042ebf0169c127846e4ca97b6a8f841dd599638c7ea30adbb972a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: deb7643c4bf84251d1de3bc2818cd1ede4194a56
+          path: approved-source
+          persist-credentials: false
+      - name: Check approval, preservation and manual release gates
+        run: |
+          python3 -B tests/marketing_publish_test.py -v
+          python3 -B tests/marketing_release_test.py -v
+          node --test tests/marketing_publish_gate.test.mjs tests/release_deploy_gate.test.mjs tests/legacy_release_guard.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '14443664409'
+          run-id: '44343745692'
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/approved-baseline
+          merge-multiple: true
+      - name: Reconstruct and verify the complete approved payload without publishing
+        run: >-
+          python3 -B tools/publish_approved_marketing.py stage
+          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
+          --baseline "$RUNNER_TEMP/approved-baseline/site"
+          --source-repo approved-source --output "$RUNNER_TEMP/approved-site"
+      - name: Verify that production still matches the approved rollback baseline
+        run: >-
+          python3 -B tools/publish_approved_marketing.py verify-public
+          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
+          --phase baseline --attempts 2 --report preflight.json
+      - name: Retain the reviewed site and preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-marketing-review-only
+          path: |
+            ${{ runner.temp }}/approved-site
+            preflight.json
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: error
