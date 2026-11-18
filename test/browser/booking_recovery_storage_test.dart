@@ -1,7 +1,8 @@
 // Run explicitly with --platform chrome. Uses real browser localStorage.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:fleetpilot/garage/booking_recovery_journal.dart';
-import 'package:fleetpilot/garage/booking_recovery_storage_web.dart';
+import 'package:fleetpilot/garage/booking_recovery_storage.dart';
 
 void main() {
   test('real browser storage preserves opaque attempts across journal lifetimes', () {
@@ -9,7 +10,7 @@ void main() {
     const other = '00000000-0000-4000-8000-000000000992';
     const workspace = '00000000-0000-4000-8000-000000000993';
     const key = '00000000-0000-4000-8000-000000000994';
-    final first = createBookingRecoveryJournal();
+    final first = createBookingRecoveryJournal()!;
     void cleanup() {
       for (final storageKey in first.storage.keys().where((key) =>
           key.startsWith('${BookingRecoveryJournal.prefix}$actor.') ||
@@ -20,12 +21,12 @@ void main() {
     cleanup();
     addTearDown(cleanup);
     final marker = first.begin(actor: actor, workspace: workspace, requestKey: key);
-    final restored = createBookingRecoveryJournal();
+    final restored = createBookingRecoveryJournal()!;
     expect(restored.pending(actor).single.encode(), marker.encode());
     expect(restored.pending(other), isEmpty);
     expect(() => restored.begin(actor: actor, workspace: workspace, requestKey: key),
       throwsA(isA<BookingRecoveryPending>()));
     restored.complete(marker);
-    expect(createBookingRecoveryJournal().pending(actor), isEmpty);
-  });
+    expect(createBookingRecoveryJournal()!.pending(actor), isEmpty);
+  }, skip: !kIsWeb);
 }
