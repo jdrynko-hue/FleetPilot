@@ -1,0 +1,679 @@
+{
+  "approval": "Owner explicitly requested deployment of the delivered package on 2026-11-18.",
+  "capture_artifact_id": 14443664409,
+  "capture_artifact_sha256": "d9f273d2cb9ac8cce0e7fc7f00b592ffb4da7435f249ac4c2cda52d53cdcf9fc",
+  "capture_run_id": 44343745692,
+  "changed_paths": [
+    "index.html",
+    "install/index.html",
+    "start/index.html"
+  ],
+  "file_count": 161,
+  "files": {
+    "CNAME": {
+      "sha256": "7ee655a21e4eb123576c3100cefe1bfbac24164e35070ab4d3ee34cf31883fb3",
+      "size_bytes": 13
+    },
+    "app/.last_build_id": {
+      "sha256": "49b6412af93ee36cedcfcf3796b980794dde95af0bf4a7898b0c70b00d4d20e0",
+      "size_bytes": 32
+    },
+    "app/CNAME": {
+      "sha256": "7ee655a21e4eb123576c3100cefe1bfbac24164e35070ab4d3ee34cf31883fb3",
+      "size_bytes": 13
+    },
+    "app/app/index.html": {
+      "sha256": "197aca950d0766611d0971a054c5e9bbf9129f5dff6beea1592d2825f2eaef96",
+      "size_bytes": 1719
+    },
+    "app/assets/AssetManifest.bin": {
+      "sha256": "b43fe62b19f9188014ccd57f08381326c94e906bfb24f45fc3da5c8605644ed6",
+      "size_bytes": 83
+    },
+    "app/assets/AssetManifest.bin.json": {
+      "sha256": "5d25c27a9eb026cf7d159df038fd9cdad094143134e9d7cde32f5ab17dca5c84",
+      "size_bytes": 114
+    },
+    "app/assets/FontManifest.json": {
+      "sha256": "28b1eb2b3d2e1ad60b8c8b0f9100b1ccbf492f7fa97f5bebb51ea97e73926e7d",
+      "size_bytes": 82
+    },
+    "app/assets/NOTICES": {
+      "sha256": "7560e46713ec3c05c82a6c0b2d1f027e7ea047b7aa107cf950017b5f6207bb28",
+      "size_bytes": 1362359
+    },
+    "app/assets/assets/branding/flotaryx_mark.png": {
+      "sha256": "7ad18d0f3af699c7acc826e9593ad025c2166a397c7c5012e30f9fec4cb6ca4d",
+      "size_bytes": 31293
+    },
+    "app/assets/fonts/MaterialIcons-Regular.otf": {
+      "sha256": "68c6eb133c00a2688f8a3e2383c0b1d8e1edce005819148231ea5bb9a75af182",
+      "size_bytes": 19292
+    },
+    "app/assets/shaders/ink_sparkle.frag": {
+      "sha256": "2dca5ab93d4ec29e963f996f3916320ba60825e9537dfb149a68008c7a16b026",
+      "size_bytes": 8890
+    },
+    "app/assets/shaders/stretch_effect.frag": {
+      "sha256": "ab412f07a5b9b50b67a885b24dbe16929738ae28630407d6490c924caf0a3220",
+      "size_bytes": 6737
+    },
+    "app/canvaskit/canvaskit.js": {
+      "sha256": "bb559f6080c7d312ac2a912b4abec9f68ff3d3022d4a603c7796b9b31460642b",
+      "size_bytes": 86987
+    },
+    "app/canvaskit/canvaskit.js.symbols": {
+      "sha256": "384f80b392972c83fd4f262527e3d06215a297d33ed59732c726721e9d9311bd",
+      "size_bytes": 1356926
+    },
+    "app/canvaskit/canvaskit.wasm": {
+      "sha256": "fbed517a43e82452404446683f00f2e876d835aed84410695759e67b6bb01cd3",
+      "size_bytes": 7284602
+    },
+    "app/canvaskit/chromium/canvaskit.js": {
+      "sha256": "6018b12bd8ed37e6952eee72d59c1cf7ad707ccdb74a0a45190010f77edd9068",
+      "size_bytes": 86226
+    },
+    "app/canvaskit/chromium/canvaskit.js.symbols": {
+      "sha256": "31c86fac6042dd8b756150832c1d15495d0d07742e2718f75dbdde5a5a91455e",
+      "size_bytes": 1235870
+    },
+    "app/canvaskit/chromium/canvaskit.wasm": {
+      "sha256": "ae8ff1d858140f7b1300ced3fa89fb8c9dce0a400a0f4f1e11f6dcfb3315fdcf",
+      "size_bytes": 5428806
+    },
+    "app/canvaskit/skwasm.js": {
+      "sha256": "71d7d3e34bf71b52bdba3b588b103bba8148ba28de5754083e01b3398e7a6e1c",
+      "size_bytes": 63537
+    },
+    "app/canvaskit/skwasm.js.symbols": {
+      "sha256": "9137f1a3ae744dea575043abfc6e063a047e910e6dab1ee53e496c975d1c033e",
+      "size_bytes": 1540006
+    },
+    "app/canvaskit/skwasm.wasm": {
+      "sha256": "e540fd5e8303b7b68ec2718cb49e9c421f8ade3075b15e02a7059a62654df9a1",
+      "size_bytes": 3593715
+    },
+    "app/canvaskit/skwasm_heavy.js": {
+      "sha256": "cec554b46ddcf4c0e63d799e0556d546f42d2c3f69316fb4f67ed776f6104558",
+      "size_bytes": 63650
+    },
+    "app/canvaskit/skwasm_heavy.js.symbols": {
+      "sha256": "b6b79ed497e11d4cd13cc46724f9e289eacc744d2d185e31c72d595cdf62772b",
+      "size_bytes": 1672152
+    },
+    "app/canvaskit/skwasm_heavy.wasm": {
+      "sha256": "565f5cc1cca6ab120f11934b105f01fec4b58b480c82e0889dca93af8e6f8635",
+      "size_bytes": 5216217
+    },
+    "app/canvaskit/webparagraph/canvaskit.js": {
+      "sha256": "3110e3e4d9b7b5657d336f253aaca8acca5777cde9319fb69ac302d6ff5a8b23",
+      "size_bytes": 76114
+    },
+    "app/canvaskit/webparagraph/canvaskit.js.symbols": {
+      "sha256": "44d6c47919106235cf32252252490cdf798d907ee874ba343ab53dc94bc2a9dc",
+      "size_bytes": 963641
+    },
+    "app/canvaskit/webparagraph/canvaskit.wasm": {
+      "sha256": "0ce1b05082efdc8529550e8a01f6ff0593972d55525035010e26f5600aa9f254",
+      "size_bytes": 3729129
+    },
+    "app/canvaskit/wimp.js": {
+      "sha256": "8fd8a47480c6eb0a374d159912d0b3fb15661b41f5c113ecdd39c2f01f2bee46",
+      "size_bytes": 59127
+    },
+    "app/canvaskit/wimp.js.symbols": {
+      "sha256": "b4907ebd33131302a8cd99f7c55f52357bdfde04f421b605a616ba8764ae1de4",
+      "size_bytes": 1813030
+    },
+    "app/canvaskit/wimp.wasm": {
+      "sha256": "e924eaafd801d41e017d178f3fd5cf8a417f641fe35c9ed34a4e1d7582283e0c",
+      "size_bytes": 3581677
+    },
+    "app/cookies/index.html": {
+      "sha256": "187d15d85abf305cdea172cdfca0eb86ea4b7274216d1f364ef5bf390a8e2944",
+      "size_bytes": 635
+    },
+    "app/demo/connected/index.html": {
+      "sha256": "8aef5169ec93e3ee74f1e00202873570d4081d2158e15743d50d61db82992397",
+      "size_bytes": 11553
+    },
+    "app/demo/session/index.html": {
+      "sha256": "14c94c4ed6dc5c61569a6bc0ff8bfd6e343ab101beb8761db93fa7db62808ebe",
+      "size_bytes": 23416
+    },
+    "app/dpa/index.html": {
+      "sha256": "adc4070c15e8c0cce7d9de0ae8331166d1548b656be2ff99d414664b767cb079",
+      "size_bytes": 623
+    },
+    "app/favicon.png": {
+      "sha256": "58bdf83f1bf2995a70b0169045c7060f99a283c9ff71dc5234ffb1cfe156fbee",
+      "size_bytes": 2004
+    },
+    "app/flutter.js": {
+      "sha256": "2beb1ce6b159c71540aa66030af1d7964b6a92377cc78473745e02f97b74effe",
+      "size_bytes": 12136
+    },
+    "app/flutter_bootstrap.js": {
+      "sha256": "6b2d1e6c60b69a41dd06caabb8d1b4fd5be172a13e8fff27f1d4647db898e3d5",
+      "size_bytes": 13093
+    },
+    "app/flutter_service_worker.js": {
+      "sha256": "a131df5ca46154cc4eb79044f7f5a14029c2f8bfccf8cef34e3ec3b5a9f5a88c",
+      "size_bytes": 784
+    },
+    "app/icons/Icon-192.png": {
+      "sha256": "ea532fc1ccd4a3e82183f571ac1a97802dfa9f239ffca2416d0af26fb5d6a37f",
+      "size_bytes": 7793
+    },
+    "app/icons/Icon-512.png": {
+      "sha256": "7ad18d0f3af699c7acc826e9593ad025c2166a397c7c5012e30f9fec4cb6ca4d",
+      "size_bytes": 31293
+    },
+    "app/icons/Icon-maskable-192.png": {
+      "sha256": "7509f4fd8ff83a0afbe5503fc7a719e84273936b4ab99ab469b4a38c6e68f415",
+      "size_bytes": 9555
+    },
+    "app/icons/Icon-maskable-512.png": {
+      "sha256": "40f8b3f874a43fb8b8366fe9fca901671182e06372faba9b46d015b1312eb7d4",
+      "size_bytes": 36339
+    },
+    "app/index.html": {
+      "sha256": "e24128cf5ac4e48c0c48c74f9fca6a65289dfac0e90528066ff9985eb7e80356",
+      "size_bytes": 1706
+    },
+    "app/install/index.html": {
+      "sha256": "8e223f094eecc2edbacfb1a33ca1d9459d05e091a17f0006433f044d28ec57db",
+      "size_bytes": 8636
+    },
+    "app/legal/cs/cookies/index.html": {
+      "sha256": "254989e7d630a99fb6a45f22be1d9a645b4052519d66396c48a6c414731cf289",
+      "size_bytes": 5335
+    },
+    "app/legal/cs/dpa/index.html": {
+      "sha256": "159d0255fd361bade8c57460bf11b400b60855717ead3dda10201dd0c2adf4ef",
+      "size_bytes": 7363
+    },
+    "app/legal/cs/privacy/index.html": {
+      "sha256": "b8a62cbf87a20f506b046585dd04205dc37ded4d04cbc5a0b9963f3c2eab59cc",
+      "size_bytes": 7459
+    },
+    "app/legal/cs/terms/index.html": {
+      "sha256": "25d72e3149868e476f45c22ea927f73cd9a2299a35882c1aa9fd5b7fb9b2d387",
+      "size_bytes": 7717
+    },
+    "app/legal/de/cookies/index.html": {
+      "sha256": "e164d72eb2ebdfe15e488729df31e725b0d920a6da653c45d79eb03b1b447bf0",
+      "size_bytes": 5502
+    },
+    "app/legal/de/dpa/index.html": {
+      "sha256": "75abc7ec48233b9ae8eddfd850d6231d8f4d6d6b97fafcd9949dfbb6d14eedc2",
+      "size_bytes": 8086
+    },
+    "app/legal/de/privacy/index.html": {
+      "sha256": "df24b99398f0645ceee5d611a483b53dbbe9969ae67f5007a1aa204bf0f1e0cb",
+      "size_bytes": 8010
+    },
+    "app/legal/de/terms/index.html": {
+      "sha256": "77955faf123a24fe88fd1487a26629358392da6aabd118806dc91cfc430cd424",
+      "size_bytes": 8416
+    },
+    "app/legal/en/cookies/index.html": {
+      "sha256": "ea8f8f516631ba22f49944663b9df5d7050718dfbae157c91bb0c33738d2e3c5",
+      "size_bytes": 6075
+    },
+    "app/legal/en/dpa/index.html": {
+      "sha256": "1be48c46b08cc4f53be8e988ac009d2511360ffbfca3756d2e67e784f6c62860",
+      "size_bytes": 9754
+    },
+    "app/legal/en/privacy/index.html": {
+      "sha256": "d16f469268d08e26eeced064dcb5dc55222b52772e25128862932338fc98e445",
+      "size_bytes": 9067
+    },
+    "app/legal/en/terms/index.html": {
+      "sha256": "65c70494ee9e68218735a58e0fcc8751060230a6b2f0fd2e23fea1dc1ad610aa",
+      "size_bytes": 9180
+    },
+    "app/legal/es/cookies/index.html": {
+      "sha256": "893c9cdacb66c7555531ed4f82e11a0fc6c41ce36a2e5800d9e62a6380c2e3f8",
+      "size_bytes": 5439
+    },
+    "app/legal/es/dpa/index.html": {
+      "sha256": "2632408f2dd7abaa0a540e5c26af97975d240e720f9e29c138d861e600d2d3b0",
+      "size_bytes": 7835
+    },
+    "app/legal/es/privacy/index.html": {
+      "sha256": "2f336ae49f6e8a7f09763753621e75d3430df55eba10efa3b52717b9ab0a89ae",
+      "size_bytes": 7881
+    },
+    "app/legal/es/terms/index.html": {
+      "sha256": "a459f417021feb2c4a048bb8ab42fa5338dc3d09c594072eaa2117681c783338",
+      "size_bytes": 8067
+    },
+    "app/legal/fr/cookies/index.html": {
+      "sha256": "6f6f06691fd44832bf6dc83fb3b78549e2f53bc6d0cfaa886ea55a256b0362dc",
+      "size_bytes": 5457
+    },
+    "app/legal/fr/dpa/index.html": {
+      "sha256": "07ed406e0bfdd83d7eec06bcc77e7ce9c2628aad9417751d3f934bf48c778516",
+      "size_bytes": 7931
+    },
+    "app/legal/fr/privacy/index.html": {
+      "sha256": "b9ca1c7e4453cb49f9ab7a7d24173e070e5e2f7fa3999e921073bea64bb87c3e",
+      "size_bytes": 7985
+    },
+    "app/legal/fr/terms/index.html": {
+      "sha256": "adc849fa914e8d75e5859427bfd5fe466882498e53ce6b6b3b5ee312829e2251",
+      "size_bytes": 8347
+    },
+    "app/legal/hu/cookies/index.html": {
+      "sha256": "c721b59f004881412b49936ce6cd85bc12b4ed4704877f2cc8745385d82b80a4",
+      "size_bytes": 5431
+    },
+    "app/legal/hu/dpa/index.html": {
+      "sha256": "2555fdb96ae2b13276df41504720f3c68f44a0afdf8230ae854b75b3d24eb1cc",
+      "size_bytes": 7704
+    },
+    "app/legal/hu/privacy/index.html": {
+      "sha256": "0fef3c38955ab600d536bb8872161b07f6173a43e5152a0a0854a6660f971e90",
+      "size_bytes": 7896
+    },
+    "app/legal/hu/terms/index.html": {
+      "sha256": "3f0c0e560e821e2e2a9548c78ada70cc1f3f8c2054def4a3267ba5edfe444c61",
+      "size_bytes": 8225
+    },
+    "app/legal/it/cookies/index.html": {
+      "sha256": "13dbb72f2bf8e16c1d07a5d2c9540852ba6fe9d085e9a2597277facabee717a0",
+      "size_bytes": 5321
+    },
+    "app/legal/it/dpa/index.html": {
+      "sha256": "93f28da448cc41b73e69530ec9e915a7253019978a87be1c96854613875fcf34",
+      "size_bytes": 7553
+    },
+    "app/legal/it/privacy/index.html": {
+      "sha256": "20b905db2e28c1abc0f00e6221a65d732757f7831fbf802255a408279e6ea36d",
+      "size_bytes": 7587
+    },
+    "app/legal/it/terms/index.html": {
+      "sha256": "77a0fcd9ff9a5390d44b095a4bbe7cb25a1cb92f0cb56e417028af58177d0b91",
+      "size_bytes": 7949
+    },
+    "app/legal/pl/cookies/index.html": {
+      "sha256": "4fbffdbc09a7a0ef3c22a0197ca05d4c64bb1ee5adeb9c07c493484eee22731e",
+      "size_bytes": 6080
+    },
+    "app/legal/pl/dpa/index.html": {
+      "sha256": "2aa9e1b8626114c20d75f399163282347ef6de8275dfaa4a9da1ecdfd4e5ae78",
+      "size_bytes": 9274
+    },
+    "app/legal/pl/privacy/index.html": {
+      "sha256": "df95bb78bdcc59de1935ecef8a3f3c7c954ce32a647d918b3a81bc7b3f5f47ad",
+      "size_bytes": 8984
+    },
+    "app/legal/pl/terms/index.html": {
+      "sha256": "13b47e65a2eb926266ac73edd11c2a497dea464452d29fc83fb1b362e83b493e",
+      "size_bytes": 9422
+    },
+    "app/legal/pt/cookies/index.html": {
+      "sha256": "a1126a5eb32cafeb5fe9e28bc02bbbc455a3fdfd1e275d8e63f3bdf53342fba4",
+      "size_bytes": 5333
+    },
+    "app/legal/pt/dpa/index.html": {
+      "sha256": "a4258bc932765d2e1043da883ab99e5c3ea303428f3bccec45e9518afda96733",
+      "size_bytes": 7604
+    },
+    "app/legal/pt/privacy/index.html": {
+      "sha256": "f11e2d643802ac3fae73ddb1d044a5244d3248cc15d014cd5babed2009362f8c",
+      "size_bytes": 7741
+    },
+    "app/legal/pt/terms/index.html": {
+      "sha256": "450c28f95fd00a2ef2666b54eba4ab2a0f786ce8f7807674fe380c7d221e8523",
+      "size_bytes": 7951
+    },
+    "app/legal/ro/cookies/index.html": {
+      "sha256": "b95a5a550538230e2301e0d8e2d02eb8e5039c54d70eb4bc03d18390fc2908f9",
+      "size_bytes": 5325
+    },
+    "app/legal/ro/dpa/index.html": {
+      "sha256": "74d73a1b0086e4e3f8b88ae59a0e93773790a5144c9dab0c9c6f0e56398047ff",
+      "size_bytes": 7563
+    },
+    "app/legal/ro/privacy/index.html": {
+      "sha256": "04a6e1b0728ba1e0be3a67b116ab5ff21c3c0f5e69bb87aa17fb086cf868d78b",
+      "size_bytes": 7686
+    },
+    "app/legal/ro/terms/index.html": {
+      "sha256": "15414282920f92bd93b7aa058e1c9e50e6ab359f673616025439ec705dbaecd0",
+      "size_bytes": 7945
+    },
+    "app/legal/sk/cookies/index.html": {
+      "sha256": "c1baadf840e07d3b4ed8182d800d3e6bc053cd22346b97d076ac5dc1cf98fef4",
+      "size_bytes": 5308
+    },
+    "app/legal/sk/dpa/index.html": {
+      "sha256": "dc5335551a95c07f2f4ec17db2b0a9dd75ddc6b8df89f51b4945f9c133d89e04",
+      "size_bytes": 7279
+    },
+    "app/legal/sk/privacy/index.html": {
+      "sha256": "a973674194a5cfba1b2d598d084b0fcc347927183fc55af5db4cb1767621b947",
+      "size_bytes": 7575
+    },
+    "app/legal/sk/terms/index.html": {
+      "sha256": "684cd3de87101241ca5bb38bb96abe703748cd31e93a64570cb1fe08f39c7b1a",
+      "size_bytes": 7817
+    },
+    "app/legal/uk/cookies/index.html": {
+      "sha256": "bff47aa532655f262fd1a4fc2ebd4eccdad2f7b41193168519a911a165827a18",
+      "size_bytes": 6124
+    },
+    "app/legal/uk/dpa/index.html": {
+      "sha256": "700193b646b5d3e64170f30abf98be8bd9d771b0dd785a5bc5335054868fdf40",
+      "size_bytes": 9827
+    },
+    "app/legal/uk/privacy/index.html": {
+      "sha256": "df42f518fd872e2b6f1e8fa792b3c40713adc918148914a3c6e636c3dede2f10",
+      "size_bytes": 9869
+    },
+    "app/legal/uk/terms/index.html": {
+      "sha256": "153601d850d75583802342e39907028372c4bbd65078fc484591188276712551",
+      "size_bytes": 10571
+    },
+    "app/main.dart.js": {
+      "sha256": "e03d1b27a0fe12243629302f12c8edbf7d913534310184ea90193159947838f8",
+      "size_bytes": 4663690
+    },
+    "app/manifest.json": {
+      "sha256": "e4632f924fff3ed1eeef4168f5516a388e44aed6011c49b1893e3ae7c2db68af",
+      "size_bytes": 901
+    },
+    "app/privacy/index.html": {
+      "sha256": "f2c93808c7fb87ce0a833c8f6620927d38f428e42760c63dd41229b6d46d988d",
+      "size_bytes": 635
+    },
+    "app/start/index.html": {
+      "sha256": "abed3b06f63ab660e6fcd86d0e622e8222bac0939a9f604fa8e0dfa54004f39d",
+      "size_bytes": 179494
+    },
+    "app/terms/index.html": {
+      "sha256": "19017ddcb09dd6411c54d0867ddcc52ccfc8be9415530a41683297eebdb709a3",
+      "size_bytes": 629
+    },
+    "app/version.json": {
+      "sha256": "af1c1b196a0e6b583e946517da4eaf6951e62288a7cf0a8895d2e48ecbd85889",
+      "size_bytes": 90
+    },
+    "cookies/index.html": {
+      "sha256": "187d15d85abf305cdea172cdfca0eb86ea4b7274216d1f364ef5bf390a8e2944",
+      "size_bytes": 635
+    },
+    "demo/connected/index.html": {
+      "sha256": "8aef5169ec93e3ee74f1e00202873570d4081d2158e15743d50d61db82992397",
+      "size_bytes": 11553
+    },
+    "demo/session/index.html": {
+      "sha256": "14c94c4ed6dc5c61569a6bc0ff8bfd6e343ab101beb8761db93fa7db62808ebe",
+      "size_bytes": 23416
+    },
+    "dpa/index.html": {
+      "sha256": "adc4070c15e8c0cce7d9de0ae8331166d1548b656be2ff99d414664b767cb079",
+      "size_bytes": 623
+    },
+    "favicon.png": {
+      "sha256": "58bdf83f1bf2995a70b0169045c7060f99a283c9ff71dc5234ffb1cfe156fbee",
+      "size_bytes": 2004
+    },
+    "icons/Icon-192.png": {
+      "sha256": "ea532fc1ccd4a3e82183f571ac1a97802dfa9f239ffca2416d0af26fb5d6a37f",
+      "size_bytes": 7793
+    },
+    "icons/Icon-512.png": {
+      "sha256": "7ad18d0f3af699c7acc826e9593ad025c2166a397c7c5012e30f9fec4cb6ca4d",
+      "size_bytes": 31293
+    },
+    "icons/Icon-maskable-192.png": {
+      "sha256": "7509f4fd8ff83a0afbe5503fc7a719e84273936b4ab99ab469b4a38c6e68f415",
+      "size_bytes": 9555
+    },
+    "icons/Icon-maskable-512.png": {
+      "sha256": "40f8b3f874a43fb8b8366fe9fca901671182e06372faba9b46d015b1312eb7d4",
+      "size_bytes": 36339
+    },
+    "index.html": {
+      "sha256": "f386ebe183fa6bdd7f9a0d7d9373b1e5ecbe45032adeba6a593a224d24779fff",
+      "size_bytes": 134808
+    },
+    "install/index.html": {
+      "sha256": "a895e69bac3398e27624164bde414851fad96494d7f2a9625dcb51bbf8e41266",
+      "size_bytes": 10023
+    },
+    "legal/cs/cookies/index.html": {
+      "sha256": "254989e7d630a99fb6a45f22be1d9a645b4052519d66396c48a6c414731cf289",
+      "size_bytes": 5335
+    },
+    "legal/cs/dpa/index.html": {
+      "sha256": "159d0255fd361bade8c57460bf11b400b60855717ead3dda10201dd0c2adf4ef",
+      "size_bytes": 7363
+    },
+    "legal/cs/privacy/index.html": {
+      "sha256": "b8a62cbf87a20f506b046585dd04205dc37ded4d04cbc5a0b9963f3c2eab59cc",
+      "size_bytes": 7459
+    },
+    "legal/cs/terms/index.html": {
+      "sha256": "25d72e3149868e476f45c22ea927f73cd9a2299a35882c1aa9fd5b7fb9b2d387",
+      "size_bytes": 7717
+    },
+    "legal/de/cookies/index.html": {
+      "sha256": "e164d72eb2ebdfe15e488729df31e725b0d920a6da653c45d79eb03b1b447bf0",
+      "size_bytes": 5502
+    },
+    "legal/de/dpa/index.html": {
+      "sha256": "75abc7ec48233b9ae8eddfd850d6231d8f4d6d6b97fafcd9949dfbb6d14eedc2",
+      "size_bytes": 8086
+    },
+    "legal/de/privacy/index.html": {
+      "sha256": "df24b99398f0645ceee5d611a483b53dbbe9969ae67f5007a1aa204bf0f1e0cb",
+      "size_bytes": 8010
+    },
+    "legal/de/terms/index.html": {
+      "sha256": "77955faf123a24fe88fd1487a26629358392da6aabd118806dc91cfc430cd424",
+      "size_bytes": 8416
+    },
+    "legal/en/cookies/index.html": {
+      "sha256": "ea8f8f516631ba22f49944663b9df5d7050718dfbae157c91bb0c33738d2e3c5",
+      "size_bytes": 6075
+    },
+    "legal/en/dpa/index.html": {
+      "sha256": "1be48c46b08cc4f53be8e988ac009d2511360ffbfca3756d2e67e784f6c62860",
+      "size_bytes": 9754
+    },
+    "legal/en/privacy/index.html": {
+      "sha256": "d16f469268d08e26eeced064dcb5dc55222b52772e25128862932338fc98e445",
+      "size_bytes": 9067
+    },
+    "legal/en/terms/index.html": {
+      "sha256": "65c70494ee9e68218735a58e0fcc8751060230a6b2f0fd2e23fea1dc1ad610aa",
+      "size_bytes": 9180
+    },
+    "legal/es/cookies/index.html": {
+      "sha256": "893c9cdacb66c7555531ed4f82e11a0fc6c41ce36a2e5800d9e62a6380c2e3f8",
+      "size_bytes": 5439
+    },
+    "legal/es/dpa/index.html": {
+      "sha256": "2632408f2dd7abaa0a540e5c26af97975d240e720f9e29c138d861e600d2d3b0",
+      "size_bytes": 7835
+    },
+    "legal/es/privacy/index.html": {
+      "sha256": "2f336ae49f6e8a7f09763753621e75d3430df55eba10efa3b52717b9ab0a89ae",
+      "size_bytes": 7881
+    },
+    "legal/es/terms/index.html": {
+      "sha256": "a459f417021feb2c4a048bb8ab42fa5338dc3d09c594072eaa2117681c783338",
+      "size_bytes": 8067
+    },
+    "legal/fr/cookies/index.html": {
+      "sha256": "6f6f06691fd44832bf6dc83fb3b78549e2f53bc6d0cfaa886ea55a256b0362dc",
+      "size_bytes": 5457
+    },
+    "legal/fr/dpa/index.html": {
+      "sha256": "07ed406e0bfdd83d7eec06bcc77e7ce9c2628aad9417751d3f934bf48c778516",
+      "size_bytes": 7931
+    },
+    "legal/fr/privacy/index.html": {
+      "sha256": "b9ca1c7e4453cb49f9ab7a7d24173e070e5e2f7fa3999e921073bea64bb87c3e",
+      "size_bytes": 7985
+    },
+    "legal/fr/terms/index.html": {
+      "sha256": "adc849fa914e8d75e5859427bfd5fe466882498e53ce6b6b3b5ee312829e2251",
+      "size_bytes": 8347
+    },
+    "legal/hu/cookies/index.html": {
+      "sha256": "c721b59f004881412b49936ce6cd85bc12b4ed4704877f2cc8745385d82b80a4",
+      "size_bytes": 5431
+    },
+    "legal/hu/dpa/index.html": {
+      "sha256": "2555fdb96ae2b13276df41504720f3c68f44a0afdf8230ae854b75b3d24eb1cc",
+      "size_bytes": 7704
+    },
+    "legal/hu/privacy/index.html": {
+      "sha256": "0fef3c38955ab600d536bb8872161b07f6173a43e5152a0a0854a6660f971e90",
+      "size_bytes": 7896
+    },
+    "legal/hu/terms/index.html": {
+      "sha256": "3f0c0e560e821e2e2a9548c78ada70cc1f3f8c2054def4a3267ba5edfe444c61",
+      "size_bytes": 8225
+    },
+    "legal/it/cookies/index.html": {
+      "sha256": "13dbb72f2bf8e16c1d07a5d2c9540852ba6fe9d085e9a2597277facabee717a0",
+      "size_bytes": 5321
+    },
+    "legal/it/dpa/index.html": {
+      "sha256": "93f28da448cc41b73e69530ec9e915a7253019978a87be1c96854613875fcf34",
+      "size_bytes": 7553
+    },
+    "legal/it/privacy/index.html": {
+      "sha256": "20b905db2e28c1abc0f00e6221a65d732757f7831fbf802255a408279e6ea36d",
+      "size_bytes": 7587
+    },
+    "legal/it/terms/index.html": {
+      "sha256": "77a0fcd9ff9a5390d44b095a4bbe7cb25a1cb92f0cb56e417028af58177d0b91",
+      "size_bytes": 7949
+    },
+    "legal/pl/cookies/index.html": {
+      "sha256": "4fbffdbc09a7a0ef3c22a0197ca05d4c64bb1ee5adeb9c07c493484eee22731e",
+      "size_bytes": 6080
+    },
+    "legal/pl/dpa/index.html": {
+      "sha256": "2aa9e1b8626114c20d75f399163282347ef6de8275dfaa4a9da1ecdfd4e5ae78",
+      "size_bytes": 9274
+    },
+    "legal/pl/privacy/index.html": {
+      "sha256": "df95bb78bdcc59de1935ecef8a3f3c7c954ce32a647d918b3a81bc7b3f5f47ad",
+      "size_bytes": 8984
+    },
+    "legal/pl/terms/index.html": {
+      "sha256": "13b47e65a2eb926266ac73edd11c2a497dea464452d29fc83fb1b362e83b493e",
+      "size_bytes": 9422
+    },
+    "legal/pt/cookies/index.html": {
+      "sha256": "a1126a5eb32cafeb5fe9e28bc02bbbc455a3fdfd1e275d8e63f3bdf53342fba4",
+      "size_bytes": 5333
+    },
+    "legal/pt/dpa/index.html": {
+      "sha256": "a4258bc932765d2e1043da883ab99e5c3ea303428f3bccec45e9518afda96733",
+      "size_bytes": 7604
+    },
+    "legal/pt/privacy/index.html": {
+      "sha256": "f11e2d643802ac3fae73ddb1d044a5244d3248cc15d014cd5babed2009362f8c",
+      "size_bytes": 7741
+    },
+    "legal/pt/terms/index.html": {
+      "sha256": "450c28f95fd00a2ef2666b54eba4ab2a0f786ce8f7807674fe380c7d221e8523",
+      "size_bytes": 7951
+    },
+    "legal/ro/cookies/index.html": {
+      "sha256": "b95a5a550538230e2301e0d8e2d02eb8e5039c54d70eb4bc03d18390fc2908f9",
+      "size_bytes": 5325
+    },
+    "legal/ro/dpa/index.html": {
+      "sha256": "74d73a1b0086e4e3f8b88ae59a0e93773790a5144c9dab0c9c6f0e56398047ff",
+      "size_bytes": 7563
+    },
+    "legal/ro/privacy/index.html": {
+      "sha256": "04a6e1b0728ba1e0be3a67b116ab5ff21c3c0f5e69bb87aa17fb086cf868d78b",
+      "size_bytes": 7686
+    },
+    "legal/ro/terms/index.html": {
+      "sha256": "15414282920f92bd93b7aa058e1c9e50e6ab359f673616025439ec705dbaecd0",
+      "size_bytes": 7945
+    },
+    "legal/sk/cookies/index.html": {
+      "sha256": "c1baadf840e07d3b4ed8182d800d3e6bc053cd22346b97d076ac5dc1cf98fef4",
+      "size_bytes": 5308
+    },
+    "legal/sk/dpa/index.html": {
+      "sha256": "dc5335551a95c07f2f4ec17db2b0a9dd75ddc6b8df89f51b4945f9c133d89e04",
+      "size_bytes": 7279
+    },
+    "legal/sk/privacy/index.html": {
+      "sha256": "a973674194a5cfba1b2d598d084b0fcc347927183fc55af5db4cb1767621b947",
+      "size_bytes": 7575
+    },
+    "legal/sk/terms/index.html": {
+      "sha256": "684cd3de87101241ca5bb38bb96abe703748cd31e93a64570cb1fe08f39c7b1a",
+      "size_bytes": 7817
+    },
+    "legal/uk/cookies/index.html": {
+      "sha256": "bff47aa532655f262fd1a4fc2ebd4eccdad2f7b41193168519a911a165827a18",
+      "size_bytes": 6124
+    },
+    "legal/uk/dpa/index.html": {
+      "sha256": "700193b646b5d3e64170f30abf98be8bd9d771b0dd785a5bc5335054868fdf40",
+      "size_bytes": 9827
+    },
+    "legal/uk/privacy/index.html": {
+      "sha256": "df42f518fd872e2b6f1e8fa792b3c40713adc918148914a3c6e636c3dede2f10",
+      "size_bytes": 9869
+    },
+    "legal/uk/terms/index.html": {
+      "sha256": "153601d850d75583802342e39907028372c4bbd65078fc484591188276712551",
+      "size_bytes": 10571
+    },
+    "manifest.json": {
+      "sha256": "e4632f924fff3ed1eeef4168f5516a388e44aed6011c49b1893e3ae7c2db68af",
+      "size_bytes": 901
+    },
+    "privacy/index.html": {
+      "sha256": "f2c93808c7fb87ce0a833c8f6620927d38f428e42760c63dd41229b6d46d988d",
+      "size_bytes": 635
+    },
+    "start/index.html": {
+      "sha256": "f386ebe183fa6bdd7f9a0d7d9373b1e5ecbe45032adeba6a593a224d24779fff",
+      "size_bytes": 134808
+    },
+    "terms/index.html": {
+      "sha256": "19017ddcb09dd6411c54d0867ddcc52ccfc8be9415530a41683297eebdb709a3",
+      "size_bytes": 629
+    }
+  },
+  "kind": "flotaryx-approved-marketing-release",
+  "marketing_source_commit": "deb7643c4bf84251d1de3bc2818cd1ede4194a56",
+  "origin": "https://flotaryx.com",
+  "package_sha256": "d505b1a0376c95f35c408bc8f9a58ea1c76e21b8aad39dfc03c41fb96b521a3c",
+  "portal_file_count": 97,
+  "previous_pages": {
+    "index.html": {
+      "sha256": "e4c50aaeac39aee1e9576e590289abc5b3da211bd9e8739d0caf1ebee4350fd9",
+      "size_bytes": 181104
+    },
+    "install/index.html": {
+      "sha256": "8e223f094eecc2edbacfb1a33ca1d9459d05e091a17f0006433f044d28ec57db",
+      "size_bytes": 8636
+    },
+    "start/index.html": {
+      "sha256": "abed3b06f63ab660e6fcd86d0e622e8222bac0939a9f604fa8e0dfa54004f39d",
+      "size_bytes": 179494
+    }
+  },
+  "repository": "jdrynko-hue/FleetPilot",
+  "version": 1
+}

@@ -1,0 +1,110 @@
+name: Publish approved marketing package
+
+# This workflow publishes the exact site payload approved on 2026-11-18.
+# It never builds Flutter. A merge does not publish anything.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: 'Type PUBLISH-MARKETING-d505b1a0 to publish the approved three-page update'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  APPROVAL_MANIFEST: docs/releases/2026-11-18-approved-marketing.json
+  APPROVAL_SHA256: bd4c33351ee042ebf0169c127846e4ca97b6a8f841dd599638c7ea30adbb972a
+
+jobs:
+  prepare:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_release == 'PUBLISH-MARKETING-d505b1a0' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: deb7643c4bf84251d1de3bc2818cd1ede4194a56
+          path: approved-source
+          persist-credentials: false
+      - name: Download the retained complete rollback snapshot
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '14443664409'
+          run-id: '44343745692'
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/approved-baseline
+          merge-multiple: true
+      - name: Stage and hash every file against the approved package
+        run: >-
+          python3 -B tools/publish_approved_marketing.py stage
+          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
+          --baseline "$RUNNER_TEMP/approved-baseline/site"
+          --source-repo approved-source --output "$RUNNER_TEMP/approved-site"
+      - name: Retain the exact unchanged rollback site
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-rollback-site
+          path: ${{ runner.temp }}/approved-baseline
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload only the verified approved site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: approved-marketing-pages
+          path: ${{ runner.temp }}/approved-site
+          retention-days: 30
+
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Hold if any public file has changed since package approval
+        run: >-
+          python3 -B tools/publish_approved_marketing.py verify-public
+          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
+          --phase baseline --attempts 2 --report preflight.json
+      - name: Publish the approved marketing payload
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: approved-marketing-pages
+      - name: Verify all 161 published files and four entry routes
+        run: >-
+          python3 -B tools/publish_approved_marketing.py verify-public
+          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
+          --phase release --attempts 10 --report published-verification.json
+      - name: Retain publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-publication-evidence
+          path: |
+            preflight.json
+            published-verification.json
+            docs/releases/2026-11-18-approved-marketing.json
+          retention-days: 30
+          if-no-files-found: error
