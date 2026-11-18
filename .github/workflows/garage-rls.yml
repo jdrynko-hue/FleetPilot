@@ -16,6 +16,7 @@ on:
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
       - 'tests/garage_booking_recovery_rls.sql'
+      - 'tests/garage_booking_recovery_e2e.mjs'
       - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
@@ -41,6 +42,7 @@ on:
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
       - 'tests/garage_booking_recovery_rls.sql'
+      - 'tests/garage_booking_recovery_e2e.mjs'
       - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
@@ -204,6 +206,7 @@ jobs:
           node "$GITHUB_WORKSPACE/tests/garage_local_supabase_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_repairbridge_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_consumer_bookings_e2e.mjs"
+          node "$GITHUB_WORKSPACE/tests/garage_booking_recovery_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_resource_calendar_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_mechanic_roster_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/flotaryx_unified_ecosystem_e2e.mjs"

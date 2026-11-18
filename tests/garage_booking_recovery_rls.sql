@@ -8,9 +8,13 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('00000000-0000-4000-8000-000000000273','recovery-b@example.test',now()),
  ('00000000-0000-4000-8000-000000000274','recovery-unverified@example.test',NULL),
  ('00000000-0000-4000-8000-000000000275','recovery-quota@example.test',now());
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000271',true);
 INSERT INTO public.garage_workspaces(id,owner_user_id,name,country,currency)
 VALUES('00000000-0000-4000-8000-000000000281',
  '00000000-0000-4000-8000-000000000271','Recovery QA','GB','GBP');
+COMMIT;
 
 DO $$ BEGIN
  IF NOT (SELECT relrowsecurity FROM pg_class

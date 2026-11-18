@@ -59,6 +59,7 @@ class GarageBookingSearchScreen extends StatefulWidget {
 
 class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   final _city = TextEditingController();
+  final _scroll = ScrollController();
   List<GarageBookingWorkshop> _shops = const [];
   String _serviceFilter = '';
   String _countryFilter = '';
@@ -146,6 +147,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   void dispose() {
     _generation++;
     _city.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -243,6 +245,9 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
       final outcome = await resolve(marker);
       if (!mounted || generation != _generation) return;
       setState(() { _recovered = outcome; _loadPending(); });
+      // The pending card can shrink after resolution. Keep its result visible
+      // instead of leaving the viewport below it on a narrow mobile screen.
+      if (_scroll.hasClients) _scroll.jumpTo(0);
     } catch (_) {
       if (mounted && generation == _generation) {
         setState(() => _resolutionFailed = true);
@@ -293,7 +298,7 @@ class _GarageBookingSearchState extends State<GarageBookingSearchScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(GarageUiText.get('findWorkshop'))),
-    body: SafeArea(child: ListView(padding: const EdgeInsets.all(16),
+    body: SafeArea(child: ListView(controller: _scroll, padding: const EdgeInsets.all(16),
       children: [
         ..._recoveryWidgets(),
         Text(GarageUiText.get('bookingSearchHint'),
