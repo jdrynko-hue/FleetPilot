@@ -53,6 +53,12 @@ try {
           assert.equal(await page.locator('#main-content').evaluate(el => el === document.activeElement), true);
           for (const locale of locales) {
             await page.locator('#site-language').selectOption(locale);
+            const namedControls = page.locator('[data-aria-en]');
+            assert.equal(await namedControls.count(), 4);
+            for (const control of await namedControls.all()) {
+              assert.equal(await control.getAttribute('aria-label'),
+                await control.getAttribute('data-aria-' + locale));
+            }
             const link = page.locator('.nav-compact-login');
             const visible = await link.isVisible();
             const label = await link.locator('.nav-compact-label').getAttribute('data-' + locale);
