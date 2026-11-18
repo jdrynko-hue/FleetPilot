@@ -27,7 +27,8 @@ permissions:
 jobs:
   local-connected-demo:
     name: Hardened real Fleet and Garage - Android Chrome and iPhone Safari emulation
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 supports Ubuntu 24.04; ubuntu-latest can move ahead of it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       GARAGE_QA_DIR: /tmp/flotaryx-single-session-qa
