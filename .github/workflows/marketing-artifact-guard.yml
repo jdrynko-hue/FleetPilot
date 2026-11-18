@@ -1,0 +1,28 @@
+name: Marketing artifact preservation
+
+on:
+  pull_request:
+    paths:
+      - 'tools/prepare_marketing_release.py'
+      - 'tests/marketing_release_test.py'
+      - 'docs/marketing-release-preparation.md'
+      - '.github/workflows/marketing-artifact-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/prepare_marketing_release.py'
+      - 'tests/marketing_release_test.py'
+      - '.github/workflows/marketing-artifact-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preserve-compiled-portal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify offline artifact preparation with synthetic fixtures
+        run: python3 -B tests/marketing_release_test.py -v

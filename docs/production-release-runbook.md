@@ -40,6 +40,13 @@ Unverified gates mean **NO-GO for paid public launch**. Marketing drafts and a c
 
 ## Manual web publication
 
+For a marketing-only update that must preserve the existing compiled portal,
+follow [marketing-release-preparation.md](marketing-release-preparation.md).
+It requires the complete verified current production artifact and retained
+manifest, and produces a review folder without publishing. The workflow below
+rebuilds Flutter, so it does **not** preserve a previously deployed application
+byte for byte and cannot substitute for that preparation path.
+
 1. Freeze a reviewed known-good commit on main, record its SHA and CI evidence, and retain a rollback reference.
 2. Confirm that the public landing page does not claim disabled or incomplete Garage/Booking/billing capabilities are already available.
 3. In GitHub Actions select Deploy Flotaryx, Run workflow, choose main, enter PUBLISH-FLOTARYX, and explicitly start.
