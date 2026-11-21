@@ -10,6 +10,9 @@ from prepare_marketing_release import PageReferences, PreparationError, checked_
 
 BOOKING_PATH = '/booking-recovery-qa/'
 PWA_SCOPE_FIELDS = ('id', 'start_url', 'scope')
+BOOKING_TITLE = 'Flotaryx | Booking QA'
+BOOKING_APP_NAME = 'Flotaryx Booking Recovery QA'
+BOOKING_SHORT_NAME = 'Flotaryx Booking QA'
 
 
 def stage(source, target):
@@ -19,8 +22,18 @@ def stage(source, target):
     if any(manifest.get(field) != '/app/' for field in PWA_SCOPE_FIELDS):
         raise PreparationError('Review the Booking staging adapter for the changed source manifest')
     manifest.update(dict.fromkeys(PWA_SCOPE_FIELDS, BOOKING_PATH))
+    manifest.update(name=BOOKING_APP_NAME, short_name=BOOKING_SHORT_NAME)
+    html = (source / 'app/index.html').read_text(encoding='utf-8')
+    for original, replacement in (
+        ('<title>Flotaryx | Smarter Fleet Management</title>', f'<title>{BOOKING_TITLE}</title>'),
+        ('name="apple-mobile-web-app-title" content="Flotaryx"',
+         f'name="apple-mobile-web-app-title" content="{BOOKING_SHORT_NAME}"'),
+    ):
+        if html.count(original) != 1:
+            raise PreparationError('Review the Booking staging adapter for the changed source HTML')
+        html = html.replace(original, replacement)
     target.mkdir(parents=True, exist_ok=False)
-    shutil.copyfile(source / 'app/index.html', target / 'index.html')
+    (target / 'index.html').write_text(html, encoding='utf-8')
     shutil.copyfile(source / 'favicon.png', target / 'favicon.png')
     shutil.copytree(source / 'icons', target / 'icons')
     (target / 'manifest.json').write_text(
@@ -36,6 +49,8 @@ def check(root):
     manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
     if any(manifest.get(field) != BOOKING_PATH for field in PWA_SCOPE_FIELDS):
         raise PreparationError('Booking install identity, start URL and scope must stay under its mount')
+    if manifest.get('name') != BOOKING_APP_NAME or manifest.get('short_name') != BOOKING_SHORT_NAME:
+        raise PreparationError('Booking manifest must use its own install name')
     for name in {*page.refs, 'main.dart.js', *(icon['src'] for icon in manifest['icons'])}:
         path = root / checked_path(name)
         if not path.is_file() or path.stat().st_size == 0:

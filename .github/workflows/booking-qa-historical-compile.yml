@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/booking-qa-historical-compile.yml'
+      - 'tools/prepare_booking_qa.py'
   workflow_dispatch:
 
 permissions:

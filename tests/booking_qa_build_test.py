@@ -26,14 +26,19 @@ class BookingBuildTests(unittest.TestCase):
             (self.stage / name).write_text('compiled fixture')
 
     def test_rebases_pwa_from_real_sources_without_marketing_or_app_route(self):
-        self.assertEqual((self.stage / 'index.html').read_bytes(),
-                         (self.source / 'app/index.html').read_bytes())
+        html = (self.stage / 'index.html').read_text()
+        self.assertIn('<title>Flotaryx | Booking QA</title>', html)
+        self.assertIn('name="apple-mobile-web-app-title" content="Flotaryx Booking QA"', html)
+        manifest = json.loads((self.stage / 'manifest.json').read_text())
+        self.assertEqual(manifest['name'], 'Flotaryx Booking Recovery QA')
+        self.assertEqual(manifest['short_name'], 'Flotaryx Booking QA')
         self.assertEqual({p.name for p in self.stage.iterdir()},
                          {'index.html', 'manifest.json', 'favicon.png', 'icons'})
         self.simulate_compiler()
         booking.check(self.stage)
         original = json.loads((self.source / 'manifest.json').read_text())
         self.assertTrue(all(original[k] == '/app/' for k in booking.PWA_SCOPE_FIELDS))
+        self.assertNotEqual(original['short_name'], manifest['short_name'])
 
     def test_wrong_base_is_rejected(self):
         self.simulate_compiler('/app/')
