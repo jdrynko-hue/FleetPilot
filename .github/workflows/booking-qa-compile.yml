@@ -1,0 +1,79 @@
+name: Compile isolated Booking QA comparison
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/booking-qa-compile.yml'
+      - 'tools/prepare_booking_qa.py'
+      - 'tests/booking_qa_build_test.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  booking-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test Booking portal staging and validation
+        run: python3 -B tests/booking_qa_build_test.py -v
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.50.1'
+          cache: true
+      - name: Verify the reviewed Flutter toolchain
+        run: |
+          flutter --version --machine > "$RUNNER_TEMP/booking-toolchain.json"
+          python3 -B tools/verify_flutter_toolchain.py --actual "$RUNNER_TEMP/booking-toolchain.json"
+      - name: Stage and build the Booking mount with compile-only inputs
+        shell: bash
+        run: |
+          python3 -B tools/prepare_booking_qa.py stage web "$RUNNER_TEMP/booking-web"
+          mv web "$RUNNER_TEMP/original-web"
+          mv "$RUNNER_TEMP/booking-web" web
+          flutter pub get
+          args=(
+            --release --no-web-resources-cdn --no-pub
+            --base-href /booking-recovery-qa/
+            --dart-define=FLOTARYX_ECOSYSTEM_QA=true
+            --dart-define=FLOTARYX_BOOKING_RECOVERY_QA=true
+            --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
+          )
+          flutter build web "${args[@]}"
+          python3 -B tools/prepare_booking_qa.py check build/web
+          python3 - "${args[@]}" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          Path('build/web/qa-build-context.json').write_text(json.dumps({
+              'command': ['flutter', 'build', 'web', *sys.argv[1:]],
+              'auth_callback_configured': False,
+              'deployment_authorized': False,
+              'mode': 'compile-only',
+          }, indent=2) + '\n')
+          PY
+      - name: Record and verify the complete artifact
+        run: |
+          cp "$RUNNER_TEMP/booking-toolchain.json" build/web/qa-build-toolchain.json
+          cp pubspec.lock build/web/qa-build-pubspec.lock
+          cp .github/workflows/booking-qa-compile.yml build/web/qa-build-workflow.yml
+          python3 -B tools/qa_artifact_integrity.py create --root build/web \
+            --declared-source-commit "$(git rev-parse HEAD)" \
+            --declared-source-tree "$(git rev-parse 'HEAD^{tree}')" > "$RUNNER_TEMP/booking-receipt.json"
+          digest=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["manifest_sha256"])' < "$RUNNER_TEMP/booking-receipt.json")
+          python3 -B tools/qa_artifact_integrity.py verify --root build/web --manifest-sha256 "$digest"
+          echo "Booking inventory SHA-256: $digest (compile-only; deployment not authorized)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain the Booking compile comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-booking-compile
+          path: build/web
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
