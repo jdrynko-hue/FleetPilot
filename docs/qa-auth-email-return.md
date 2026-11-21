@@ -6,7 +6,9 @@ signup/password-reset request before it reaches Auth; it never substitutes the
 production return URL.
 
 Use the exact currently reviewed private preview hostname. The hostname below
-is a placeholder, not a deployment target:
+is a placeholder, not a deployment target. Set the build-specific path to
+`/app/` for the main QA portal or `/booking-recovery-qa/` for the separate
+Booking QA portal on private Sites:
 
 ```
 https://REVIEWED-PREVIEW.chatgpt.site/app/
@@ -22,6 +24,10 @@ https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=garage
 https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=customer
 https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=search
 ```
+
+For the separate Booking build, verify the equivalent five exact entries
+under `/booking-recovery-qa/` as well. Entries for `/app/` do not substitute
+for the Booking mount.
 
 Review QA email templates for hardcoded production destinations or `.SiteURL`
 links that bypass `.RedirectTo`/the generated confirmation URL. An application

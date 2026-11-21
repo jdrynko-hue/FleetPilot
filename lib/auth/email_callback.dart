@@ -6,10 +6,14 @@ String authEmailCallback({required String backendUrl,
   var base = Uri.parse('https://flotaryx.com/app/');
   if (backendUrl == qaBackend) {
     final candidate = Uri.tryParse(configuredQaCallback);
+    final bookingMount = RegExp(
+      r'^https://(?:[a-z0-9-]+\.)+chatgpt\.site/booking-recovery-qa/$',
+    ).hasMatch(configuredQaCallback);
     if (candidate == null || candidate.scheme != 'https' ||
         candidate.host.isEmpty || candidate.host.endsWith('.') ||
         candidate.userInfo.isNotEmpty ||
-        candidate.port != 443 || candidate.path != '/app/' ||
+        candidate.port != 443 ||
+        (candidate.path != '/app/' && !bookingMount) ||
         candidate.hasQuery || candidate.hasFragment ||
         candidate.host == 'flotaryx.com' || candidate.host == 'www.flotaryx.com') {
       throw StateError('QA email return URL is not configured.');

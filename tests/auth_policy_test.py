@@ -61,6 +61,7 @@ class AuthPolicyTests(unittest.TestCase):
 
 class QaAuthPolicyTests(unittest.TestCase):
     callback = "https://reviewed-qa.example.chatgpt.site/app/"
+    booking = "https://reviewed-qa.example.chatgpt.site/booking-recovery-qa/"
 
     def test_qa_requires_base_and_each_supported_portal(self):
         expected = auth_policy.qa_redirects(self.callback)
@@ -95,6 +96,25 @@ class QaAuthPolicyTests(unittest.TestCase):
         self.assertIn(auth_policy.QA_PROJECT_REF, request.call_args.args[0].full_url)
         self.assertNotIn("hidden-fixture", output.getvalue())
         self.assertNotIn(self.callback, output.getvalue())
+
+    def test_both_qa_mounts_require_independent_exact_entries(self):
+        required = auth_policy.qa_redirects(self.callback) + auth_policy.qa_redirects(self.booking)
+        self.assertEqual(len(set(required)), 10)
+        self.assertIn(self.booking + "?portal=customer", required)
+        command = ["--environment", "qa", "--qa-callback", self.callback,
+                   "--qa-callback", self.booking]
+        for missing in (None, self.booking + "?portal=customer"):
+            config = {"password_min_length": 12,
+                      "uri_allow_list": ",".join(url for url in required if url != missing)}
+            with self.subTest(missing=missing), patch.dict("os.environ", {"SUPABASE_ACCESS_TOKEN": "fixture"}), patch.object(auth_policy.urllib.request, "urlopen") as request:
+                request.return_value = io.StringIO(json.dumps(config))
+                if missing:
+                    with self.assertRaisesRegex(SystemExit, "uri_allow_list"):
+                        auth_policy.main(command)
+                else:
+                    with redirect_stdout(io.StringIO()):
+                        auth_policy.main(command)
+                self.assertEqual([call.args[0].get_method() for call in request.call_args_list], ["GET"])
 
     def test_qa_mismatch_never_patches(self):
         with patch.dict("os.environ", {"SUPABASE_ACCESS_TOKEN": "fixture"}), patch.object(auth_policy.urllib.request, "urlopen") as request:
