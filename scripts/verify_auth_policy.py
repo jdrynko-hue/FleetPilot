@@ -1,4 +1,5 @@
-"""Enforce bounded Auth settings; never print or persist full Auth configuration."""
+"""Verify Auth settings, with an explicit option to apply a bounded correction."""
+import argparse
 import json
 import os
 import urllib.error
@@ -23,7 +24,11 @@ def policy_patch(config):
     return patch
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--apply", action="store_true",
+                        help="Apply the required production Auth policy corrections")
+    args = parser.parse_args(argv)
     token = os.environ.get("SUPABASE_ACCESS_TOKEN")
     if not token:
         raise SystemExit("Missing existing SUPABASE_ACCESS_TOKEN repository secret")
@@ -44,14 +49,18 @@ def main():
 
     before = request()
     patch = policy_patch(before)
+    if patch and not args.apply:
+        fields = ", ".join(sorted(patch))
+        raise SystemExit(f"Auth policy verification failed for: {fields}")
     if patch:
         request("PATCH", patch)
-    after = request()
+    after = request() if patch else before
     if policy_patch(after):
         raise SystemExit("Auth password minimum or app redirect failed verification")
     print("Server password minimum:", after["password_min_length"])
     print("Exact Flotaryx app recovery redirect allowed: true")
-    print("Existing password/session settings preserved; only required policy fields patched:", sorted(patch))
+    if patch:
+        print("Auth policy fields patched:", ", ".join(sorted(patch)))
 
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ jobs:
   server-policy:
     # GitHub's existing Management API token currently returns HTTP 403.
     # Admin settings cannot be verified by the public password probe;
-    # retain the strict admin check as an explicitly manual release gate.
+    # retain the strict read-only admin check as a manual release gate.
     # Normal pushes still test public Auth password enforcement.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: policy-tests
