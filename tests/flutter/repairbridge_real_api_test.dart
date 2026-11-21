@@ -183,13 +183,21 @@ void main() {
       // authenticated PostgREST client. Checking the outcome must not resend.
       final resumedBookings = GarageBookingRepository(outsider,
         recoveryJournal: BookingRecoveryJournal(storage));
-      await mount(GarageBookingSearchScreen.forRepository(resumedBookings));
+      await mount(Builder(builder: (context) =>
+        GarageBookingSearchScreen.forRepository(resumedBookings,
+          onViewBookings: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) =>
+              GarageMyBookingsScreen.forRepository(resumedBookings))),
+        ),
+      ));
       await see(find.byKey(const Key('booking_pending_recovery')), 'pending booking');
       await tap(find.byKey(const Key('booking_recovery_resolve')));
       await see(find.byKey(const Key('booking_recovery_outcome')), 'recorded booking');
       expect(find.byKey(const Key('booking_recovery_history')), findsOneWidget);
       expect(resumedBookings.pendingRequests(), isEmpty);
       expect(bookingTransport.bookingPosts, 1);
+      await tap(find.byKey(const Key('booking_recovery_history')));
+      await see(find.byType(GarageMyBookingsScreen), 'booking history navigation');
       await tester.runAsync(() async {
         final booking = (await bookings.myRequests()).single;
         expect(booking.status, GarageBookingStatus.requested);
