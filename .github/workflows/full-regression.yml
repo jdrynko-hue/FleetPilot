@@ -10,6 +10,8 @@ on:
       - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
+      - 'tools/qa_artifact_integrity.py'
+      - 'tools/prepare_marketing_release.py'
       - '.github/workflows/full-regression.yml'
   push:
     branches: [main]
@@ -21,6 +23,8 @@ on:
       - 'web/app/index.html'
       - 'supabase/functions/**'
       - 'tests/**'
+      - 'tools/qa_artifact_integrity.py'
+      - 'tools/prepare_marketing_release.py'
       - '.github/workflows/full-regression.yml'
   workflow_dispatch:
 
@@ -32,6 +36,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  qa-artifact-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject incomplete or stale QA artifact inventories
+        run: python3 -B tests/qa_artifact_integrity_test.py -v
+
   sandbox-backend:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -44,6 +56,7 @@ jobs:
         run: node --experimental-strip-types --test tests/checkout.test.mjs tests/billing-manage.test.mjs tests/webhook.test.mjs tests/landing_language_handoff.test.mjs
 
   flutter:
+    needs: qa-artifact-integrity
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -126,10 +139,23 @@ jobs:
               assert (output / name).is_file() and (output / name).stat().st_size > 0, name
           print('PASS: QA portal entry, /app/ base and bootstrap assets')
           PY
+      - name: Inventory all QA build bytes without authorizing publication
+        run: |
+          flutter --version --machine > build/web/qa-build-toolchain.json
+          cp pubspec.lock build/web/qa-build-pubspec.lock
+          cp .github/workflows/full-regression.yml build/web/qa-build-workflow.yml
+          python3 -B tools/qa_artifact_integrity.py create --root build/web \
+            --declared-source-commit "$(git rev-parse HEAD)" \
+            --declared-source-tree "$(git rev-parse 'HEAD^{tree}')" > "$RUNNER_TEMP/qa-inventory-receipt.json"
+          cat "$RUNNER_TEMP/qa-inventory-receipt.json"
+          manifest_sha=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["manifest_sha256"])' "$RUNNER_TEMP/qa-inventory-receipt.json")
+          python3 -B tools/qa_artifact_integrity.py verify --root build/web --manifest-sha256 "$manifest_sha"
+          echo "QA inventory SHA-256: $manifest_sha (integrity only; deployment not authorized)" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the self-contained QA portal for private preview
         uses: actions/upload-artifact@v4
         with:
           name: qa-web-portal
           path: build/web
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
