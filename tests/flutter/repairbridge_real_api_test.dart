@@ -1,11 +1,19 @@
 // Explicit opt-in integration suite: real Flutter widgets + loopback Supabase.
 // Outside test/ so normal offline regression never attempts network access.
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fleetpilot/core/localization.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
+import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
+import 'package:fleetpilot/garage/booking_management_screens.dart';
+import 'package:fleetpilot/garage/booking_recovery_journal.dart';
+import 'package:fleetpilot/garage/consumer_booking_screen.dart';
+import 'package:fleetpilot/garage/staff_invitation_screen.dart';
+import 'package:fleetpilot/garage/workspace_repository.dart';
 import 'package:fleetpilot/data/models.dart';
 import 'package:fleetpilot/garage/bridge_connections_screen.dart';
 import 'package:fleetpilot/garage/consumer_booking_repository.dart';
@@ -16,6 +24,45 @@ import 'package:fleetpilot/garage/workshop_quotes_screen.dart';
 class _LocalApiBinding extends AutomatedTestWidgetsFlutterBinding {
   @override
   bool get overrideHttpClient => false;
+}
+
+class _BookingTransport extends http.BaseClient {
+  _BookingTransport(this.inner);
+
+  final http.Client inner;
+  bool dropNextBookingResponse = false;
+  int bookingPosts = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final booking = request.method == 'POST' &&
+        request.url.path == '/rest/v1/rpc/garage_booking_request_once';
+    if (booking) bookingPosts++;
+    final response = await inner.send(request);
+    if (booking && dropNextBookingResponse &&
+        response.statusCode >= 200 && response.statusCode < 300) {
+      dropNextBookingResponse = false;
+      await response.stream.drain<void>();
+      throw http.ClientException('Simulated response loss after server acceptance', request.url);
+    }
+    return response;
+  }
+
+  @override
+  void close() => inner.close();
+}
+
+class _MemoryBookingStorage implements BookingRecoveryStorage {
+  final _values = <String, String>{};
+
+  @override
+  List<String> keys() => _values.keys.toList();
+  @override
+  String? read(String key) => _values[key];
+  @override
+  void write(String key, String value) { _values[key] = value; }
+  @override
+  void remove(String key) { _values.remove(key); }
 }
 
 void main() {
@@ -43,11 +90,15 @@ void main() {
       }
       addTearDown(closeClients);
       final suffix = DateTime.now().microsecondsSinceEpoch.toString();
+      late _BookingTransport bookingTransport;
       Future<SupabaseClient> actor(String role) async {
         // Disposable password signups do not use browser PKCE redirects/storage.
         final transport = HttpClient()..idleTimeout = Duration.zero;
         transports.add(transport);
-        final client = SupabaseClient(api, anon, httpClient: IOClient(transport),
+        final io = IOClient(transport);
+        if (role == 'outsider') bookingTransport = _BookingTransport(io);
+        final client = SupabaseClient(api, anon,
+          httpClient: role == 'outsider' ? bookingTransport : io,
           authOptions: const AuthClientOptions(
           authFlowType: AuthFlowType.implicit, autoRefreshToken: false));
         clients.add(client);
@@ -58,6 +109,10 @@ void main() {
       }
       late SupabaseClient fleet, owner, mechanic, outsider;
       late String company, shop, mechanicId;
+      final storage = _MemoryBookingStorage();
+      late GarageBookingRepository bookings;
+      late String bookingKey;
+      late Future<String> Function() sendBooking;
       final garageName = 'Flutter Garage $suffix';
       final fleetName = 'Flutter Fleet $suffix';
       final title = 'Flutter brake defect $suffix';
@@ -80,26 +135,22 @@ void main() {
           'p_workspace': shop, 'p_city': 'FlutterQA$suffix', 'p_time_zone': 'Europe/London',
           'p_services': ['brakes'], 'p_duration': 60, 'p_listed': true,
         });
-        // Exercise the actual Dart repository transport, not only JS RPC calls.
-        final bookings = GarageBookingRepository(outsider);
-        final requestKey = newBookingRequestKey();
+        bookings = GarageBookingRepository(outsider);
+        final firstScreenRepository = GarageBookingRepository(outsider,
+          recoveryJournal: BookingRecoveryJournal(storage));
+        bookingKey = newBookingRequestKey();
         final preferred = DateTime.now().toUtc().add(const Duration(days: 2));
-        Future<String> sendBooking() => bookings.request(
+        Future<String> submit(GarageBookingRepository repository) => repository.request(
           workspaceId: shop, customerName: 'Flutter private customer',
           vehicleMake: 'Ford', vehicleModel: 'Focus', service: 'brakes',
           concern: 'Flutter durable request', desiredStart: preferred,
-          requestKey: requestKey,
+          requestKey: bookingKey,
         );
-        final bookingId = await sendBooking();
-        expect(await bookings.cancel(bookingId), GarageBookingStatus.withdrawn);
-        expect(await sendBooking(), bookingId);
-        final history = await bookings.myRequests();
-        expect(history, hasLength(1));
-        expect(history.single.status, GarageBookingStatus.withdrawn);
-        final token = await owner.rpc('garage_issue_staff_invite', params: {
-          'p_workspace_id': shop, 'p_email': mechanic.auth.currentUser!.email, 'p_role': 'mechanic',
-        });
-        await mechanic.rpc('garage_accept_staff_invite', params: {'p_token': token});
+        sendBooking = () => submit(bookings);
+        bookingTransport.dropNextBookingResponse = true;
+        await expectLater(submit(firstScreenRepository), throwsA(isA<http.ClientException>()));
+        expect(bookingTransport.bookingPosts, 1);
+        expect(firstScreenRepository.pendingRequests().single.requestKey, bookingKey);
         mechanicId = mechanic.auth.currentUser!.id;
       });
       expect(tester.takeException(), isNull);
@@ -129,6 +180,73 @@ void main() {
         await tester.pumpWidget(MaterialApp(key: UniqueKey(), home: screen));
         await tester.pump();
       }
+      // Reconstruct the Flutter screen with the persisted marker and an actual
+      // authenticated PostgREST client. Checking the outcome must not resend.
+      final resumedBookings = GarageBookingRepository(outsider,
+        recoveryJournal: BookingRecoveryJournal(storage));
+      await mount(Builder(builder: (context) =>
+        GarageBookingSearchScreen.forRepository(resumedBookings,
+          onViewBookings: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) =>
+              GarageMyBookingsScreen.forRepository(resumedBookings))),
+        ),
+      ));
+      await see(find.byKey(const Key('booking_pending_recovery')), 'pending booking');
+      await tap(find.byKey(const Key('booking_recovery_resolve')));
+      await see(find.byKey(const Key('booking_recovery_outcome')), 'recorded booking');
+      expect(find.byKey(const Key('booking_recovery_history')), findsOneWidget);
+      expect(resumedBookings.pendingRequests(), isEmpty);
+      expect(bookingTransport.bookingPosts, 1);
+      await tap(find.byKey(const Key('booking_recovery_history')));
+      await see(find.byType(GarageMyBookingsScreen), 'booking history navigation');
+      await tester.runAsync(() async {
+        final booking = (await bookings.myRequests()).single;
+        expect(booking.status, GarageBookingStatus.requested);
+        expect(await bookings.cancel(booking.id), GarageBookingStatus.withdrawn);
+        expect(await sendBooking(), booking.id);
+        expect((await bookings.myRequests()).single.status, GarageBookingStatus.withdrawn);
+      });
+      expect(tester.takeException(), isNull);
+
+      // Issue from the Flutter form, then accept from a separately authenticated
+      // account and verify the server membership through the real module chooser.
+      final ownerRepository = GarageWorkspaceRepository(owner);
+      await mount(GarageStaffInvitationScreen(
+        issue: true,
+        isCurrentAccount: () => owner.auth.currentUser != null,
+        submit: (email, role) => ownerRepository.issueStaffInvitation(
+          workspaceId: shop, email: email, role: role),
+      ));
+      const invitationInput = Key('garage_staff_invitation_input');
+      const invitationSubmit = Key('garage_staff_invitation_submit');
+      const issuedCode = Key('garage_staff_issued_code');
+      await tester.enterText(find.byKey(invitationInput), mechanic.auth.currentUser!.email!);
+      await tap(find.byKey(invitationSubmit));
+      await see(find.byKey(issuedCode), 'issued staff code');
+      final code = tester.widget<SelectableText>(find.byKey(issuedCode)).data!;
+      await tester.runAsync(() async {
+        await expectLater(GarageWorkspaceRepository(outsider).acceptStaffInvitation(code),
+          throwsA(isA<PostgrestException>().having((e) => e.code, 'code', '42501')));
+      });
+      expect(tester.takeException(), isNull);
+
+      final mechanicRepository = GarageWorkspaceRepository(mechanic);
+      await mount(EcosystemGate(
+        loadAccess: EcosystemAccessRepository.forClient(mechanic).load,
+        signOut: () => mechanic.auth.signOut(),
+        destinationBuilder: (_) => const SizedBox.shrink(),
+        acceptInvitationBuilder: (_) => GarageStaffInvitationScreen(
+          issue: false,
+          isCurrentAccount: () => mechanic.auth.currentUser?.id == mechanicId,
+          submit: (value, _) => mechanicRepository.acceptStaffInvitation(value),
+        ),
+      ));
+      await tap(find.byKey(const Key('ecosystem_accept_staff_invitation')));
+      await see(find.byKey(invitationInput), 'acceptance form');
+      await tester.enterText(find.byKey(invitationInput), code);
+      await tap(find.byKey(invitationSubmit));
+      await see(find.byKey(Key('ecosystem_$shop')), 'mechanic membership after acceptance');
+
       Widget connections(SupabaseClient client, bool isFleet) => GarageBridgeConnectionsScreen.forClient(
         client: client, scopeId: isFleet ? company : shop, fleet: isFleet);
       Widget requests(SupabaseClient client, bool isFleet) => GarageRepairRequestsScreen.forClient(
