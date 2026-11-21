@@ -127,6 +127,7 @@ def fetch_public(path, expected, nonce):
 def verify_public(approval, phase, attempts, report_path, fetcher=fetch_public, pause=time.sleep):
     if not 1 <= attempts <= 12:
         raise PreparationError('Verification attempts must be between 1 and 12')
+    package_digest = approval['package_sha256']
     expected = expected_files(approval, phase)
     # Check the real entry URLs as well as every archived file.
     for route, file in {'': 'index.html', 'start/': 'start/index.html',
@@ -146,7 +147,7 @@ def verify_public(approval, phase, attempts, report_path, fetcher=fetch_public, 
             pause(10)
     report = {'status': 'VERIFIED' if not pending else 'HOLD', 'phase': phase,
               'origin': ORIGIN, 'checked_at': datetime.now(timezone.utc).isoformat(),
-              'approved_package_sha256': APPROVED_PACKAGE, 'attempts': attempt,
+              'approved_package_sha256': package_digest, 'attempts': attempt,
               'verified_files_and_routes': sum(row['ok'] for row in results.values()),
               'results': [results[name] for name in sorted(results)]}
     Path(report_path).write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')

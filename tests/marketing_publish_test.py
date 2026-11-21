@@ -11,6 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import publish_approved_marketing as release
+import publish_fleet_first_marketing as fleet_first
 
 MANIFEST = ROOT / 'docs/releases/2026-11-18-approved-marketing.json'
 DIGEST = 'bd4c33351ee042ebf0169c127846e4ca97b6a8f841dd599638c7ea30adbb972a'
@@ -89,6 +90,23 @@ class ApprovedMarketingTests(unittest.TestCase):
         result = release.verify_public(self.approval, 'release', 1, self.root / 'report.json', fetcher=fetch)
         self.assertEqual(result['verified_files_and_routes'], 165)
         self.assertTrue({'', 'start/', 'install/', 'app/', 'app/.last_build_id'} <= set(calls))
+
+    def test_verification_reports_identify_the_active_package(self):
+        def fetch(path, expected, nonce):
+            return {'path': path, 'ok': True, **expected}
+
+        for contract in (self.approval, fleet_first.release_contract(self.approval)):
+            for phase in ('baseline', 'release'):
+                with self.subTest(package=contract['package_sha256'], phase=phase):
+                    report_path = self.root / 'report.json'
+                    summary = release.verify_public(
+                        contract, phase, 1, report_path, fetcher=fetch,
+                    )
+                    report = json.loads(report_path.read_text())
+                    self.assertEqual(summary['approved_package_sha256'], contract['package_sha256'])
+                    self.assertEqual(report['approved_package_sha256'], contract['package_sha256'])
+                    self.assertEqual(report['phase'], phase)
+                    self.assertEqual(report['verified_files_and_routes'], 165)
 
     def test_changed_production_is_a_hold_and_evidence_is_retained(self):
         def fetch(path, expected, nonce):
