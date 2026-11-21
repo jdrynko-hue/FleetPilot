@@ -1,15 +1,11 @@
 name: FleetPilot - 12 Languages Product Website
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fleetpilot-website-12-languages.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: fleetpilot-12-language-release
@@ -17,6 +13,8 @@ concurrency:
 
 jobs:
   publish-translations:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

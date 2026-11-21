@@ -1,15 +1,11 @@
 name: Flotaryx - Website Homepage and App Portal
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-homepage-release.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: flotaryx-homepage-release
@@ -17,6 +13,8 @@ concurrency:
 
 jobs:
   publish-homepage-and-app:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

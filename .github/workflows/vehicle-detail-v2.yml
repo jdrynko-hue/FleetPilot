@@ -1,17 +1,16 @@
 name: Vehicle Detail V2
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/vehicle-detail-v2.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   build:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:

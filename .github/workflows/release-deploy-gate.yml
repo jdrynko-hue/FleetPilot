@@ -3,12 +3,10 @@ name: Verify manual production release gate
 on:
   pull_request:
     paths:
-      - '.github/workflows/deploy.yml'
-      - '.github/workflows/release-deploy-gate.yml'
+      - '.github/workflows/**'
       - 'tests/release_deploy_gate.test.mjs'
       - 'tests/legacy_release_guard.test.mjs'
-      - '.github/workflows/flotaryx-billing-oneclick.yml'
-      - '.github/workflows/flotaryx-billing-fixed-installer.yml'
+      - 'tests/fixtures/archived_installers.json'
   workflow_dispatch:
 
 permissions:

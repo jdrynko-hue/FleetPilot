@@ -1,16 +1,16 @@
 name: Run Fixed Localization 2
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/run-localization-fixed2.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   localization:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:

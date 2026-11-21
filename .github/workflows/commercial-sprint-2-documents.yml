@@ -1,17 +1,16 @@
 name: Commercial Sprint 2 Documents
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/commercial-sprint-2-documents.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   documents:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

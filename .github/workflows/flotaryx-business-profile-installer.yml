@@ -1,14 +1,11 @@
 name: Flotaryx - Install Business Verification Form
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-business-profile-installer.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-business-profile-installer
@@ -16,6 +13,8 @@ concurrency:
 
 jobs:
   install:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

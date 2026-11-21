@@ -1,17 +1,16 @@
 name: FleetPilot UI v2
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/upgrade-ui.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   redesign:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:

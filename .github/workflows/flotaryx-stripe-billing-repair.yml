@@ -1,14 +1,11 @@
 name: Flotaryx - Repair and Publish Sandbox Billing
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-stripe-billing-repair.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-stripe-billing-repair
@@ -16,6 +13,8 @@ concurrency:
 
 jobs:
   repair-and-publish:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

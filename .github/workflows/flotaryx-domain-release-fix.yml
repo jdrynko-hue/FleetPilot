@@ -1,15 +1,11 @@
 name: Flotaryx - Verified Domain Activation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-domain-release-fix.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: flotaryx-domain-release-fixed
@@ -17,6 +13,8 @@ concurrency:
 
 jobs:
   configure-test-release:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

@@ -6,22 +6,32 @@ This is a **release gate**, not evidence that Fleet, Garage or Booking is ready 
 
 QA approval does not authorize production deployment or Stripe Live. Production web publishing requires explicit separate owner approval. Full application releases use Deploy Flotaryx, manually triggered from main with the exact confirm_release input PUBLISH-FLOTARYX. The separately approved marketing-only package uses [the checksum-pinned manual publisher](publish-approved-marketing.md). A merge to main must not publish the site automatically.
 
-## Archived billing installer safety
+## Archived installer safety
 
-The old `.github/workflows/flotaryx-billing-oneclick.yml` and
-`.github/workflows/flotaryx-billing-fixed-installer.yml` must remain
-**explicitly disabled and read-only**. The former could deploy GitHub Pages
-directly without the primary `Deploy Flotaryx` confirmation; both had
-repository write capability. The `release-deploy-gate.yml` tests reject
-restoring these permissions or triggering those jobs.
+The 45 historical installers listed in
+`tests/fixtures/archived_installers.json` must remain **explicitly disabled
+and read-only**. These include the two previously archived billing
+installers and 43 former repository-writing workflows. They contain old
+code generators, archive extraction, direct pushes or publishing steps
+that could overwrite reviewed source. Their historical job bodies are
+retained for reference; every job has a constant false condition, the only
+trigger is manual dispatch, and the only token grant is `contents: read`.
+Do not run or reactivate them to deploy an update.
 
-**Residual risk:** Other historical installer workflows may still have
-`contents: write` or `git push origin HEAD:main`. An explicit manual
-Pages gate prevents automatic publication by the main deployment workflow,
-but it does not prevent privileged historical workflows from changing
-repository contents. Review and retire them; configure GitHub branch
-protection/rulesets and environment reviewers before commercial launch.
-No test or documentation change alone can enforce these GitHub settings.
+`release-deploy-gate.yml` runs for changes to any workflow or the archive
+inventory. It checks every archived job and rejects unlisted workflows
+that grant repository writes or contain direct `git push` commands. The
+guard intentionally accepts only the canonical archive YAML envelope;
+alternate syntax requires a deliberate review of the guard as well.
+
+**Residual risk:** This removes the known repository-writing installers,
+not every possible privileged action. Other manual operational workflows
+using service secrets still need a separate review. Configure GitHub
+branch protection/rulesets and environment reviewers before commercial
+launch. Tests cannot enforce repository settings or detect arbitrary
+obfuscated write commands; the manual Pages gate is not a substitute for
+those controls. Existing reminder schedules and the reviewed deployment
+workflows are not changed by this archive operation.
 
 ## Mandatory launch gates
 

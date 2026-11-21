@@ -1,15 +1,11 @@
 name: FleetPilot - Multi Industry Website Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fleetpilot-multi-industry-site.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: fleetpilot-site-release
@@ -17,6 +13,8 @@ concurrency:
 
 jobs:
   publish-product-website:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

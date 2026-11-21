@@ -1,17 +1,16 @@
 name: FleetPilot - Installable App and Public Website
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fleetpilot-app-release.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   prepare-web-app:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

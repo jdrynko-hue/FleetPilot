@@ -1,18 +1,16 @@
 name: FleetPilot Email Test Button
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fleetpilot-email-test-button.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   install:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

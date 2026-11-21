@@ -1,17 +1,16 @@
 name: FleetPilot Driver Checks UI Fixed
 
 on:
-  push:
-    paths:
-      - ".github/workflows/fleetpilot-driver-checks-ui-fixed.yml"
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   driver_checks:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

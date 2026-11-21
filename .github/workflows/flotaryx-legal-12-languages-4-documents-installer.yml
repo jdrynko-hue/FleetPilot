@@ -3,8 +3,9 @@ name: Flotaryx — Install Multilingual Legal Pages
 on:
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-multilingual-legal-installer
@@ -12,6 +13,8 @@ concurrency:
 
 jobs:
   install:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

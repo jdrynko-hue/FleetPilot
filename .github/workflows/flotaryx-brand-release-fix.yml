@@ -1,14 +1,11 @@
 name: Flotaryx - Verified Brand Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-brand-release-fix.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-brand-release-fix
@@ -16,6 +13,8 @@ concurrency:
 
 jobs:
   brand-and-publish:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

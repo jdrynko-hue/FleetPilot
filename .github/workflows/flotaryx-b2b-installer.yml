@@ -1,14 +1,11 @@
 name: Flotaryx B2B Checkout Installer
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-b2b-installer.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-b2b-installer
@@ -16,6 +13,8 @@ concurrency:
 
 jobs:
   install-b2b:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

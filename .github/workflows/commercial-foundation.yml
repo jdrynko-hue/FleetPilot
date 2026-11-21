@@ -1,17 +1,16 @@
 name: FleetPilot Commercial Foundation
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/commercial-foundation.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   commercial:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:

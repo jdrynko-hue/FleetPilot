@@ -1,15 +1,11 @@
 name: Flotaryx - Activate Custom Domain
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-domain-release.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: flotaryx-domain-activation
@@ -17,6 +13,8 @@ concurrency:
 
 jobs:
   migrate-and-verify:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
