@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 PROJECT_REF = "wqhymmtiawfwjikdaujo"
 APP_REDIRECT = "https://flotaryx.com/app/"
 QA_PROJECT_REF = "fyestmquqvkdebxxbcky"
+QA_CALLBACK_PATHS = ("/app/", "/booking-recovery-qa/")
 
 
 def qa_redirects(callback):
@@ -17,13 +18,13 @@ def qa_redirects(callback):
         url = urlsplit(callback)
         valid = (url.scheme == "https" and url.hostname
                  and url.hostname.endswith(".chatgpt.site")
-                 and url.netloc == url.hostname and url.path == "/app/"
+                 and url.netloc == url.hostname and url.path in QA_CALLBACK_PATHS
                  and not url.query and not url.fragment
                  and not any(c.isspace() or c in "*?#[\\]" for c in callback))
     except ValueError:
         valid = False
     if not valid:
-        raise ValueError("QA requires an exact HTTPS Sites /app/ callback")
+        raise ValueError("QA requires an exact HTTPS Sites /app/ or /booking-recovery-qa/ callback")
     return (callback, *(callback + "?portal=" + portal
                         for portal in ("fleet", "garage", "customer", "search")))
 
@@ -50,7 +51,8 @@ def main(argv=None):
     parser.add_argument("--apply", action="store_true",
                         help="Apply the required production Auth policy corrections")
     parser.add_argument("--environment", choices=("production", "qa"), default="production")
-    parser.add_argument("--qa-callback", help="Exact reviewed QA HTTPS Sites /app/ return URL")
+    parser.add_argument("--qa-callback", action="append",
+                        help="Exact reviewed HTTPS Sites return URL; repeat for each QA mount")
     args = parser.parse_args(argv)
     required = (APP_REDIRECT,)
     project = PROJECT_REF
@@ -60,7 +62,8 @@ def main(argv=None):
         if not args.qa_callback:
             parser.error("QA verification requires --qa-callback")
         try:
-            required = qa_redirects(args.qa_callback)
+            required = tuple(dict.fromkeys(url for callback in args.qa_callback
+                                           for url in qa_redirects(callback)))
         except ValueError as error:
             parser.error(str(error))
         project = QA_PROJECT_REF

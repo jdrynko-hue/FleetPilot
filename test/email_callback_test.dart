@@ -35,12 +35,22 @@ void main() {
       portal: 'https://evil.example/'), preview);
     expect(authEmailCallback(backendUrl: qa, configuredQaCallback: preview), preview);
   });
+  test('Booking QA stays on its reviewed mount and preserves customer navigation', () {
+    const booking = 'https://qa-preview.example.chatgpt.site/booking-recovery-qa/';
+    expect(authEmailCallback(backendUrl: qa, configuredQaCallback: booking,
+      portal: 'customer'), '$booking?portal=customer');
+    expect(authEmailCallback(backendUrl: qa, configuredQaCallback: booking), booking);
+  });
   for (final invalid in ['', 'https://flotaryx.com/app/',
     'https://www.flotaryx.com/app/', 'https://flotaryx.com./app/',
     'http://qa.example/app/',
     'https://user:secret@qa.example/app/', 'https://qa.example:8443/app/',
     'https://qa.example/', 'https://qa.example/app/?redirect=https://evil.example',
-    'https://qa.example/app/#access_token=private']) {
+    'https://qa.example/app/#access_token=private',
+    'https://qa.example/booking-recovery-qa/',
+    'https://qa.chatgpt.site:443/booking-recovery-qa/',
+    'https://qa.chatgpt.site/booking-recovery-qa/?portal=customer',
+    'https://*.chatgpt.site/booking-recovery-qa/']) {
     test('QA rejects unsafe or missing callback: $invalid', () {
       expect(() => authEmailCallback(backendUrl: qa, configuredQaCallback: invalid),
         throwsStateError);

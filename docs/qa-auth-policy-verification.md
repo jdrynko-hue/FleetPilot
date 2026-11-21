@@ -5,10 +5,13 @@ existing authorized Supabase management token (never put it in a command or log)
 
 ```sh
 python3 scripts/verify_auth_policy.py --environment qa \
-  --qa-callback https://REVIEWED-PREVIEW.chatgpt.site/app/
+  --qa-callback https://REVIEWED-PREVIEW.chatgpt.site/app/ \
+  --qa-callback https://REVIEWED-PREVIEW.chatgpt.site/booking-recovery-qa/
 ```
 
-Replace the example hostname with the exact reviewed preview hostname. This
+Pass only the reviewed callback for each candidate you are checking. The option
+can be repeated to check both mounts in one read. Replace the example hostname
+with the exact reviewed preview hostname. This
 reads only QA project `fyestmquqvkdebxxbcky`; `--apply` is rejected before any
 request. Production remains the default for existing callers, with its existing
 separate opt-in correction behavior. A QA callback cannot be passed to the
