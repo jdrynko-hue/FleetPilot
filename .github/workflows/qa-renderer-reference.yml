@@ -1,0 +1,59 @@
+name: Record the Flutter 3.47.7 renderer reference
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-renderer-reference.yml'
+      - 'tools/qa_renderer_reference.py'
+      - 'tests/qa_renderer_reference_test.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record-renderer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FLUTTER_VERSION: '3.47.7'
+      FLUTTER_FRAMEWORK: abaf9c523780a608bd46686fd5e53740a07077f8
+      FLUTTER_ENGINE: deb287481e3ce9468f3434937ced4240a70539ca
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test reading renderer ZIPs and rejecting malformed inputs
+        run: python3 -B tests/qa_renderer_reference_test.py -v
+      - name: Read the official renderer without running the old SDK
+        shell: bash
+        run: |
+          sdk_url="https://storage.googleapis.com/flutter_infra_release/flutter/$FLUTTER_ENGINE/flutter-web-sdk.zip"
+          archive="$RUNNER_TEMP/flutter-web-sdk.zip"
+          evidence="$RUNNER_TEMP/renderer-reference"
+          curl --proto '=https' --fail --silent --show-error --max-time 90 --max-filesize 200000000 "$sdk_url" -o "$archive"
+          mkdir "$evidence"
+          python3 -B tools/qa_renderer_reference.py "$archive" "$evidence/renderer-inventory.json" | tee "$evidence/receipt.json"
+          python3 - "$archive" "$evidence/vendor.json" "$sdk_url" <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import sys
+          with open(sys.argv[1], 'rb') as source:
+              archive_hash = hashlib.file_digest(source, 'sha256').hexdigest()
+          Path(sys.argv[2]).write_text(json.dumps({
+              'flutter_version': os.environ['FLUTTER_VERSION'],
+              'framework_revision': os.environ['FLUTTER_FRAMEWORK'],
+              'engine_revision': os.environ['FLUTTER_ENGINE'],
+              'archive_url': sys.argv[3],
+              'observed_archive_sha256': archive_hash,
+          }, indent=2) + '\n')
+          PY
+      - name: Retain only the public reference digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-3477-renderer-reference
+          path: ${{ runner.temp }}/renderer-reference
+          if-no-files-found: error
+          retention-days: 7
