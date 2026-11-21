@@ -5,6 +5,7 @@ The external manifest digest must come from an independently retained record.
 Declared source identifiers are claims, not proof of source/build equivalence.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -87,6 +88,47 @@ def verify(root, trusted_digest):
     }
 
 
+def comparison_input(path, trusted_digest, prefix):
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise PreparationError('Comparison requires a regular manifest file')
+    data = path.read_bytes()
+    if (not isinstance(trusted_digest, str) or not SHA256.fullmatch(trusted_digest)
+            or hashlib.sha256(data).hexdigest() != trusted_digest):
+        raise PreparationError('Manifest does not match the independently retained SHA-256')
+    value = validate(json.loads(data.decode('utf-8'), object_pairs_hook=unique_object))
+    files = value['files']
+    if prefix is not None:
+        directory = checked_path(prefix) + '/'
+        files = {name[len(directory):]: entry for name, entry in files.items()
+                 if name.startswith(directory)}
+        if not files:
+            raise PreparationError('Selected portal prefix contains no files')
+    return files, {
+        'manifest_sha256': trusted_digest,
+        'prefix': prefix,
+        'file_count': len(files),
+        'declared_source_commit': value['declared_source_commit'],
+        'declared_source_tree': value['declared_source_tree'],
+    }
+
+
+def compare(*, left_manifest, left_digest, right_manifest, right_digest,
+            left_prefix=None, right_prefix=None):
+    left, left_context = comparison_input(left_manifest, left_digest, left_prefix)
+    right, right_context = comparison_input(right_manifest, right_digest, right_prefix)
+    common = left.keys() & right.keys()
+    changed = sorted(name for name in common if left[name] != right[name])
+    return {
+        'left': left_context, 'right': right_context,
+        'left_only': sorted(left.keys() - right.keys()),
+        'right_only': sorted(right.keys() - left.keys()),
+        'changed': changed,
+        'equal_count': len(common) - len(changed),
+        'deployment_authorized': False, 'source_identity_verified': False,
+    }
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -97,15 +139,27 @@ def main(argv=None):
     check = commands.add_parser('verify')
     check.add_argument('--root', required=True)
     check.add_argument('--manifest-sha256', required=True)
+    diff = commands.add_parser('compare')
+    for side in ('left', 'right'):
+        diff.add_argument(f'--{side}-manifest', required=True)
+        diff.add_argument(f'--{side}-sha256', required=True)
+        diff.add_argument(f'--{side}-prefix')
     args = parser.parse_args(argv)
     try:
         if args.command == 'create':
             result = create(args.root, source_commit=args.declared_source_commit,
                             source_tree=args.declared_source_tree)
+        elif args.command == 'compare':
+            result = compare(
+                left_manifest=args.left_manifest, left_digest=args.left_sha256,
+                right_manifest=args.right_manifest, right_digest=args.right_sha256,
+                left_prefix=args.left_prefix, right_prefix=args.right_prefix,
+            )
         else:
             result = verify(args.root, args.manifest_sha256)
         print(json.dumps(result, indent=2, sort_keys=True))
-        return int(any(result.get(key) for key in ('missing', 'unexpected', 'changed')))
+        return int(any(result.get(key) for key in
+                       ('missing', 'unexpected', 'changed', 'left_only', 'right_only')))
     except (OSError, ValueError) as error:
         print(f'FAIL: {error}', file=sys.stderr)
         return 1

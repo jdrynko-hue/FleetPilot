@@ -46,6 +46,24 @@ byte-for-byte reproducibility of every build input.
 
 For an existing private preview, preserve the original archive and manifest,
 compare all bytes and document any intentional portal/base-path transformation.
+When both inventories have already been verified against their own archives,
+compare a nested portal with a separately built artifact without extracting
+the bytes again:
+
+```sh
+python3 tools/qa_artifact_integrity.py compare \
+  --left-manifest /private/preview-inventory.json --left-sha256 "$PREVIEW_DIGEST" \
+  --left-prefix mounted-portal \
+  --right-manifest /private/ci-inventory.json --right-sha256 "$CI_DIGEST"
+```
+
+Each prefix selects a directory and strips that prefix only for path matching.
+Omit it to compare the whole inventory. Both saved digests are validated before
+comparison. Reports list differing common paths and paths exclusive to each
+side. Any difference or invalid input returns a nonzero exit code. The report
+cannot verify downloaded file bytes or establish which build inputs produced
+them. Keep private comparison output outside the public repository.
+
 Prepare the new inventory in a separate candidate only after reviewing those
 differences. Checksums alone do not establish source/build equivalence, backend
 versions, migrations, Auth callback correctness, access controls or deployment
