@@ -206,6 +206,71 @@ class QaArtifactIntegrityTests(unittest.TestCase):
         self.assertEqual(receipt['file_count'], 5)
         self.assertEqual(qa.verify(self.root, receipt['manifest_sha256'])['changed'], [])
 
+    def comparison_command(self):
+        left = qa.create(self.root, source_commit='a' * 40, source_tree='b' * 40)
+        right_root = self.root.parent / 'comparison'
+        right_root.mkdir()
+        (right_root / '.last_build_id').write_bytes(b'build-id')
+        (right_root / 'main.dart.js').write_bytes(b'COMPILED')
+        (right_root / 'only-right.css').write_bytes(b'new')
+        right = qa.create(right_root)
+        return [sys.executable, '-B', qa.__file__, 'compare',
+                '--left-manifest', str(self.root / qa.MANIFEST),
+                '--left-sha256', left['manifest_sha256'],
+                '--right-manifest', str(right_root / qa.MANIFEST),
+                '--right-sha256', right['manifest_sha256']]
+
+    def test_compare_rebases_portal_and_reports_all_drift_without_qualification(self):
+        self.write('app/only-left.css', b'old')
+        self.write('app-other/ignored.js', b'outside')
+        command = self.comparison_command() + ['--left-prefix', 'app']
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report['equal_count'], 1)
+        self.assertEqual(report['left_only'], ['only-left.css'])
+        self.assertEqual(report['changed'], ['main.dart.js'])
+        self.assertEqual(report['right_only'], ['only-right.css'])
+        self.assertEqual(report['left']['file_count'], 3)
+        self.assertEqual(report['right']['file_count'], 3)
+        self.assertEqual(report['left']['declared_source_commit'], 'a' * 40)
+        self.assertIsNone(report['right']['declared_source_commit'])
+        self.assertFalse(report['source_identity_verified'])
+        self.assertFalse(report['deployment_authorized'])
+
+    def test_equal_portal_at_two_prefixes_does_not_compare_outside_scope(self):
+        self.write('mirror/.last_build_id', b'build-id')
+        self.write('mirror/main.dart.js', b'compiled')
+        trusted = self.seal()
+        path = self.root / qa.MANIFEST
+        report = qa.compare(left_manifest=path, left_digest=trusted, left_prefix='app',
+                            right_manifest=path, right_digest=trusted, right_prefix='mirror')
+        self.assertEqual(report['equal_count'], 2)
+        self.assertEqual([report[k] for k in ('left_only', 'right_only', 'changed')], [[], [], []])
+        self.assertFalse(report['source_identity_verified'])
+
+    def test_compare_requires_both_external_digests(self):
+        command = self.comparison_command()
+        for side in ('left', 'right'):
+            changed = command.copy()
+            changed[changed.index(f'--{side}-sha256') + 1] = '0' * 64
+            result = subprocess.run(changed, capture_output=True, text=True)
+            with self.subTest(side=side):
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stdout, '')
+                self.assertIn('independently retained SHA-256', result.stderr)
+
+    def test_compare_refuses_invalid_or_unmatched_prefix(self):
+        command = self.comparison_command()
+        for prefix in ('../app', '/app', 'app/', 'missing', ''):
+            result = subprocess.run(command + ['--left-prefix', prefix],
+                                    capture_output=True, text=True)
+            with self.subTest(prefix=prefix):
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stdout, '')
+                self.assertIn('portal prefix' if prefix == 'missing' else 'artifact path',
+                              result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
