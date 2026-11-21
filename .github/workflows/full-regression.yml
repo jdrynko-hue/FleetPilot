@@ -69,6 +69,8 @@ jobs:
         run: flutter test test/vehicle_insurance_test.dart test/garage_booking_time_text_test.dart test/garage_booking_local_start_test.dart test/garage_booking_screens_test.dart test/garage_resource_calendar_screen_test.dart --reporter expanded
       - name: Run all Flutter tests
         run: flutter test --reporter expanded
+      - name: Verify durable booking markers in a real browser
+        run: flutter test --platform chrome test/browser/booking_recovery_storage_test.dart --reporter expanded
       - name: Verify QA-only ecosystem entry and private route cleanup
         run: >-
           flutter test test/ecosystem_auth_routes_test.dart test/ecosystem_access_test.dart test/email_callback_test.dart
@@ -97,6 +99,7 @@ jobs:
         run: >-
           flutter build web --release --no-web-resources-cdn --base-href "/app/"
           --dart-define=FLOTARYX_ECOSYSTEM_QA=true
+          --dart-define=FLOTARYX_BOOKING_RECOVERY_QA=true
           --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
           --dart-define=QA_AUTH_CALLBACK_URL=https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/

@@ -4,6 +4,14 @@ import 'package:fleetpilot/core/app_config.dart';
 void main() {
   const qa = 'https://fyestmquqvkdebxxbcky.supabase.co';
   const production = 'https://wqhymmtiawfwjikdaujo.supabase.co';
+  test('booking recovery is QA-only and requires both explicit flags', () {
+    expect(AppConfig.bookingRecoveryEnabledFor(qa, qa: true, recovery: true), isTrue);
+    expect(AppConfig.bookingRecoveryEnabledFor(qa, qa: true), isFalse);
+    expect(AppConfig.bookingRecoveryEnabledFor(qa, recovery: true), isFalse);
+    for (final url in [production, '$qa/', '$qa.evil.test', 'https://example.test']) {
+      expect(AppConfig.bookingRecoveryEnabledFor(url, qa: true, recovery: true), isFalse);
+    }
+  });
   test('each deployment requires its own explicit opt-in', () {
     expect(AppConfig.ecosystemEnabledFor(qa), isFalse);
     expect(AppConfig.ecosystemEnabledFor(production), isFalse);

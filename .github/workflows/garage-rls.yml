@@ -15,6 +15,8 @@ on:
       - 'tests/repairbridge_fleet_fixture.sql'
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
+      - 'tests/garage_booking_recovery_rls.sql'
+      - 'tests/garage_booking_recovery_e2e.mjs'
       - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
@@ -39,6 +41,8 @@ on:
       - 'tests/repairbridge_fleet_fixture.sql'
       - 'tests/garage_repairbridge_e2e.mjs'
       - 'tests/garage_consumer_bookings_rls.sql'
+      - 'tests/garage_booking_recovery_rls.sql'
+      - 'tests/garage_booking_recovery_e2e.mjs'
       - 'tests/garage_booking_incremental_upgrade.sql'
       - 'tests/garage_consumer_bookings_e2e.mjs'
       - 'tests/garage_resource_calendar_rls.sql'
@@ -101,6 +105,7 @@ jobs:
             -f tests/garage_quote_approval_rls.sql \
             -f tests/garage_repairbridge_rls.sql \
             -f tests/garage_consumer_bookings_rls.sql \
+            -f tests/garage_booking_recovery_rls.sql \
             -f tests/garage_resource_calendar_rls.sql \
             -f tests/garage_mechanic_roster_rls.sql
       - name: Verify read-only Garage API metadata and deliberate drift
@@ -163,6 +168,11 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/013_booking_durable_request_keys.sql" supabase/migrations/20261016000013_booking_durable_request_keys.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/014_booking_confirmation_replay.sql" supabase/migrations/20261016000014_booking_confirmation_replay.sql
           cp "$GITHUB_WORKSPACE/supabase/garage_staging/015_booking_profile_owner_read.sql" supabase/migrations/20261016000015_booking_profile_owner_read.sql
+          # Generate the disposable migration name with the pinned CLI.
+          supabase migration new booking_request_recovery
+          recovery_migration=(supabase/migrations/*_booking_request_recovery.sql)
+          test "${#recovery_migration[@]}" -eq 1
+          cp "$GITHUB_WORKSPACE/supabase/garage_staging/proposals/booking_request_recovery.sql" "${recovery_migration[0]}"
           # GoTrue signup on loopback must issue a session without contacting
           # external email providers. Never change this in hosted production.
           sed -i 's/^enable_confirmations = true$/enable_confirmations = false/' \
@@ -196,6 +206,7 @@ jobs:
           node "$GITHUB_WORKSPACE/tests/garage_local_supabase_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_repairbridge_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_consumer_bookings_e2e.mjs"
+          node "$GITHUB_WORKSPACE/tests/garage_booking_recovery_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_resource_calendar_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/garage_mechanic_roster_e2e.mjs"
           node "$GITHUB_WORKSPACE/tests/flotaryx_unified_ecosystem_e2e.mjs"
