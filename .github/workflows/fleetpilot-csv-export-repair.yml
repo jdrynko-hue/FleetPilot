@@ -1,17 +1,16 @@
 name: FleetPilot CSV Export Repair
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/fleetpilot-csv-export-repair.yml"
+  workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   repair:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

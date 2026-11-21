@@ -3,8 +3,9 @@ name: Flotaryx Live UI Safe Preparation
 on:
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-live-ui-safe-preparation
@@ -12,6 +13,8 @@ concurrency:
 
 jobs:
   prepare:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -1,14 +1,11 @@
 name: Flotaryx - Install Sandbox Billing UI
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/flotaryx-stripe-billing-install.yml'
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flotaryx-stripe-billing-install
@@ -16,6 +13,8 @@ concurrency:
 
 jobs:
   install-billing:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

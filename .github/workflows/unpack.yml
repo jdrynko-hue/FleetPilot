@@ -3,11 +3,14 @@ name: Unpack FleetPilot
 on:
   workflow_dispatch:
 
+# Archived installer; superseded by reviewed code and manual release workflows.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   unpack:
+    # Historical source only; never execute this installer.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:
