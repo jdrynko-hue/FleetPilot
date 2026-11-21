@@ -1,0 +1,102 @@
+name: Rebuild historical Booking for comparison
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/booking-qa-historical-compile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SOURCE_COMMIT: '075969492859870c88c7664704c65b471b43e411'
+      SOURCE_TREE: '4fad16c6dc4a00cf6bd2deab4accff95aadf4e6c'
+      LOCK_BLOB: '70d2f9368f332a72111982778dcf2431eb9e20b3'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: historical-booking
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+          cache: true
+      - name: Verify the source and official toolchain pins
+        run: |
+          test "$(git -C historical-booking rev-parse HEAD)" = "$SOURCE_COMMIT"
+          test "$(git -C historical-booking rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test "$(git hash-object historical-booking/pubspec.lock)" = "$LOCK_BLOB"
+          flutter --version --machine > "$RUNNER_TEMP/toolchain.json"
+          python3 - "$RUNNER_TEMP/toolchain.json" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          actual = json.loads(Path(sys.argv[1]).read_text())
+          expected = {
+              'frameworkVersion': '3.47.7',
+              'frameworkRevision': 'abaf9c523780a608bd46686fd5e53740a07077f8',
+              'engineRevision': 'deb287481e3ce9468f3434937ced4240a70539ca',
+              'channel': 'stable',
+          }
+          if any(actual.get(key) != value for key, value in expected.items()):
+              raise SystemExit('Flutter framework or engine does not match the reviewed pin')
+          PY
+      - name: Rebuild with the tracked lockfile and compile-only settings
+        working-directory: historical-booking
+        shell: bash
+        run: |
+          python3 -B ../tools/prepare_booking_qa.py stage web "$RUNNER_TEMP/booking-web"
+          mv web "$RUNNER_TEMP/source-web"
+          mv "$RUNNER_TEMP/booking-web" web
+          flutter pub get --enforce-lockfile
+          test "$(git hash-object pubspec.lock)" = "$LOCK_BLOB"
+          args=(
+            --release --no-web-resources-cdn --no-pub
+            --base-href /booking-recovery-qa/
+            --dart-define=FLOTARYX_ECOSYSTEM_QA=true
+            --dart-define=FLOTARYX_BOOKING_RECOVERY_QA=true
+            --dart-define=SUPABASE_URL=https://fyestmquqvkdebxxbcky.supabase.co
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_check_only
+          )
+          flutter build web "${args[@]}"
+          python3 -B ../tools/prepare_booking_qa.py check build/web
+          python3 - "${args[@]}" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          Path('build/web/qa-build-context.json').write_text(json.dumps({
+              'command': ['flutter', 'build', 'web', *sys.argv[1:]],
+              'historical_deployed_parameters_verified': False,
+              'auth_callback_configured': False,
+              'deployment_authorized': False,
+              'mode': 'compile-only',
+          }, indent=2) + '\n')
+          PY
+      - name: Record and verify every generated file
+        run: |
+          output=historical-booking/build/web
+          cp "$RUNNER_TEMP/toolchain.json" "$output/qa-build-toolchain.json"
+          cp historical-booking/pubspec.lock "$output/qa-build-pubspec.lock"
+          cp .github/workflows/booking-qa-historical-compile.yml "$output/qa-build-workflow.yml"
+          python3 -B tools/qa_artifact_integrity.py create --root "$output" \
+            --declared-source-commit "$SOURCE_COMMIT" --declared-source-tree "$SOURCE_TREE" > "$RUNNER_TEMP/receipt.json"
+          digest=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["manifest_sha256"])' < "$RUNNER_TEMP/receipt.json")
+          python3 -B tools/qa_artifact_integrity.py verify --root "$output" --manifest-sha256 "$digest"
+      - name: Retain the comparison build
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-booking-historical-compile
+          path: historical-booking/build/web
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
