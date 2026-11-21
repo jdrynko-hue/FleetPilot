@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'tests/flutter/**'
+      - 'tests/database_restore/**'
       - 'lib/**'
       - '.github/workflows/staging-single-session-qa.yml'
       - 'web/demo/session/**'
@@ -122,6 +123,8 @@ jobs:
         run: |
           cd "$GARAGE_QA_DIR"
           supabase start -x studio,analytics,imgproxy
+      - name: Rehearse database dump and restore with synthetic records
+        run: bash tests/database_restore/rehearse.sh
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
