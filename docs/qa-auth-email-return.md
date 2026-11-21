@@ -5,21 +5,22 @@ Production Auth settings must remain unchanged. The QA build uses the explicit
 signup/password-reset request before it reaches Auth; it never substitutes the
 production return URL.
 
-For the current private QA preview, the build define is:
+Use the exact currently reviewed private preview hostname. The hostname below
+is a placeholder, not a deployment target:
 
 ```
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/
+https://REVIEWED-PREVIEW.chatgpt.site/app/
 ```
 
 Before testing email confirmation or recovery, verify these exact allowed redirect
 URLs in the **QA** Supabase project's Auth URL Configuration:
 
 ```
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=fleet
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=garage
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=customer
-https://flotaryx-qa-preview.fairdrake9.chatgpt.site/app/?portal=search
+https://REVIEWED-PREVIEW.chatgpt.site/app/
+https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=fleet
+https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=garage
+https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=customer
+https://REVIEWED-PREVIEW.chatgpt.site/app/?portal=search
 ```
 
 Review QA email templates for hardcoded production destinations or `.SiteURL`
@@ -34,3 +35,6 @@ Verify account switching clears private screens. Do not publish this callback
 change to the private preview until the QA provider configuration is verified.
 
 Reference: https://supabase.com/docs/guides/auth/redirect-urls
+
+Run the [read-only QA configuration verifier](qa-auth-policy-verification.md)
+with that same reviewed callback before hosted acceptance tests.
