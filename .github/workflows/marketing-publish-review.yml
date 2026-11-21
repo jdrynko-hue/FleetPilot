@@ -49,19 +49,14 @@ jobs:
           --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
           --baseline "$RUNNER_TEMP/approved-baseline/site"
           --source-repo approved-source --output "$RUNNER_TEMP/approved-site"
-      - name: Verify that production still matches the approved rollback baseline
-        run: >-
-          python3 -B tools/publish_approved_marketing.py verify-public
-          --manifest "$APPROVAL_MANIFEST" --manifest-sha256 "$APPROVAL_SHA256"
-          --phase baseline --attempts 2 --report preflight.json
-      - name: Retain the reviewed site and preflight evidence
+      # This review reconstructs the historical release. Only its manual
+      # publisher checks live production against that release's old baseline.
+      - name: Retain the reconstructed historical site
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: approved-marketing-review-only
-          path: |
-            ${{ runner.temp }}/approved-site
-            preflight.json
+          path: ${{ runner.temp }}/approved-site
           include-hidden-files: true
           retention-days: 30
           if-no-files-found: error

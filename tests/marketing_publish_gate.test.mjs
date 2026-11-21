@@ -37,9 +37,10 @@ test('only deployment can publish after exact staging and public preflight', () 
   assert.match(workflow, /group: pages\n\s+cancel-in-progress: false/);
 });
 
-test('review workflow cannot publish or change the repository', () => {
+test('historical review reconstructs the package without contacting production', () => {
   const review = readFileSync('.github/workflows/marketing-publish-review.yml', 'utf8');
   assert.doesNotMatch(review, /pages: write|id-token: write|contents: write|deploy-pages|upload-pages-artifact/);
-  assert.match(review, /--phase baseline/);
+  assert.match(review, /publish_approved_marketing\.py stage/);
+  assert.doesNotMatch(review, /verify-public|preflight\.json/);
   assert.match(review, /include-hidden-files: true/);
 });
