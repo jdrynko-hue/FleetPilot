@@ -5,19 +5,31 @@ import '../auth/company_gate.dart';
 import '../auth/portal_entry.dart';
 import '../garage/garage_ui_text.dart';
 import '../garage/create_workspace_screen.dart';
+import '../core/app_config.dart';
+import '../garage/staff_invitation_screen.dart';
+import '../garage/workspace_repository.dart';
 import 'ecosystem_access.dart';
 import 'ecosystem_module_hub.dart';
 
 /// QA-only entry point. A private customer is never forced to create a fleet.
 class EcosystemGate extends StatefulWidget {
   const EcosystemGate({required this.loadAccess,
-    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, this.preferredPortal, super.key});
+    required this.destinationBuilder, required this.signOut, this.isCurrentAccount, this.createWorkshopBuilder, this.acceptInvitationBuilder, this.preferredPortal, super.key});
 
   factory EcosystemGate.forClient(SupabaseClient client, {Key? key, PortalEntry? preferredPortal, bool customerSearchFirst = false, String? customerCity, String? customerWorkshopId}) {
     final userId = client.auth.currentUser?.id;
     return EcosystemGate(key: key, preferredPortal: preferredPortal,
         createWorkshopBuilder: (routeContext) => GarageCreateWorkspaceScreen.forClient(
           client: client, onCreated: () => Navigator.of(routeContext).pop()),
+        acceptInvitationBuilder: AppConfig.ecosystemQaEnabled
+            ? (_) => GarageStaffInvitationScreen(
+                issue: false,
+                isCurrentAccount: () => userId != null &&
+                    client.auth.currentUser?.id == userId,
+                submit: (code, _) =>
+                    GarageWorkspaceRepository(client).acceptStaffInvitation(code),
+              )
+            : null,
         isCurrentAccount: () => userId != null && client.auth.currentUser?.id == userId,
         loadAccess: EcosystemAccessRepository.forClient(client).load,
         signOut: () => client.auth.signOut(),
@@ -34,6 +46,7 @@ class EcosystemGate extends StatefulWidget {
   final Future<void> Function() signOut;
   final bool Function()? isCurrentAccount;
   final WidgetBuilder? createWorkshopBuilder;
+  final WidgetBuilder? acceptInvitationBuilder;
   @override
   State<EcosystemGate> createState() => _EcosystemGateState();
 }
@@ -66,11 +79,12 @@ class _EcosystemGateState extends State<EcosystemGate> {
       if (mounted && !_signingOut && _current) _reload();
     });
   }
-  void _createWorkshop() {
-    if (!mounted || _opening || _signingOut || !_current || widget.createWorkshopBuilder == null) return;
+  void _createWorkshop() => _openSetup(widget.createWorkshopBuilder);
+  void _openSetup(WidgetBuilder? builder) {
+    if (!mounted || _opening || _signingOut || !_current || builder == null) return;
     _opening = true;
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
-      builder: widget.createWorkshopBuilder!,
+      builder: builder,
     )).then((_) {
       _opening = false;
       if (mounted && !_signingOut && _current) _reload();
@@ -146,6 +160,13 @@ class _EcosystemGateState extends State<EcosystemGate> {
                 title: Text(GarageUiText.get('createWorkshop')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _signingOut ? null : _createWorkshop)),
+            if (widget.acceptInvitationBuilder != null)
+              Card(child: ListTile(key: const Key('ecosystem_accept_staff_invitation'),
+                leading: const Icon(Icons.person_add_alt_1_outlined),
+                title: Text(GarageStaffInvitationScreen.title(false)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _signingOut ? null :
+                    () => _openSetup(widget.acceptInvitationBuilder))),
             for (final garage in access.garages)
               _tile('ecosystem_${garage.workspaceId}',
                 garage.module == EcosystemModule.mechanic
