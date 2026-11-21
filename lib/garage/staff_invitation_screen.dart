@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/localization.dart';
 import 'workspace_repository.dart';
@@ -35,7 +36,17 @@ class _GarageStaffInvitationScreenState
   String _role = 'mechanic';
   String? _code;
   bool _busy = false;
-  bool _failed = false;
+  String? _error;
+
+  String get _defaultError => widget.issue
+      ? _copy(
+          'Nie udało się potwierdzić utworzenia zaproszenia.',
+          'Could not confirm that the invitation was created.',
+        )
+      : _copy(
+          'Sprawdź kod i zaloguj się na konto z zaproszonym adresem e-mail.',
+          'Check the code and sign in with the invited email address.',
+        );
 
   String _copy(String pl, String en) =>
       GarageStaffInvitationScreen._copy(pl, en);
@@ -53,13 +64,13 @@ class _GarageStaffInvitationScreenState
         ? RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)
         : GarageWorkspaceRepository.invitationCode.hasMatch(value);
     if (!valid) {
-      setState(() => _failed = true);
+      setState(() => _error = _defaultError);
       return;
     }
 
     setState(() {
       _busy = true;
-      _failed = false;
+      _error = null;
     });
     try {
       final result = await widget.submit(value, _role);
@@ -70,9 +81,21 @@ class _GarageStaffInvitationScreenState
       } else {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted && widget.isCurrentAccount()) {
-        setState(() => _failed = true);
+        final subscriptionRequired =
+            widget.issue &&
+            error is PostgrestException &&
+            error.code == '42501' &&
+            error.message == 'Garage subscription required';
+        setState(
+          () => _error = subscriptionRequired
+              ? _copy(
+                  'Warsztat musi mieć aktywną subskrypcję lub okres próbny, aby wystawić zaproszenie.',
+                  'The workshop needs an active subscription or trial to create an invitation.',
+                )
+              : _defaultError,
+        );
       }
     } finally {
       if (mounted && widget.isCurrentAccount()) {
@@ -135,18 +158,7 @@ class _GarageStaffInvitationScreenState
                             if (value != null) setState(() => _role = value);
                           },
                   ),
-                if (_failed)
-                  Text(
-                    widget.issue
-                        ? _copy(
-                            'Nie udało się potwierdzić utworzenia zaproszenia.',
-                            'Could not confirm that the invitation was created.',
-                          )
-                        : _copy(
-                            'Sprawdź kod i zaloguj się na konto z zaproszonym adresem e-mail.',
-                            'Check the code and sign in with the invited email address.',
-                          ),
-                  ),
+                if (_error case final message?) Text(message),
                 const SizedBox(height: 16),
                 FilledButton(
                   key: const Key('garage_staff_invitation_submit'),

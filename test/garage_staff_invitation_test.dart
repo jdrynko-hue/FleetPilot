@@ -5,6 +5,7 @@ import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
 import 'package:fleetpilot/garage/staff_invitation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _code = '0123456789abcdef0123456789abcdef';
 const _input = Key('garage_staff_invitation_input');
@@ -80,6 +81,31 @@ void main() {
     response.complete(_code);
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('garage_staff_issued_code')), findsNothing);
+  });
+
+  testWidgets('an inactive workshop receives a specific invitation error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GarageStaffInvitationScreen(
+          isCurrentAccount: () => true,
+          issue: true,
+          submit: (_, _) async => throw const PostgrestException(
+            message: 'Garage subscription required',
+            code: '42501',
+          ),
+        ),
+      ),
+    );
+    await tester.enterText(find.byKey(_input), 'workshop@example.invalid');
+    await tester.tap(find.byKey(_submit));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(RegExp('active subscription|aktywną subskrypcję')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('garage_staff_issued_code')), findsNothing);
   });
 }
