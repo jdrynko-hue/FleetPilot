@@ -183,8 +183,9 @@ class _GarageStaffInvitationScreenState
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    if (widget.isCurrentAccount())
+                    if (widget.isCurrentAccount()) {
                       Clipboard.setData(ClipboardData(text: code));
+                    }
                   },
                   child: Text(_copy('Kopiuj kod', 'Copy code')),
                 ),
