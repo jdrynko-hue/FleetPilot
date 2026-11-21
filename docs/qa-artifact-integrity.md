@@ -35,6 +35,15 @@ includes hidden build files, so `.last_build_id` cannot silently disappear.
 Build inputs contain a placeholder publishable key: this CI artifact is a
 compile check, not a ready-to-deploy connected environment.
 
+The build is pinned to the reviewed Flutter 3.50.1 toolchain recorded in
+`tool/flutter-toolchain.json`. Before dependency resolution, CI compares the
+framework version/revision, engine revision, channel and Dart SDK version with
+`flutter --version --machine`. A moving `stable` channel alone is insufficient.
+Update the workflow version and reviewed pin together in a separately tested PR;
+never regenerate the pin automatically from the toolchain under test. This pin
+does not establish the provenance of an older hosted preview or guarantee
+byte-for-byte reproducibility of every build input.
+
 For an existing private preview, preserve the original archive and manifest,
 compare all bytes and document any intentional portal/base-path transformation.
 Prepare the new inventory in a separate candidate only after reviewing those
