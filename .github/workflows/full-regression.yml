@@ -11,6 +11,8 @@ on:
       - 'supabase/functions/**'
       - 'tests/**'
       - 'tools/qa_artifact_integrity.py'
+      - 'tools/verify_flutter_toolchain.py'
+      - 'tool/flutter-toolchain.json'
       - 'tools/prepare_marketing_release.py'
       - '.github/workflows/full-regression.yml'
   push:
@@ -24,6 +26,8 @@ on:
       - 'supabase/functions/**'
       - 'tests/**'
       - 'tools/qa_artifact_integrity.py'
+      - 'tools/verify_flutter_toolchain.py'
+      - 'tool/flutter-toolchain.json'
       - 'tools/prepare_marketing_release.py'
       - '.github/workflows/full-regression.yml'
   workflow_dispatch:
@@ -42,7 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Reject incomplete or stale QA artifact inventories
-        run: python3 -B tests/qa_artifact_integrity_test.py -v
+        run: |
+          python3 -B tests/qa_artifact_integrity_test.py -v
+          python3 -B tests/flutter_toolchain_test.py -v
 
   sandbox-backend:
     runs-on: ubuntu-latest
@@ -64,7 +70,12 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.50.1'
           cache: true
+      - name: Verify the pinned Flutter and Dart toolchain
+        run: |
+          flutter --version --machine > "$RUNNER_TEMP/flutter-toolchain.json"
+          python3 -B tools/verify_flutter_toolchain.py --actual "$RUNNER_TEMP/flutter-toolchain.json"
       - run: flutter pub get
       - name: Preserve the resolved public dependency lockfile
         uses: actions/upload-artifact@v4
