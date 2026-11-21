@@ -9,13 +9,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const user = '00000000-0000-4000-8000-000000000001';
+  const workshop = '00000000-0000-4000-8000-000000000101';
+  const invitation = '0123456789abcdef0123456789abcdef';
   var verified = true;
+  String? rpc;
   var writes = 0;
   late Map<String, dynamic> body;
   late SupabaseClient client;
   late MockClient transport;
   setUp(() {
-    verified = true; writes = 0;
+    verified = true; writes = 0; rpc = null;
     transport = MockClient((request) async {
       if (request.url.path == '/auth/v1/token') {
         final expiry = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600;
@@ -30,6 +33,15 @@ void main() {
             if (verified) 'email_confirmed_at':'2026-10-16T00:00:00Z',
             'app_metadata':{},'user_metadata':{}},
         }),200,request:request,headers:{'content-type':'application/json'});
+      }
+      if (request.url.path.startsWith('/rest/v1/rpc/')) {
+        rpc = request.url.pathSegments.last;
+        expect(request.method, 'POST');
+        body = (jsonDecode(request.body) as Map).cast<String, dynamic>();
+        return http.Response(
+          jsonEncode(rpc == 'garage_issue_staff_invite' ? invitation : workshop),
+          200, request: request, headers: {'content-type': 'application/json'},
+        );
       }
       expect(request.url.path, '/rest/v1/garage_workspaces');
       expect(request.method, 'POST');
@@ -70,4 +82,29 @@ void main() {
     await expectLater(GarageWorkspaceRepository(client).create(name:'Garage',country:'US'),throwsArgumentError);
     expect(writes,0);
   });
+
+  test('staff issuance sends only the scoped workspace, email and role', () async {
+    await login();
+    final code = await GarageWorkspaceRepository(client).issueStaffInvitation(
+      workspaceId: workshop, email: '  staff@example.test  ', role: 'mechanic',
+    );
+    expect(rpc, 'garage_issue_staff_invite');
+    expect(body, {
+      'p_workspace_id': workshop,
+      'p_email': 'staff@example.test',
+      'p_role': 'mechanic',
+    });
+    expect(code, invitation);
+  });
+
+  test('staff acceptance sends only a valid invitation code', () async {
+    await login();
+    final repository = GarageWorkspaceRepository(client);
+    await expectLater(repository.acceptStaffInvitation('invalid'), throwsArgumentError);
+    expect(rpc, isNull);
+    expect(await repository.acceptStaffInvitation(invitation), workshop);
+    expect(rpc, 'garage_accept_staff_invite');
+    expect(body, {'p_token': invitation});
+  });
+
 }

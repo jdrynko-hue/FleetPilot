@@ -17,6 +17,8 @@ import '../garage/workshop_quotes_screen.dart';
 import '../garage/garage_ui_text.dart';
 import '../garage/setup_guide.dart';
 import '../garage/garage_shell.dart';
+import '../garage/staff_invitation_screen.dart';
+import '../garage/workspace_repository.dart';
 import '../garage/repair_requests_screen.dart';
 import '../garage/bridge_connections_screen.dart';
 import 'ecosystem_access.dart';
@@ -56,7 +58,18 @@ class EcosystemModuleHub extends StatelessWidget {
         (_) => GarageBookingNotificationsScreen.forRepository(calendar),
       ]);
     }
+    final userId = client.auth.currentUser?.id;
     final pages = <String, Widget Function()>{
+        if (AppConfig.ecosystemQaEnabled && destination.canConfigure)
+          GarageStaffInvitationScreen.title(true): () =>
+            GarageStaffInvitationScreen(
+              issue: true,
+              isCurrentAccount: () => userId != null &&
+                  client.auth.currentUser?.id == userId,
+              submit: (email, role) => GarageWorkspaceRepository(client)
+                  .issueStaffInvitation(workspaceId: destination.workspaceId!,
+                    email: email, role: role),
+            ),
 
         if (destination.canConfigure)
           GarageUiText.get('fleetConnections'): () =>
