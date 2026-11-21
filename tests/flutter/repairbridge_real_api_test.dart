@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fleetpilot/core/localization.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_access.dart';
 import 'package:fleetpilot/ecosystem/ecosystem_gate.dart';
+import 'package:fleetpilot/garage/booking_management_screens.dart';
 import 'package:fleetpilot/garage/booking_recovery_journal.dart';
 import 'package:fleetpilot/garage/consumer_booking_screen.dart';
 import 'package:fleetpilot/garage/staff_invitation_screen.dart';
