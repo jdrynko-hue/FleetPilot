@@ -3,6 +3,7 @@ import io
 import json
 from contextlib import redirect_stdout
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -62,6 +63,33 @@ class AuthPolicyTests(unittest.TestCase):
 class QaAuthPolicyTests(unittest.TestCase):
     callback = "https://reviewed-qa.example.chatgpt.site/app/"
     booking = "https://reviewed-qa.example.chatgpt.site/booking-recovery-qa/"
+
+    def test_dashboard_list_compares_both_mounts_without_network(self):
+        required = auth_policy.qa_redirects(self.callback) + auth_policy.qa_redirects(self.booking)
+        with TemporaryDirectory() as temporary:
+            path = Path(temporary) / "redirects.txt"
+            path.write_text("\n".join(required), encoding="utf-8")
+            args = ["--environment", "qa", "--qa-callback", self.callback,
+                    "--qa-callback", self.booking, "--qa-redirect-file", str(path)]
+            output = io.StringIO()
+            with patch.object(auth_policy.urllib.request, "urlopen") as request:
+                with redirect_stdout(output):
+                    auth_policy.main(args)
+                self.assertIn("10 exact entries present", output.getvalue())
+                self.assertIn("Live Auth settings and password policy unverified", output.getvalue())
+                self.assertNotIn(self.callback, output.getvalue())
+                path.write_text("\n".join((*required[:-1], "https://**.chatgpt.site/**")), encoding="utf-8")
+                with self.assertRaisesRegex(SystemExit, "1 of 10 exact entries missing"):
+                    auth_policy.main(args)
+                request.assert_not_called()
+
+    def test_dashboard_list_requires_qa_and_both_mounts(self):
+        from contextlib import redirect_stderr
+        with patch.object(auth_policy.urllib.request, "urlopen") as request, redirect_stderr(io.StringIO()):
+            for args in ([], ["--environment", "qa", "--qa-callback", self.callback]):
+                with self.assertRaises(SystemExit):
+                    auth_policy.main([*args, "--qa-redirect-file", "unused.txt"])
+            request.assert_not_called()
 
     def test_qa_requires_base_and_each_supported_portal(self):
         expected = auth_policy.qa_redirects(self.callback)

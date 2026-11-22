@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
@@ -53,6 +54,8 @@ def main(argv=None):
     parser.add_argument("--environment", choices=("production", "qa"), default="production")
     parser.add_argument("--qa-callback", action="append",
                         help="Exact reviewed HTTPS Sites return URL; repeat for each QA mount")
+    parser.add_argument("--qa-redirect-file", type=Path,
+                        help="Compare dashboard Redirect URLs offline, one URL per line")
     args = parser.parse_args(argv)
     required = (APP_REDIRECT,)
     project = PROJECT_REF
@@ -69,6 +72,19 @@ def main(argv=None):
         project = QA_PROJECT_REF
     elif args.qa_callback is not None:
         parser.error("--qa-callback is only valid with --environment qa")
+    if args.qa_redirect_file is not None:
+        if args.environment != "qa" or sorted(urlsplit(url).path for url in args.qa_callback) != sorted(QA_CALLBACK_PATHS):
+            parser.error("Offline comparison requires one QA callback for each mount")
+        try:
+            redirects = args.qa_redirect_file.read_text(encoding="utf-8-sig").splitlines()
+        except (OSError, UnicodeError):
+            parser.error("Could not read the QA redirect list as UTF-8")
+        missing = set(required) - {url.strip() for url in redirects}
+        if missing:
+            raise SystemExit(f"Offline QA redirect comparison failed: {len(missing)} of {len(required)} exact entries missing")
+        print(f"Offline QA redirect comparison: {len(required)} exact entries present")
+        print("Live Auth settings and password policy unverified")
+        return
     token = os.environ.get("SUPABASE_ACCESS_TOKEN")
     if not token:
         raise SystemExit("Missing existing SUPABASE_ACCESS_TOKEN repository secret")
