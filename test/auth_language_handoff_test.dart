@@ -144,6 +144,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(AppLocale.language.value, language);
       expect(find.text(tr('password')), findsOneWidget);
+      final showPassword = find.byTooltip(tr('show_password'));
+      final hidePassword = find.byTooltip(tr('hide_password'));
+      final passwordField = find.byType(EditableText).last;
+      expect(showPassword, findsOneWidget);
+      expect(hidePassword, findsNothing);
+      expect(tester.widget<EditableText>(passwordField).obscureText, isTrue);
+      await tester.ensureVisible(showPassword);
+      await tester.tap(showPassword);
+      await tester.pumpAndSettle();
+      expect(hidePassword, findsOneWidget);
+      expect(showPassword, findsNothing);
+      expect(tester.widget<EditableText>(passwordField).obscureText, isFalse);
+      await tester.tap(hidePassword);
+      await tester.pumpAndSettle();
+      expect(showPassword, findsOneWidget);
+      expect(tester.widget<EditableText>(passwordField).obscureText, isTrue);
       final forgot = authText('Forgot password?', 'Nie pamiętasz hasła?');
       expect(find.text(forgot), findsOneWidget);
       if (language == 'pl') {
