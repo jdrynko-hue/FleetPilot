@@ -1,0 +1,128 @@
+name: Publish install guide language
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/publish-install-language.yml'
+      - 'tools/publish_install_language.py'
+  workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: 'Type PUBLISH-INSTALL-65581c04 to publish the reviewed site'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'pages' || format('install-guide-review-{0}', github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: ${{ github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && inputs.confirm_release == 'PUBLISH-INSTALL-65581c04') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download pinned production capture used by the last publication
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '14443664409'
+          run-id: '44343745692'
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/production-capture
+          merge-multiple: true
+      - name: Reconstruct and verify the reviewed update and rollback
+        run: >-
+          python3 -B tools/publish_fleet_first_marketing.py prepare
+          --capture "$RUNNER_TEMP/production-capture/site"
+          --repo . --output "$RUNNER_TEMP/fleet-first-marketing"
+      - name: Stage the reviewed install page and exact rollback
+        run: >-
+          python3 -B tools/publish_install_language.py prepare
+          --baseline "$RUNNER_TEMP/fleet-first-marketing/site"
+          --output "$RUNNER_TEMP/install-language"
+      - name: Compare public production with the rollback inventory
+        if: github.event_name == 'pull_request'
+        run: >-
+          python3 -B tools/publish_install_language.py verify
+          --phase baseline --attempts 2 --report marketing-review.json
+      - name: Publish review evidence to the run
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-language-review
+          path: marketing-review.json
+          if-no-files-found: ignore
+      - name: Upload the tested update for Pages
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: install-language-site
+          path: ${{ runner.temp }}/install-language/site
+      - name: Upload the verified rollback for Pages
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: install-language-rollback
+          path: ${{ runner.temp }}/install-language/rollback
+
+  deploy:
+    needs: prepare
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_release == 'PUBLISH-INSTALL-65581c04' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Hold unless all 161 files and four entry routes match the rollback
+        run: >-
+          python3 -B tools/publish_install_language.py verify
+          --phase baseline --attempts 2 --report marketing-preflight.json
+      - name: Publish the tested update
+        id: publish
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: install-language-site
+      - name: Verify all 161 published files and four entry routes
+        id: verify
+        run: >-
+          python3 -B tools/publish_install_language.py verify
+          --phase release --attempts 6 --report marketing-published.json
+      - name: Restore the previous site if deployment or verification failed
+        id: rollback
+        if: ${{ failure() && (steps.publish.outcome == 'failure' || steps.verify.outcome == 'failure') }}
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: install-language-rollback
+      - name: Verify the previous site after rollback
+        if: ${{ always() && steps.rollback.outcome == 'success' }}
+        run: >-
+          python3 -B tools/publish_install_language.py verify
+          --phase baseline --attempts 6 --report marketing-rollback.json
+      - name: Retain all available verification results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-language-evidence
+          path: |
+            marketing-preflight.json
+            marketing-published.json
+            marketing-rollback.json
+          if-no-files-found: ignore
