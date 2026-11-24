@@ -23,6 +23,11 @@ function setLang(value,remember=true){
   locale=value==='pl'?'pl':'en';
   if(remember)preferred=locale;
   document.documentElement.lang=locale;
+  const pageMeta=locale==='pl'
+    ? {title:'Zainstaluj Flotaryx na iPhonie i Androidzie',description:'Dodaj aplikację internetową Flotaryx do ekranu swojego iPhone’a lub Androida.'}
+    : {title:'Install Flotaryx on iPhone and Android',description:'Install Flotaryx as a web app on your iPhone or Android device.'};
+  document.title=pageMeta.title;
+  document.querySelector('meta[name="description"]')?.setAttribute('content',pageMeta.description);
   document.querySelectorAll('[data-en]').forEach(e=>{e.textContent=e.getAttribute('data-'+locale)});
   document.querySelectorAll('[data-en-html]').forEach(e=>{e.innerHTML=e.getAttribute('data-'+locale+'-html')});
   document.querySelectorAll('.lang button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===locale)));

@@ -49,14 +49,15 @@ function languagePage(file,{query='',saved=null,browser=['en-GB'],restricted=fal
   }));
   const buttons=['en','pl'].map(lang=>({dataset:{lang},setAttribute(){},addEventListener(_,fn){this.select=fn;}}));
   const selector={value:'en',options:[{text:'Language'}],selectedIndex:0,addEventListener(_,fn){this.select=fn;}};
-  const document={documentElement:{lang:'en'},title:'',getElementById:()=>selector,querySelector:()=>({}),
+  const description={content:'',setAttribute(name,value){this[name]=value;}};
+  const document={documentElement:{lang:'en'},title:'',getElementById:()=>selector,querySelector:q=>q==='meta[name="description"]'?description:{},
     querySelectorAll:q=>q==='a[href]'?links:q==='.lang button'?buttons:[]};
   let stored=saved;
   const window={location:new URL(`https://flotaryx.com/${file.includes('/install/')?'install/':''}${query}`),
     localStorage:{getItem(){if(restricted)throw Error('Blocked');return stored;},
       setItem(_,value){if(restricted)throw Error('Blocked');stored=value;}}};
   vm.runInNewContext(script,{document,window,navigator:{languages:browser},URL});
-  return {document,links,buttons,selector,stored:()=>stored};
+  return {document,description,links,buttons,selector,stored:()=>stored};
 }
 
 for(const file of ['web/index.html','web/start/index.html'])test(`${file}: explicit language wins over stored and browser language`,()=>{
@@ -83,6 +84,8 @@ test('install guide preserves selected language through restricted storage and f
   for(const options of cases){
     const page=languagePage('web/install/index.html',options);
     assert.equal(page.document.documentElement.lang,options.expected);
+    assert.equal(page.document.title,options.expected==='pl'?'Zainstaluj Flotaryx na iPhonie i Androidzie':'Install Flotaryx on iPhone and Android');
+    assert.equal(page.description.content,options.expected==='pl'?'Dodaj aplikację internetową Flotaryx do ekranu swojego iPhone’a lub Androida.':'Install Flotaryx as a web app on your iPhone or Android device.');
     for(const link of page.links.slice(0,3))assert.equal(new URL(link.href,'https://flotaryx.com').searchParams.get('lang'),options.handoff);
     assert.equal(new URL(page.links[0].href,'https://flotaryx.com').searchParams.get('portal'),'garage');
     assert.equal(new URL(page.links[0].href,'https://flotaryx.com').hash,'#selection');
@@ -91,7 +94,13 @@ test('install guide preserves selected language through restricted storage and f
     assert.equal(page.stored(),options.saved??null,'initial fallback must not change the saved preference');
     page.buttons[1].select();
     assert.equal(page.document.documentElement.lang,'pl');
+    assert.equal(page.document.title,'Zainstaluj Flotaryx na iPhonie i Androidzie');
+    assert.match(page.description.content,/Dodaj aplikację/);
     assert.equal(new URL(page.links[0].href,'https://flotaryx.com').searchParams.get('lang'),'pl');
     if(!options.restricted)assert.equal(page.stored(),'pl');
+    page.buttons[0].select();
+    assert.equal(page.document.title,'Install Flotaryx on iPhone and Android');
+    assert.match(page.description.content,/Install Flotaryx/);
+    assert.equal(new URL(page.links[0].href,'https://flotaryx.com').searchParams.get('lang'),'en');
   }
 });
