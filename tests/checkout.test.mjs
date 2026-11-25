@@ -15,6 +15,7 @@ globalThis.Deno = {
   })[key] },
 };
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
+const checkoutUrl = () => scenario.checkoutUrl ?? 'https://checkout.stripe.com/c/pay/cs_test_mock#qa';
 globalThis.fetch = async (url, init = {}) => {
   const parsed = new URL(String(url));
   const path = parsed.pathname;
@@ -31,17 +32,24 @@ globalThis.fetch = async (url, init = {}) => {
     state: scenario.ready ? 'ready' : 'reserved',
     attempt_id: companyId,
     session_expires_at: new Date(Date.now() + 35 * 60 * 1000).toISOString(),
-    checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_mock#qa',
+    checkout_url: checkoutUrl(),
   });
   if (path === '/v1/checkout/sessions/cs_test_mock') return json({
     livemode: false, status: 'open', client_reference_id: companyId,
     adaptive_pricing: { enabled: scenario.adaptive ?? false },
     metadata: { vat_registered: String(scenario.storedVat ?? false) },
+    tax_id_collection: scenario.reusedTaxCollection,
   });
   if (path === '/v1/checkout/sessions') {
     postedForm = new URLSearchParams(init.body);
     assert.equal(init.headers['Idempotency-Key'], 'flotaryx:sandbox:checkout-v2:' + companyId);
-    return json({ id: 'cs_test_mock', url: 'https://checkout.stripe.com/c/pay/cs_test_mock#qa' });
+    return json({
+      id: 'cs_test_mock',
+      url: checkoutUrl(),
+      tax_id_collection: Object.hasOwn(scenario, 'createdTaxCollection')
+        ? scenario.createdTaxCollection
+        : postedForm.get('tax_id_collection[enabled]') === 'true' ? { enabled: true } : undefined,
+    });
   }
   if (path === '/rest/v1/rpc/flotaryx_finalize_test_checkout') return json(true);
   throw new Error('Unexpected test request: ' + path);
@@ -99,6 +107,36 @@ test('reuses only sessions with matching currency and VAT settings', async () =>
   assert.equal(postedForm, null);
   assert.equal((await checkout({ vat_registered: true }, { ready: true })).response.status, 409);
   assert.equal((await checkout({}, { ready: true, adaptive: true })).response.status, 409);
+});
+test('creates and reuses a Stripe g/pay session for a non-VAT business', async () => {
+  const url = 'https://checkout.stripe.com/g/pay/cs_test_mock#qa';
+  const fresh = await checkout({}, { checkoutUrl: url });
+  assert.equal(fresh.response.status, 200);
+  assert.equal(fresh.body.url, url);
+  const ready = await checkout({}, { ready: true, checkoutUrl: url });
+  assert.equal(ready.response.status, 200);
+  assert.equal(ready.body.url, url);
+  assert.equal(ready.body.reused, true);
+  assert.equal(postedForm, null);
+});
+test('does not accept a missing tax-collection setting for a VAT purchase', async () => {
+  const fresh = await checkout({ vat_registered: true }, { createdTaxCollection: null });
+  assert.equal(fresh.response.status, 502);
+  const ready = await checkout({ vat_registered: true }, { ready: true, storedVat: true });
+  assert.equal(ready.response.status, 409);
+  const confirmed = await checkout({ vat_registered: true }, {
+    ready: true, storedVat: true, reusedTaxCollection: { enabled: true },
+  });
+  assert.equal(confirmed.response.status, 200);
+});
+test('does not return a Stripe URL with a mismatched session or host', async () => {
+  for (const url of [
+    'https://checkout.stripe.com/g/pay/cs_test_different',
+    'https://checkout.stripe.com/g/pay/cs_live_mock',
+    'https://checkout.stripe.com.example.com/g/pay/cs_test_mock',
+  ]) {
+    assert.equal((await checkout({}, { checkoutUrl: url })).response.status, 502);
+  }
 });
 test('sandbox refuses a live Stripe key', async () => {
   assert.equal((await checkout({}, { liveKey: true })).response.status, 503);
