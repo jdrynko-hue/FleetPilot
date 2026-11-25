@@ -18,6 +18,15 @@ function reply(data: Record<string, unknown>, status = 200): Response {
 function errorMessage(status: number) {
   return status === 401 ? "Please sign in again" : status === 403 ? "Not authorized to manage billing" : "An operation failed";
 }
+function checkoutSessionId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin !== "https://checkout.stripe.com" || parsed.username || parsed.password) return null;
+    return parsed.pathname.match(/^\/(?:c|g)\/pay\/(cs_test_[A-Za-z0-9]+)$/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return reply({ error: "POST required" }, 405);
@@ -167,13 +176,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (reservation.state === "ready") {
       const checkoutUrl = String(reservation.checkout_url || "");
       const verifiedUrl = new URL(checkoutUrl);
-      if (verifiedUrl.protocol !== "https:" || verifiedUrl.hostname !== "checkout.stripe.com") {
+      if (verifiedUrl.origin !== "https://checkout.stripe.com" || verifiedUrl.username || verifiedUrl.password) {
         return reply({ error: "Invalid reserved Stripe URL" }, 503);
       }
       // A reserved session is immutable: never silently reuse an older form
       // or a checkout prepared with a different VAT-registration choice.
-      const sessionId = verifiedUrl.pathname.match(/^\/c\/pay\/(cs_test_[A-Za-z0-9]+)$/)?.[1] || "";
-      if (!/^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
+      const sessionId = checkoutSessionId(checkoutUrl);
+      if (!sessionId) {
         return reply({ error: "The previous checkout must expire before preparing a new one" }, 409);
       }
       const sessionResponse = await fetch(
@@ -185,6 +194,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (session.livemode !== false || session.status !== "open"
           || session.client_reference_id !== companyId
           || session.adaptive_pricing?.enabled !== false
+          || (session.tax_id_collection?.enabled ?? false) !== vatRegistered
           || session.metadata?.vat_registered !== String(vatRegistered)) {
         return reply({ error: "A previous checkout has different billing details. Complete it or wait for it to expire before changing VAT registration." }, 409);
       }
@@ -244,7 +254,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       body: form,
     });
     const checkout = await stripeResponse.json();
-    if (!stripeResponse.ok || typeof checkout.url !== "string" || !checkout.url.startsWith("https://checkout.stripe.com/")) {
+    const sessionId = typeof checkout?.url === "string" ? checkoutSessionId(checkout.url) : null;
+    if (!stripeResponse.ok || !sessionId || sessionId !== checkout.id
+        || (checkout.tax_id_collection?.enabled ?? false) !== vatRegistered) {
       console.error("Stripe Checkout rejected request with status", stripeResponse.status);
       return reply({ error: "Unable to start test checkout" }, 502);
     }
