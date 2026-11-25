@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_config.dart';
+import '../core/formatters.dart';
 import '../core/localization.dart';
 import '../data/fleet_repository.dart';
 import '../data/models.dart';
@@ -134,6 +137,8 @@ class _BillingScreenState extends State<BillingScreen> {
         currency: null,
         vehicleCount: entitlements.vehicleCount,
         status: entitlements.subscriptionStatus,
+        billingProvider: subscription['billing_provider']?.toString(),
+        trialEndsAt: entitlements.trialEndsAt,
         prices: const [],
         hasStripe: hasStripe,
         cancellationScheduled: subscription['cancel_at_period_end'] == true,
@@ -154,6 +159,8 @@ class _BillingScreenState extends State<BillingScreen> {
       vehicleCount: entitlements.vehicleCount,
       status:
           subscription['status']?.toString() ?? entitlements.subscriptionStatus,
+      billingProvider: subscription['billing_provider']?.toString(),
+      trialEndsAt: entitlements.trialEndsAt,
       prices: (rows as List)
           .map(
             (item) =>
@@ -311,6 +318,8 @@ class _BillingScreenState extends State<BillingScreen> {
               currency: data.currency,
               vehicleCount: data.vehicleCount,
               status: data.status,
+              billingProvider: data.billingProvider,
+              trialEndsAt: data.trialEndsAt,
               prices: data.prices,
               hasStripe: data.hasStripe,
               cancellationScheduled: cancellationScheduled,
@@ -481,6 +490,17 @@ class _BillingScreenState extends State<BillingScreen> {
         final canRestart = billable &&
             data.status == 'canceled' &&
             _billingMode == 'test';
+        final trialCheckout = fleetTrialCheckoutState(
+          qaSandbox: _billingMode == 'test' &&
+              AppConfig.isEcosystemQaBackend(AppConfig.supabaseUrl),
+          billingProvider: data.billingProvider,
+          status: data.status,
+          trialEndsAt: data.trialEndsAt,
+          now: DateTime.now(),
+        );
+        final trialBlocksCheckout =
+            trialCheckout == FleetTrialCheckoutState.active ||
+            trialCheckout == FleetTrialCheckoutState.dateUnavailable;
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
           children: [
@@ -518,6 +538,29 @@ class _BillingScreenState extends State<BillingScreen> {
                     Text(
                       '${_t('Subscription status:', 'Status abonamentu:')} ${data.status}',
                     ),
+                    if (trialCheckout != FleetTrialCheckoutState.notApplicable)
+                      ...[
+                        const SizedBox(height: 8),
+                        Text(switch (trialCheckout) {
+                          FleetTrialCheckoutState.active => _t(
+                            'Your trial ends on ${formatDateTime(data.trialEndsAt)}. Refresh this screen after it ends.',
+                            'Okres próbny kończy się ${formatDateTime(data.trialEndsAt)}. Po jego zakończeniu odśwież ten ekran.',
+                          ),
+                          FleetTrialCheckoutState.ended => _t(
+                            'Your trial ended on ${formatDateTime(data.trialEndsAt)}.',
+                            'Okres próbny zakończył się ${formatDateTime(data.trialEndsAt)}.',
+                          ),
+                          FleetTrialCheckoutState.dateUnavailable => _t(
+                            'The trial end date is unavailable. Refresh this screen before trying Checkout.',
+                            'Nie można ustalić daty zakończenia okresu próbnego. Odśwież ten ekran przed ponowną próbą.',
+                          ),
+                          FleetTrialCheckoutState.notApplicable => '',
+                        }),
+                        Text(_t(
+                          'The first charge happens when you complete Checkout after the trial ends.',
+                          'Pierwsza opłata jest pobierana przy finalizacji płatności po zakończeniu okresu próbnego.',
+                        )),
+                      ],
                     if (data.cancellationScheduled)
                       Text(
                         _t(
@@ -797,6 +840,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       (!valid ||
                           _busy ||
                           !_b2bConfirmed ||
+                          trialBlocksCheckout ||
                           (_billingMode == 'live' && !_liveBillingAvailable))
                       ? null
                       : () => _startCheckout(selected!, vehicles),
@@ -834,11 +878,32 @@ class _BillingScreenState extends State<BillingScreen> {
   );
 }
 
+enum FleetTrialCheckoutState { notApplicable, dateUnavailable, active, ended }
+
+@visibleForTesting
+FleetTrialCheckoutState fleetTrialCheckoutState({
+  required bool qaSandbox,
+  required String? billingProvider,
+  required String status,
+  required DateTime? trialEndsAt,
+  required DateTime now,
+}) {
+  if (!qaSandbox || billingProvider != 'manual' || status != 'trialing') {
+    return FleetTrialCheckoutState.notApplicable;
+  }
+  if (trialEndsAt == null) return FleetTrialCheckoutState.dateUnavailable;
+  return trialEndsAt.isAfter(now)
+      ? FleetTrialCheckoutState.active
+      : FleetTrialCheckoutState.ended;
+}
+
 class _BillingData {
   const _BillingData({
     required this.currency,
     required this.vehicleCount,
     required this.status,
+    required this.billingProvider,
+    required this.trialEndsAt,
     required this.prices,
     required this.hasStripe,
     required this.cancellationScheduled,
@@ -847,6 +912,8 @@ class _BillingData {
   final String? currency;
   final int vehicleCount;
   final String status;
+  final String? billingProvider;
+  final DateTime? trialEndsAt;
   final List<_BillingPrice> prices;
   final bool hasStripe;
   final bool cancellationScheduled;
