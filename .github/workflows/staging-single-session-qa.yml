@@ -124,7 +124,7 @@ jobs:
           cd "$GARAGE_QA_DIR"
           supabase start -x studio,analytics,imgproxy
       - name: Rehearse database dump and restore with synthetic records
-        run: bash tests/database_restore/rehearse.sh
+        run: bash tests/database_restore/rehearse.sh "$GARAGE_QA_DIR"/supabase/migrations/*_booking_request_recovery.sql
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
