@@ -190,6 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: tr('password'),
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
+                              tooltip: tr(_obscurePassword ? 'show_password' : 'hide_password'),
                               onPressed: () => setState(
                                 () => _obscurePassword = !_obscurePassword,
                               ),
