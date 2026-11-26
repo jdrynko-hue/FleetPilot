@@ -76,3 +76,28 @@ Offline regression suite:
 ```sh
 python3 -B tests/qa_artifact_integrity_test.py -v
 ```
+
+## Pair web and backend evidence offline
+
+Provide the reviewed candidate and rollback web trees with their independently
+retained manifest digests. The function release archive is a separate input. It
+must contain its release record and both candidate and rollback bundles for all
+five Garage Sandbox functions. Supply the migration SQL and the migration
+version from the reviewed database record.
+
+```sh
+python3 -B tools/verify_qa_release_evidence.py \
+  --candidate /private/candidate --candidate-sha256 "$CANDIDATE_SHA" \
+  --rollback /private/rollback --rollback-sha256 "$ROLLBACK_SHA" \
+  --backend-zip /private/backend.zip --backend-sha256 "$BACKEND_SHA" \
+  --migration /private/migration.sql --migration-sha256 "$MIGRATION_SHA" \
+  --project-ref "$QA_PROJECT_REF" --migration-version "$MIGRATION_VERSION" \
+  > /private/qa-release-evidence.json
+```
+
+Retain the report privately with its inputs. It records the pinned files,
+including both web portal entrypoints, each candidate and rollback function
+bundle, and the migration source. The migration ID is a declaration. The
+report leaves hosted equivalence, Auth configuration, database restoration
+and deployment authorization unverified. The separate disposable restore
+test uses synthetic data and does not qualify a particular database backup.
