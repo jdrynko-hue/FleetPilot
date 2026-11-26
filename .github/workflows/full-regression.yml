@@ -11,6 +11,7 @@ on:
       - 'supabase/functions/**'
       - 'tests/**'
       - 'tools/qa_artifact_integrity.py'
+      - 'tools/prepare_qa_booking_swap.py'
       - 'tools/verify_flutter_toolchain.py'
       - 'tool/flutter-toolchain.json'
       - 'tools/prepare_marketing_release.py'
@@ -26,6 +27,7 @@ on:
       - 'supabase/functions/**'
       - 'tests/**'
       - 'tools/qa_artifact_integrity.py'
+      - 'tools/prepare_qa_booking_swap.py'
       - 'tools/verify_flutter_toolchain.py'
       - 'tool/flutter-toolchain.json'
       - 'tools/prepare_marketing_release.py'
@@ -48,6 +50,7 @@ jobs:
       - name: Reject incomplete or stale QA artifact inventories
         run: |
           python3 -B tests/qa_artifact_integrity_test.py -v
+          python3 -B tests/qa_booking_swap_test.py -v
           python3 -B tests/flutter_toolchain_test.py -v
 
   sandbox-backend:
